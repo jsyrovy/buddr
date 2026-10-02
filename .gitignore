@@ -6,6 +6,9 @@ build/
 DerivedData/
 .build/
 
+# Editors
+.idea/
+
 # Xcode user state
 xcuserdata/
 *.xcuserstate
