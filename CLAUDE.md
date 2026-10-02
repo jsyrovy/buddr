@@ -157,8 +157,9 @@ Implementation (`SheepAnimator`):
   real app code needs no test guards.
 - Checking the running app: `screencapture` needs the Screen Recording permission (without it: "could not create
   image from display"). Without it, render views offscreen with SwiftUI `ImageRenderer` in a throwaway test, and
-  inspect the panel with `CGWindowListCopyWindowInfo` (owner `Buddr`, layer 3 = `.floating`). Note that
-  `NSScreen.main` is the screen with keyboard focus, not necessarily the built-in display.
+  inspect the panel with `CGWindowListCopyWindowInfo` (owner `Buddr`, layer 3 = `.floating`) – check that its
+  bounds lie inside a screen, not just that it exists. Note that `NSScreen.main` is the screen with keyboard focus,
+  not necessarily the built-in display.
 - Fixtures in `BuddrTests/Fixtures` are real herdr 0.9.3 outputs, anonymized (home directory `/Users/me`, workspace
   labels, session UUID): `session-list`, `agent-list`, `workspace-list`, `error`. Edited variants derived from the same
   shapes: `session-list-multiple`, `agent-list-mixed` (all statuses, missing optional fields, a future status),

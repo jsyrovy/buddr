@@ -11,10 +11,12 @@ final class SheepPanelController {
     private let panel: SheepPanel
 
     init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
+        // The size is set explicitly: `NSHostingView.fittingSize` is still zero here, and placing a zero-sized panel
+        // in the corner pushed the real panel off screen.
+        panel = SheepPanel(contentRect: NSRect(origin: .zero, size: SheepView.size(scale: scale)))
         let hostingView = NSHostingView(rootView: SheepView(animation: animation, scale: scale))
         // The content has a fixed size; don't let SwiftUI updates re-evaluate the window size on every frame.
         hostingView.sizingOptions = []
-        panel = SheepPanel(contentRect: NSRect(origin: .zero, size: hostingView.fittingSize))
         panel.contentView = hostingView
     }
 
@@ -23,11 +25,17 @@ final class SheepPanelController {
         panel.orderFrontRegardless()
     }
 
-    /// Bottom-right corner of the main screen, above the Dock.
+    var frame: NSRect {
+        panel.frame
+    }
+
     private func moveToDefaultPosition() {
         guard let visibleFrame = NSScreen.main?.visibleFrame else { return }
-        let origin = NSPoint(
-            x: visibleFrame.maxX - panel.frame.width - Self.margin, y: visibleFrame.minY + Self.margin)
-        panel.setFrameOrigin(origin)
+        panel.setFrameOrigin(Self.defaultOrigin(panelSize: panel.frame.size, visibleFrame: visibleFrame))
+    }
+
+    /// Bottom-right corner of the visible screen area (above the Dock), `margin` away from the edges.
+    static func defaultOrigin(panelSize: CGSize, visibleFrame: NSRect) -> NSPoint {
+        NSPoint(x: visibleFrame.maxX - panelSize.width - margin, y: visibleFrame.minY + margin)
     }
 }

@@ -15,8 +15,17 @@ struct SpriteCanvas: View {
                 }
             }
         }
-        .frame(width: CGFloat(gridWidth * scale), height: CGFloat(gridHeight * scale))
+        .frame(width: size.width, height: size.height)
         .opacity(frame.opacity)
+    }
+
+    private var size: CGSize {
+        Self.size(gridWidth: gridWidth, gridHeight: gridHeight, scale: scale)
+    }
+
+    /// Size in points of a canvas drawing a `gridWidth` × `gridHeight` pixel grid.
+    static func size(gridWidth: Int, gridHeight: Int, scale: Int) -> CGSize {
+        CGSize(width: gridWidth * scale, height: gridHeight * scale)
     }
 
     /// One path per color keeps the number of fill operations small; layers are still drawn in order.
