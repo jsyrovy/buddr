@@ -38,7 +38,8 @@ Buddr/
   App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
               wiring, RuntimeEnvironment
   Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view),
-              ScreenGeometry (screen choice, clamping)
+              ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
+              FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and back)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing)
   Animation/  AnimationClip / SheepClipID, SheepAnimator (pure state machine), SheepAnimationDriver (@Observable
@@ -78,6 +79,8 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `isMovableByWindowBackground`). When click/hover interaction is added (info bubble), distinguish clicks from drags
   there. After a drag (the button is released) the panel is moved back into the `visibleFrame` of its screen, so it
   can't be dragged out of sight. Menu bar: SwiftUI `MenuBarExtra`.
+- Fullscreen: while a fullscreen window covers the display with the sheep, the sheep runs off the screen and comes
+  back when it is gone. Details in "Fullscreen escape" below.
 - Data sources: local herdr sessions now; later all *enabled* saved machines, discovered dynamically (nothing
   hardcoded). Polling: local every ~2 s; remote every ~15 s (later). Sources are queried concurrently.
 - A failed source is reported as a failure (later: "⚠" badge + error in the info bubble); it never blocks the others.
@@ -153,6 +156,46 @@ Implementation (`SheepAnimator`):
 - The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
   variants combine freely; effects (`!`, `?`, `z`, ✔ bubble, dust) are separate layers placed on the canvas.
 
+## Fullscreen escape
+
+Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
+
+- No public API tells whether a display shows a fullscreen app. `CGWindowListCopyWindowInfo` (on-screen windows,
+  no desktop elements) is used instead: the display counts as fullscreen when a visible window of another app in
+  layer 0 covers it completely. Owner, layer, bounds and alpha need no Screen Recording permission (titles would).
+  This also catches borderless "fake fullscreen" windows (games, video); a zoomed window doesn't count, it leaves
+  the menu bar (and the Dock, if shown) uncovered. Private CGS Space APIs were rejected.
+- Window bounds are in global display coordinates (top-left origin, y down, same as `CGDisplayBounds`); screen frames
+  are AppKit coordinates. The display is chosen by the AppKit frame, the windows are compared with its CG bounds.
+- Notched displays: fullscreen windows start below the menu bar, which is 33 points tall while the top safe area
+  inset is 32 (14" MacBook Pro). The top `safeAreaInsets.top + notchMenuBarAllowance` band may stay uncovered. The
+  menu bar window stays on screen there even in fullscreen, so it can't serve as a signal. A zoomed window next to an
+  auto-hidden Dock on a notched display can't be told apart and counts as fullscreen.
+- The Dock owns a full-display window in layer 20 (27 during transitions); only layer 0 counts.
+- Checks run on `NSWorkspace.activeSpaceDidChangeNotification` and screen parameter changes, again after 250 ms (the
+  window list lags behind), and every second as a fallback (one query costs ~0.6 ms). Fullscreen ends only after it
+  has been gone for 600 ms (`FullscreenDebounce`): during transitions the fullscreen window shrinks or vanishes for a
+  moment.
+- The notification arrives after the Space slide animation, and the panel (`.canJoinAllSpaces`) is shown on the new
+  fullscreen Space at once – the sheep is briefly visible over the fullscreen app. That is where its escape starts.
+  Faster polling would catch the window during the slide, but then nobody would see the escape.
+- The display is the one of the sheep's home (`SheepEscape.homeFrame`), not of the panel, which moves off the screen.
+- Logs: category `fullscreen` (on with the window's owner and layer, off).
+
+Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
+
+- Away: the current clip plays to its end (`SheepAnimationDriver.waitForCycleEnd`), a startled hop, the sheep turns
+  to the nearer of the left and right screen edges (tie: right) and gallops until the panel is completely past it;
+  then the panel is hidden. Back: the panel appears past the same edge and the sheep runs home with an ease-out,
+  catches breath and continues with the state machine. Neighbouring displays are deliberately ignored.
+- Speed: 150 pt/s, but one way never takes longer than 1.2 s (longer distances are run faster). The panel moves
+  ~60 times a second in whole sprite pixels (`scale` points) to keep the pixel-art look.
+- Each way plays to its end; if fullscreen ends before the clip does, the sheep doesn't leave at all. The panel
+  ignores the mouse during the escape. If the home screen is gone, the sheep returns to the nearest one.
+- The sheep faces left; running right uses mirrored frames (`SpriteFrame.mirrored(canvasWidth:)`). Escape clips are
+  played as scripts by `SheepAnimationDriver` (`play` once, `loop`, `endScript`), outside the state machine, which
+  keeps its target status and continues where it stopped.
+
 ## Testing
 
 - Swift Testing (`import Testing`, `@Test`, `#expect`). The test bundle is hosted by the app (`TEST_HOST`), so
@@ -196,7 +239,9 @@ tests are cheap and stable:
   isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by grandchildren.
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`.
-- Placement math in `SheepPanelController`, `ScreenGeometry`.
+- Placement math in `SheepPanelController`, `ScreenGeometry`, `EscapeRoute`.
+- `FullscreenDetector` – window list parsing and the covering rules (notch, zoomed windows, other displays, layers);
+  `FullscreenDebounce` – on right away, off only after the delay.
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
@@ -213,7 +258,8 @@ Fine to leave uncovered:
 - `App/` – `BuddrMain`, `BuddrApp`, `AppDelegate` and the non-test branch of `RuntimeEnvironment`. Covering them
   means starting the real panel, menu bar and herdr polling under tests, which defeats `TestHostApp` and makes tests
   depend on the machine. Keep these files pure wiring instead: logic that needs a test moves into a testable type.
-- `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling. Check it by running the app.
+- `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling, `FullscreenMonitor` (notifications,
+  window server queries), `SheepEscape` (moving the real panel in real time). Check them by running the app.
 - Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
   `ProcessRunner.signalProcessGroup`.
 

@@ -8,9 +8,12 @@ final class SheepPanelController {
     /// Distance of the panel from the screen edges in its default position.
     private static let margin: CGFloat = 24
 
+    /// Points per sprite pixel.
+    let scale: Int
     private let panel: SheepPanel
 
     init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
+        self.scale = scale
         // The size is set explicitly: `NSHostingView.fittingSize` is still zero here, and placing a zero-sized panel
         // in the corner pushed the real panel off screen.
         panel = SheepPanel(contentRect: NSRect(origin: .zero, size: SheepView.size(scale: scale)))
@@ -28,8 +31,26 @@ final class SheepPanelController {
         panel.orderFrontRegardless()
     }
 
+    /// Hides the panel (for example while a fullscreen window covers its display) or shows it again in place.
+    func setHidden(_ hidden: Bool) {
+        if hidden {
+            panel.orderOut(nil)
+        } else {
+            panel.orderFrontRegardless()
+        }
+    }
+
     var frame: NSRect {
         panel.frame
+    }
+
+    func setOrigin(_ origin: NSPoint) {
+        panel.setFrameOrigin(origin)
+    }
+
+    /// Whether the sheep can be dragged; off while it escapes, so it can't be grabbed on the run.
+    func setInteractive(_ interactive: Bool) {
+        panel.ignoresMouseEvents = !interactive
     }
 
     /// The screen for a panel at `frame`: the one showing most of it, or the nearest one.
