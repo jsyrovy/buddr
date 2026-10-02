@@ -28,8 +28,10 @@ With several agents, the most urgent state wins: blocked > done > working > idle
 git clone https://github.com/jsyrovy/buddr.git
 cd buddr
 make run      # builds the Debug app into build/DerivedData and opens it
+make install  # builds Release, installs it to ~/Applications and opens it
 ```
 
+Install somewhere else with `make install INSTALL_DIR=/Applications`; `make uninstall` removes the app again.
 Other targets: `make build`, `make test`, `make lint`, `make format`, `make clean`. The app has no Dock icon; quit it
 from its menu bar item.
 

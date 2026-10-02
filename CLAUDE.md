@@ -10,6 +10,7 @@ agents. It is information only – it never focuses, attaches to, or sends anyth
 make build    # xcodebuild Debug build into build/DerivedData
 make test     # Swift Testing unit tests (hosted by the app)
 make run      # build, kill a running instance, open the app
+make install  # Release build into ~/Applications (INSTALL_DIR=…), restart it; make uninstall removes it
 make format   # xcrun swift-format, in place
 make lint     # xcrun swift-format lint --strict
 make clean    # rm -rf build
