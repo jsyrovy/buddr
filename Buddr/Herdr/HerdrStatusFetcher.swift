@@ -29,20 +29,15 @@ struct HerdrStatusFetcher: Sendable {
             for (index, source) in sources.enumerated() {
                 group.addTask { (index, await Self.fetchAgents(of: source, client: client)) }
             }
-            var results: [Int: Result<[AgentRecord], SourceFailure>] = [:]
-            for await (index, result) in group {
-                results[index] = result
-            }
-            return results
+            return await group.reduce(into: []) { $0.append($1) }
         }
 
         // Keep the order of `session list`, so snapshots are stable between polls.
         var snapshot = HerdrSnapshot.empty
-        for index in sources.indices {
-            switch results[index] {
+        for (_, result) in results.sorted(by: { $0.0 < $1.0 }) {
+            switch result {
             case .success(let agents): snapshot.agents += agents
             case .failure(let failure): snapshot.failures.append(failure)
-            case nil: break
             }
         }
         return snapshot

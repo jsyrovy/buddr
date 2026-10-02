@@ -8,20 +8,10 @@ struct HerdrSessionList: Decodable, Sendable {
 struct HerdrSession: Decodable, Sendable, Equatable {
     let name: String
     let running: Bool
-    let isDefault: Bool
-    let socketPath: String?
-
-    private enum CodingKeys: String, CodingKey {
-        case name
-        case running
-        case isDefault = "default"
-        case socketPath
-    }
 }
 
 /// Envelope of socket API responses printed by `herdr … agent list` and friends.
 struct HerdrResponse<Result: Decodable & Sendable>: Decodable, Sendable {
-    let id: String?
     let result: Result?
     let error: HerdrErrorBody?
 }
@@ -40,9 +30,7 @@ struct HerdrAgent: Decodable, Sendable, Equatable {
     let agent: String?
     let agentStatus: AgentStatus
     let paneId: String
-    let tabId: String
     let workspaceId: String
-    let focused: Bool
     let cwd: String?
     let foregroundCwd: String?
     let terminalTitle: String?
@@ -57,7 +45,4 @@ struct HerdrWorkspaceList: Decodable, Sendable {
 struct HerdrWorkspace: Decodable, Sendable, Equatable {
     let workspaceId: String
     let label: String
-    let number: Int
-    let focused: Bool
-    let agentStatus: AgentStatus
 }

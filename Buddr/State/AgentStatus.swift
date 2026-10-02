@@ -1,5 +1,6 @@
 /// Status of a single herdr agent, as reported in `agent_status`.
-enum AgentStatus: String, Sendable, CaseIterable {
+/// Statuses are ordered by urgency: blocked > done > working > idle > unknown.
+enum AgentStatus: String, Sendable, CaseIterable, Comparable {
     case idle
     case working
     /// Waiting for the user.
@@ -8,8 +9,7 @@ enum AgentStatus: String, Sendable, CaseIterable {
     case done
     case unknown
 
-    /// Higher wins when several agents are aggregated into one state.
-    var urgency: Int {
+    private var urgency: Int {
         switch self {
         case .blocked: 4
         case .done: 3
@@ -21,7 +21,11 @@ enum AgentStatus: String, Sendable, CaseIterable {
 
     /// The most urgent status (blocked > done > working > idle > unknown); `unknown` when there are no agents.
     static func aggregate(_ statuses: some Sequence<AgentStatus>) -> AgentStatus {
-        statuses.max { $0.urgency < $1.urgency } ?? .unknown
+        statuses.max() ?? .unknown
+    }
+
+    static func < (lhs: AgentStatus, rhs: AgentStatus) -> Bool {
+        lhs.urgency < rhs.urgency
     }
 }
 

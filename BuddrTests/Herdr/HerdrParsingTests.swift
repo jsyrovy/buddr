@@ -6,12 +6,7 @@ import Testing
 struct HerdrParsingTests {
     @Test func parsesSessionList() throws {
         let sessions = try HerdrClient.parseSessions(Fixture.data("session-list"))
-        #expect(
-            sessions == [
-                HerdrSession(
-                    name: "default", running: true, isDefault: true,
-                    socketPath: "/Users/me/.config/herdr/herdr.sock")
-            ])
+        #expect(sessions == [HerdrSession(name: "default", running: true)])
     }
 
     @Test func parsesSessionListWithStoppedSessions() throws {
@@ -27,9 +22,7 @@ struct HerdrParsingTests {
         #expect(agent.agent == "claude")
         #expect(agent.agentStatus == .working)
         #expect(agent.paneId == "wG:p1")
-        #expect(agent.tabId == "wG:t1")
         #expect(agent.workspaceId == "wG")
-        #expect(agent.focused)
         #expect(agent.cwd == "/Users/me/code/buddr")
         #expect(agent.foregroundCwd == "/Users/me/code/buddr")
         #expect(agent.terminalTitle == "◑ buddr impl1")
@@ -54,10 +47,7 @@ struct HerdrParsingTests {
         let list: HerdrWorkspaceList = try HerdrClient.parseResult(
             Fixture.data("workspace-list"), command: "workspace list")
         #expect(list.workspaces.map(\.label) == ["temp", "notes", "dotfiles", "website", "buddr"])
-        #expect(list.workspaces.map(\.number) == [1, 2, 3, 4, 5])
         #expect(list.workspaces.last?.workspaceId == "wG")
-        #expect(list.workspaces.last?.agentStatus == .working)
-        #expect(list.workspaces.last?.focused == true)
     }
 
     @Test func errorEnvelopeBecomesAPIError() throws {

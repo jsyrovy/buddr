@@ -22,7 +22,7 @@ struct AgentStatusTests {
     }
 
     @Test func priorityOrderIsBlockedDoneWorkingIdleUnknown() {
-        let ordered = AgentStatus.allCases.sorted { $0.urgency > $1.urgency }
+        let ordered = AgentStatus.allCases.sorted(by: >)
         #expect(ordered == [.blocked, .done, .working, .idle, .unknown])
     }
 

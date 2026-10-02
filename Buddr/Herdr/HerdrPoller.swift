@@ -1,6 +1,6 @@
 import os
 
-/// Polls herdr periodically and reports every snapshot on the main actor.
+/// Polls herdr periodically and reports changed snapshots on the main actor.
 ///
 /// Polls never overlap: the next one starts `interval` after the previous one finished, so a slow herdr can't pile up
 /// subprocesses. The fetch itself runs off the main actor.
@@ -40,17 +40,19 @@ final class HerdrPoller {
         task = nil
     }
 
+    /// Forwards only snapshots that differ from the previous one, and logs what changed.
     private func deliver(_ snapshot: HerdrSnapshot) {
-        if snapshot.failures != lastSnapshot?.failures {
+        guard snapshot != lastSnapshot else { return }
+        if snapshot.failures != lastSnapshot?.failures ?? [] {
+            if snapshot.failures.isEmpty {
+                Self.logger.info("all sources reachable")
+            }
             for failure in snapshot.failures {
                 Self.logger.error(
                     "\(failure.source?.displayName ?? "herdr", privacy: .public): \(failure.message, privacy: .public)")
             }
         }
-        if snapshot.status != lastSnapshot?.status || snapshot.agents.count != lastSnapshot?.agents.count {
-            Self.logger.info(
-                "status \(snapshot.status.rawValue, privacy: .public), \(snapshot.agents.count) agent(s)")
-        }
+        Self.logger.info("status \(snapshot.status.rawValue, privacy: .public), \(snapshot.agents.count) agent(s)")
         lastSnapshot = snapshot
         onUpdate(snapshot)
     }

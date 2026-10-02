@@ -43,25 +43,21 @@ struct HerdrClient: Sendable {
     let timeout: Duration
 
     func sessions() async throws -> [HerdrSession] {
-        let arguments = ["session", "list", "--json"]
-        return try Self.parseSessions(await run(arguments), command: Self.commandName(arguments))
+        try await run(["session", "list", "--json"], parse: Self.parseSessions)
     }
 
     func agents(on source: HerdrSource) async throws -> [HerdrAgent] {
-        let arguments = source.arguments + ["agent", "list"]
-        let list: HerdrAgentList = try Self.parseResult(await run(arguments), command: Self.commandName(arguments))
+        let list: HerdrAgentList = try await run(source.arguments + ["agent", "list"], parse: Self.parseResult)
         return list.agents
     }
 
     func workspaces(on source: HerdrSource) async throws -> [HerdrWorkspace] {
-        let arguments = source.arguments + ["workspace", "list"]
-        let list: HerdrWorkspaceList = try Self.parseResult(
-            await run(arguments), command: Self.commandName(arguments))
+        let list: HerdrWorkspaceList = try await run(source.arguments + ["workspace", "list"], parse: Self.parseResult)
         return list.workspaces
     }
 
-    /// Runs herdr and returns stdout of a successful run. herdr prints error envelopes to stderr with exit status 1.
-    private func run(_ arguments: [String]) async throws -> Data {
+    /// Runs herdr and parses stdout of a successful run. herdr prints error envelopes to stderr with exit status 1.
+    private func run<T>(_ arguments: [String], parse: (Data, String) throws -> T) async throws -> T {
         let command = Self.commandName(arguments)
         let output: ProcessOutput
         do {
@@ -80,7 +76,7 @@ struct HerdrClient: Sendable {
             let stderr = String(decoding: output.stderr, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
             throw HerdrError.commandFailed(command: command, exitStatus: output.exitStatus, stderr: stderr)
         }
-        return output.stdout
+        return try parse(output.stdout, command)
     }
 
     // MARK: Parsing
