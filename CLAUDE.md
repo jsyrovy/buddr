@@ -49,10 +49,13 @@ Buddr/
               (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
               of local sessions or of saved machines, sources queried concurrently), HerdrPoller (periodic loop on
               the main actor), HerdrMonitor (one poller per kind of source; combines, filters and logs changes)
-  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure
+  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure,
+              AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list)
+  Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs
-  Support/    fixture loader, FakeCommandRunner, ManualSleeper, ScriptedFetch + SnapshotRecorder, AgentRecord.stub
+  Support/    fixture loader, FakeCommandRunner, ManualSleeper, ScriptedFetch + SnapshotRecorder, AgentRecord.stub,
+              HerdrSnapshot init that derives the queried sources
 ```
 
 ## Conventions
@@ -81,9 +84,22 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `isMovableByWindowBackground`). A click is a drag that ended with the panel moved by at most
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is
   released) the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu
-  bar: SwiftUI `MenuBarExtra` with the settings as toggles ("Watch Remote Machines") and "Quit Buddr". A separate
-  Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate itself to show
-  one).
+  bar: SwiftUI `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the
+  rows) with the agent list, the settings as toggles ("Watch Remote Machines") and "Quit Buddr". A separate Settings
+  window is not worth it until there are more settings (an `LSUIElement` app has to activate itself to show one).
+- Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section
+  per source – "This Mac" (with the session name when several local sessions run), then the machines by label – in
+  the order of discovery (`HerdrSnapshot.sources`, so sources without agents and failed ones show up too). A failed
+  source shows only its error, no stale agents. Within a source, workspaces in herdr's sidebar order (`number`);
+  agents in `agent list` order. Order never depends on status, so rows don't jump while the list is open. More than
+  `WorkspaceGroup.idleFoldLimit` idle agents in a workspace are folded into one "N idle" row that unfolds on click.
+  Status icons are SF Symbols differing in shape and color. Rows are information only (no focusing).
+- The list reads `SnapshotStore`, which `AppDelegate` updates with every changed combined snapshot of
+  `HerdrMonitor`, so an open list updates live, and disabled machines disappear from it like from the sheep's state.
+  Opening the list (`onAppear`, which a `MenuBarExtra` window calls on every opening) calls `HerdrMonitor.refresh()`:
+  every enabled poller that sleeps between polls polls right away (`HerdrPoller.refresh()` replaces the sleeping loop
+  with a new one, which starts with a poll); one whose poll runs is left alone, so repeated openings never stack up
+  `--machine` calls. No "updated … ago" label for now (the user didn't like a ticking age).
 - Position: the origin after every drag is saved in `UserDefaults` (`panelOrigin`, `PanelPositionStore`). At launch
   the panel goes there, moved into the `visibleFrame` of its screen or the nearest one (displays may have changed);
   without a saved position it starts in the bottom-right corner of `NSScreen.main`. Escape moves are not saved.
@@ -96,7 +112,7 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `watchesRemoteMachines`, on by default). Off stops the machine poller – no `--machine` calls at all, a running one
   is cancelled – and removes the machines' agents and failures from the snapshot at once
   (`HerdrMonitor.setEnabled(_:_:)`); on polls them right away.
-- A failed source is reported as a failure (later: "⚠" badge + error in the info bubble); it never blocks the others.
+- A failed source is reported as a failure (⚠ + error in the menu bar list); it never blocks the others.
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
 - Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, non-herdr sources.
@@ -228,7 +244,8 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
   instead of `BuddrApp` (`RuntimeEnvironment.isRunningTests`), so no panel, polling or menu bar item starts and the
   real app code needs no test guards.
 - Checking the running app: `screencapture` needs the Screen Recording permission (without it: "could not create
-  image from display"). Without it, render views offscreen with SwiftUI `ImageRenderer` in a throwaway test, and
+  image from display"). Without it, render views offscreen with SwiftUI `ImageRenderer` in a throwaway test (it
+  draws neither the content of a `ScrollView` nor AppKit-backed controls such as `.link` buttons), and
   inspect the panel with `CGWindowListCopyWindowInfo` (owner `Buddr`, layer 3 = `.floating`) – check that its
   bounds lie inside a screen, not just that it exists. Note that `NSScreen.main` is the screen with keyboard focus,
   not necessarily the built-in display.
@@ -260,7 +277,8 @@ which is deliberately not unit-tested.
 Aim for ~100 %, every branch covered by a meaningful test – this is pure, deterministic logic where bugs hide and
 tests are cheap and stable:
 
-- `State/` – status decoding (including unknown future values) and priority aggregation.
+- `State/` – status decoding (including unknown future values), priority aggregation, `AgentOverview` grouping and
+  ordering.
 - `Herdr/` except `HerdrPoller` and `HerdrMonitor` – output parsing, the error envelope, binary lookup, concurrent
   fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
   grandchildren.
@@ -278,6 +296,7 @@ Also aim high, but these need a seam or a rendering step – never real-time wai
   `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and returns once
   the loop has ended, so tests can check that nothing happens after it. `HerdrPoller.cancel()` stops at once without
   waiting (nothing is reported after it); a restarted loop waits for the cancelled one, so two never overlap.
+  `refresh()` is checked the same way: a sleep reported by `ManualSleeper` ends without `wake()`.
 - `SpriteCanvas` – rendered with `ImageRenderer` and compared pixel by pixel with the grid (integer scale, no
   smoothing, transparency, layer order, opacity). This checks the actual output, which line coverage of a `Canvas`
   closure cannot.
@@ -289,6 +308,7 @@ Fine to leave uncovered:
   depend on the machine. Keep these files pure wiring instead: logic that needs a test moves into a testable type.
 - `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling, `FullscreenMonitor` (notifications,
   window server queries), `SheepEscape` (moving the real panel in real time). Check them by running the app.
+- `Menu/` – `AgentListView` (layout only; the logic is in `AgentOverview`). Check it with `ImageRenderer` or the app.
 - Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
   `ProcessRunner.signalProcessGroup`.
 

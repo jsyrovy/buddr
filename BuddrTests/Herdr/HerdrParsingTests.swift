@@ -55,6 +55,7 @@ struct HerdrParsingTests {
             Fixture.data("workspace-list"), command: "workspace list")
         #expect(list.workspaces.map(\.label) == ["temp", "notes", "dotfiles", "website", "buddr"])
         #expect(list.workspaces.last?.workspaceId == "wG")
+        #expect(list.workspaces.map(\.number) == [1, 2, 3, 4, 5])
     }
 
     @Test func errorEnvelopeBecomesAPIError() throws {
@@ -91,6 +92,8 @@ struct HerdrParsingTests {
             agents.agents, workspaces: workspaces.workspaces, source: .localSession("default"))
 
         #expect(records.map(\.workspace) == ["buddr", "dotfiles", "website", "temp", "wZ"])
+        #expect(records.map(\.workspaceID) == ["wG", "wE", "wF", "w7", "wZ"])
+        #expect(records.map(\.workspaceNumber) == [5, 3, 4, 1, nil])
         #expect(records.map(\.paneID) == ["wG:p1", "wE:p2", "wF:p3", "w7:p4", "wZ:p5"])
         #expect(records.allSatisfy { $0.source == .localSession("default") })
         // Stripped title preferred, raw title as fallback, empty when there is none.

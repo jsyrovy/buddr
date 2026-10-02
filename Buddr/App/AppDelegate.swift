@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = Preferences()
+    let snapshots = SnapshotStore()
 
     private var animation: SheepAnimationDriver?
     private var panelController: SheepPanelController?
@@ -32,7 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.fullscreenMonitor = fullscreenMonitor
 
         let preferences = preferences
+        let snapshots = snapshots
         let herdrMonitor = HerdrMonitor { snapshot in
+            snapshots.snapshot = snapshot
             animation.setStatus(snapshot.status)
         }
         let applyPreferences: @MainActor @Sendable () -> Void = {
@@ -42,5 +45,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         preferences.onChange = applyPreferences
         herdrMonitor.start()
         self.herdrMonitor = herdrMonitor
+    }
+
+    func agentListOpened() {
+        herdrMonitor?.refresh()
     }
 }

@@ -19,13 +19,9 @@ struct BuddrApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            @Bindable var preferences = appDelegate.preferences
-            Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
-            Divider()
-            Button("Quit Buddr") {
-                NSApplication.shared.terminate(nil)
+            AgentListView(store: appDelegate.snapshots, preferences: appDelegate.preferences) {
+                appDelegate.agentListOpened()
             }
-            .keyboardShortcut("q")
         } label: {
             Image(
                 nsImage: .template(
@@ -33,6 +29,7 @@ struct BuddrApp: App {
             )
             .accessibilityLabel("Buddr")
         }
+        .menuBarExtraStyle(.window)
     }
 }
 

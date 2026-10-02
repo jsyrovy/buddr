@@ -62,6 +62,15 @@ final class HerdrMonitor {
         }
     }
 
+    /// Polls every enabled kind right away, unless its poll is already running (disabled kinds don't run). For a
+    /// fresh view when the agent list opens.
+    func refresh() {
+        Self.logger.info("refresh")
+        for poller in pollers.values {
+            poller.refresh()
+        }
+    }
+
     /// All kinds are enabled initially; disabling one before `start()` keeps it from being polled. Enabling a kind
     /// polls it right away (if the monitor runs). Disabling it stops its polling and removes its
     /// agents and failures from the snapshot at once.

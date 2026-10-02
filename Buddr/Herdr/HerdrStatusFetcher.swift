@@ -28,7 +28,7 @@ struct HerdrStatusFetcher: Sendable {
         // Resolved on every poll, so installing herdr while Buddr runs just works.
         guard let executable = locator.locate() else {
             return HerdrSnapshot(
-                agents: [], failures: [SourceFailure(source: nil, error: HerdrError.executableNotFound)])
+                agents: [], failures: [SourceFailure(source: nil, error: HerdrError.executableNotFound)], sources: [])
         }
 
         let client = HerdrClient(executable: executable, runner: runner)
@@ -37,7 +37,7 @@ struct HerdrStatusFetcher: Sendable {
         do {
             sources = try await discover(client)
         } catch {
-            return HerdrSnapshot(agents: [], failures: [SourceFailure(source: nil, error: error)])
+            return HerdrSnapshot(agents: [], failures: [SourceFailure(source: nil, error: error)], sources: [])
         }
 
         let results = await withTaskGroup(of: (Int, Result<[AgentRecord], SourceFailure>).self) { group in
@@ -48,7 +48,7 @@ struct HerdrStatusFetcher: Sendable {
         }
 
         // Keep the order of the discovery, so snapshots are stable between polls.
-        var snapshot = HerdrSnapshot.empty
+        var snapshot = HerdrSnapshot(agents: [], failures: [], sources: sources)
         for (_, result) in results.sorted(by: { $0.0 < $1.0 }) {
             switch result {
             case .success(let agents): snapshot.agents += agents
@@ -75,11 +75,14 @@ struct HerdrStatusFetcher: Sendable {
 extension AgentRecord {
     /// Combines `agent list` with `workspace list` of the same source.
     static func join(_ agents: [HerdrAgent], workspaces: [HerdrWorkspace], source: HerdrSource) -> [AgentRecord] {
-        let labels = Dictionary(workspaces.map { ($0.workspaceId, $0.label) }, uniquingKeysWith: { first, _ in first })
+        let workspaces = Dictionary(workspaces.map { ($0.workspaceId, $0) }, uniquingKeysWith: { first, _ in first })
         return agents.map { agent in
-            AgentRecord(
+            let workspace = workspaces[agent.workspaceId]
+            return AgentRecord(
                 source: source,
-                workspace: labels[agent.workspaceId] ?? agent.workspaceId,
+                workspaceID: agent.workspaceId,
+                workspace: workspace?.label ?? agent.workspaceId,
+                workspaceNumber: workspace?.number,
                 paneID: agent.paneId,
                 agent: agent.agent,
                 status: agent.agentStatus,

@@ -15,6 +15,8 @@ final class HerdrPoller {
     private let onUpdate: @MainActor (HerdrSnapshot) -> Void
     /// The latest loop; once cancelled, it may still be finishing its fetch.
     private var loop: Task<Void, Never>?
+    /// Whether the loop waits between two polls; `refresh()` restarts it then.
+    private var isSleeping = false
 
     init(_ feed: Feed, onUpdate: @escaping @MainActor (HerdrSnapshot) -> Void) {
         self.feed = feed
@@ -31,9 +33,19 @@ final class HerdrPoller {
                 let snapshot = await feed.fetch()
                 guard let self, !Task.isCancelled else { return }
                 self.onUpdate(snapshot)
+                self.isSleeping = true
                 try? await feed.sleep(feed.interval)
+                self.isSleeping = false
             }
         }
+    }
+
+    /// Polls right away if the loop is sleeping between polls: the sleeping loop is replaced by a new one, which
+    /// starts with a poll. Does nothing while a poll runs (its result is about to arrive) or when not running.
+    func refresh() {
+        guard isSleeping, loop?.isCancelled == false else { return }
+        cancel()
+        start()
     }
 
     /// Stops polling without waiting: nothing is reported after this returns, a running fetch is cancelled and the

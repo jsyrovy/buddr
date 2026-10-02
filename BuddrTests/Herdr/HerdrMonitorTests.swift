@@ -177,4 +177,42 @@ struct HerdrMonitorTests {
             delivered.snapshots.last
                 == HerdrSnapshot(agents: Self.local.agents + Self.machineBlocked.agents, failures: []))
     }
+
+    @Test func refreshPollsEveryEnabledKindRightAway() async {
+        let local = ScriptedFetch([Self.local, Self.localBlocked])
+        let machines = ScriptedFetch([Self.machine, Self.machineBlocked])
+        let monitor = monitor(local: local, machines: machines)
+        var localSleeps = localSleeper.sleeps.makeAsyncIterator()
+        var machineSleeps = machineSleeper.sleeps.makeAsyncIterator()
+
+        monitor.start()
+        _ = await localSleeps.next()
+        _ = await machineSleeps.next()
+        monitor.refresh()
+        _ = await localSleeps.next()
+        _ = await machineSleeps.next()
+        await monitor.stop()
+
+        #expect(local.count == 2)
+        #expect(machines.count == 2)
+        #expect(
+            delivered.snapshots.last
+                == HerdrSnapshot(agents: Self.localBlocked.agents + Self.machineBlocked.agents, failures: []))
+    }
+
+    @Test func refreshLeavesADisabledKindAlone() async {
+        let machines = ScriptedFetch([Self.machine])
+        let monitor = monitor(local: ScriptedFetch([Self.local, Self.localBlocked]), machines: machines)
+        var localSleeps = localSleeper.sleeps.makeAsyncIterator()
+
+        monitor.setEnabled(false, .machines)
+        monitor.start()
+        _ = await localSleeps.next()
+        monitor.refresh()
+        _ = await localSleeps.next()
+        await monitor.stop()
+
+        #expect(machines.count == 0)
+        #expect(delivered.snapshots == [Self.local, Self.localBlocked])
+    }
 }

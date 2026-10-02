@@ -69,4 +69,38 @@ struct HerdrPollerTests {
         #expect(delivered.snapshots == [Self.working])
         #expect(fetch.count == 1)
     }
+
+    @Test func refreshCutsTheSleepBetweenPollsShort() async {
+        let fetch = ScriptedFetch([Self.working, Self.blocked])
+        let poller = poller(fetch)
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+
+        poller.start()
+        _ = await sleeps.next()
+        poller.refresh()
+        // The next poll ran without `wake()`, and the loop sleeps the full interval again.
+        #expect(await sleeps.next() == Self.interval)
+        await poller.stop()
+
+        #expect(fetch.count == 2)
+        #expect(delivered.snapshots == [Self.working, Self.blocked])
+    }
+
+    @Test func refreshDoesNotStartASecondPollWhileOneRuns() async {
+        let fetch = ScriptedFetch([Self.working])
+        let poller = poller(fetch)
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        var calls = fetch.calls.makeAsyncIterator()
+
+        poller.refresh()
+        poller.start()
+        _ = await sleeps.next()
+        sleeper.wake()
+        _ = await calls.next()
+        _ = await calls.next()
+        poller.refresh()
+        await poller.stop()
+
+        #expect(fetch.count == 2)
+    }
 }

@@ -52,4 +52,6 @@ struct HerdrWorkspaceList: Decodable, Sendable {
 struct HerdrWorkspace: Decodable, Sendable, Equatable {
     let workspaceId: String
     let label: String
+    /// Position in herdr's sidebar, starting at 1.
+    let number: Int?
 }

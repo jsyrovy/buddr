@@ -15,13 +15,15 @@ struct HerdrSnapshotTests {
     @Test func combiningConcatenatesThePartsAndKeepsRepeatedFailuresOnce() {
         let pi = HerdrSource.machine(id: "m2", label: "Pi")
         let missing = SourceFailure(source: nil, message: "herdr not found")
-        let local = HerdrSnapshot(agents: [.stub(.idle)], failures: [missing])
+        let devbox = HerdrSource.machine(id: "m1", label: "Devbox")
+        let local = HerdrSnapshot(agents: [.stub(.idle)], failures: [missing], sources: [.localSession("default")])
         let machines = HerdrSnapshot(
-            agents: [.stub(.blocked, source: .machine(id: "m1", label: "Devbox"))],
-            failures: [missing, SourceFailure(source: pi, message: "timed out")])
+            agents: [.stub(.blocked, source: devbox)],
+            failures: [missing, SourceFailure(source: pi, message: "timed out")], sources: [devbox, pi])
         let combined = HerdrSnapshot.combining([local, machines])
 
         #expect(combined.agents == local.agents + machines.agents)
+        #expect(combined.sources == [.localSession("default"), devbox, pi])
         #expect(combined.failures == [missing, SourceFailure(source: pi, message: "timed out")])
         #expect(combined.status == .blocked)
         #expect(HerdrSnapshot.combining([]) == .empty)
