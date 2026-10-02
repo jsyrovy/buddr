@@ -19,10 +19,10 @@ protocol CommandRunning: Sendable {
 
 /// Runs subprocesses with `stdin = /dev/null` and a hard timeout.
 ///
-/// On timeout the process gets SIGTERM and, if it is still alive after `killGracePeriod`, SIGKILL. Cancelling the
-/// calling task kills the process. The timeout watcher is a task that holds no pipes, so it never delays reading the
-/// output. A grandchild that inherited stdout (for example `ssh` started by herdr) can keep the pipe open after the
-/// process itself exited; output is only awaited for `outputGracePeriod` after exit.
+/// On timeout the process group gets SIGTERM and, if the process is still alive after `killGracePeriod`, SIGKILL.
+/// Cancelling the calling task kills the process group. The timeout watcher is a task that holds no pipes, so it never
+/// delays reading the output. A grandchild that inherited stdout and detached from the group can keep the pipe open
+/// after the process itself exited; output is only awaited for `outputGracePeriod` after exit.
 struct ProcessRunner: CommandRunning {
     var killGracePeriod: Duration = .seconds(1)
     var outputGracePeriod: Duration = .milliseconds(500)
@@ -41,11 +41,7 @@ struct ProcessRunner: CommandRunning {
         let stdout = PipeCollector(stdoutPipe.fileHandleForReading)
         let stderr = PipeCollector(stderrPipe.fileHandleForReading)
         let exited = OneShotSignal()
-        let exitStatus = OSAllocatedUnfairLock<Int32>(initialState: -1)
-        process.terminationHandler = { process in
-            exitStatus.withLock { $0 = process.terminationStatus }
-            exited.fire()
-        }
+        process.terminationHandler = { _ in exited.fire() }
 
         do {
             try process.run()
@@ -56,48 +52,54 @@ struct ProcessRunner: CommandRunning {
         }
 
         let pid = process.processIdentifier
-        let timedOut = OSAllocatedUnfairLock(initialState: false)
         let killGracePeriod = killGracePeriod
+        /// Returns whether the process had to be stopped because of the timeout.
         let watchdog = Task {
             do {
                 try await Task.sleep(for: timeout)
             } catch {
-                return  // The process exited in time.
+                return false  // The process exited in time.
             }
-            guard !exited.hasFired else { return }
-            timedOut.withLock { $0 = true }
-            kill(pid, SIGTERM)
+            guard !exited.hasFired else { return false }
+            Self.signalProcessGroup(of: pid, SIGTERM)
             await exited.wait(timeout: killGracePeriod)
             if !exited.hasFired {
-                kill(pid, SIGKILL)
+                Self.signalProcessGroup(of: pid, SIGKILL)
             }
+            return true
         }
 
         await withTaskCancellationHandler {
             await exited.wait()
         } onCancel: {
             if !exited.hasFired {
-                kill(pid, SIGKILL)
+                Self.signalProcessGroup(of: pid, SIGKILL)
             }
         }
+        watchdog.cancel()
         if Task.isCancelled {
-            watchdog.cancel()
             _ = stdout.stop()
             _ = stderr.stop()
             throw CancellationError()
         }
-        watchdog.cancel()
 
         async let stdoutEnded: Void = stdout.ended.wait(timeout: outputGracePeriod)
         async let stderrEnded: Void = stderr.ended.wait(timeout: outputGracePeriod)
         _ = await (stdoutEnded, stderrEnded)
-        let output = ProcessOutput(
-            exitStatus: exitStatus.withLock { $0 }, stdout: stdout.stop(), stderr: stderr.stop())
+        let output = ProcessOutput(exitStatus: process.terminationStatus, stdout: stdout.stop(), stderr: stderr.stop())
 
-        if timedOut.withLock({ $0 }) {
+        if await watchdog.value {
             throw ProcessRunnerError.timedOut(timeout)
         }
         return output
+    }
+
+    /// Foundation starts the child as the leader of its own process group, so signalling the group also stops
+    /// grandchildren (such as `ssh`) that would otherwise survive and keep the output pipes open.
+    private static func signalProcessGroup(of pid: pid_t, _ signal: Int32) {
+        if kill(-pid, signal) != 0 {
+            kill(pid, signal)
+        }
     }
 }
 

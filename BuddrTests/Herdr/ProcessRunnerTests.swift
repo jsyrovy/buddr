@@ -51,6 +51,18 @@ struct ProcessRunnerTests {
         #expect(clock.now - start < .seconds(2))
     }
 
+    @Test func timeoutAlsoStopsGrandchildren() async throws {
+        let pidFile = FileManager.default.temporaryDirectory.appendingPathComponent("buddr-\(UUID().uuidString).pid")
+        defer { try? FileManager.default.removeItem(at: pidFile) }
+        await #expect(throws: ProcessRunnerError.timedOut(.milliseconds(300))) {
+            try await sh("sleep 5 & echo $! > '\(pidFile.path)'; wait", timeout: .milliseconds(300))
+        }
+        let grandchild = try #require(
+            pid_t(String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(kill(grandchild, 0) != 0, "the background sleep should have been killed with its parent")
+    }
+
     @Test func doesNotWaitForGrandchildrenHoldingThePipe() async throws {
         // The background `sleep` inherits stdout and keeps it open after `sh` exits.
         let start = clock.now

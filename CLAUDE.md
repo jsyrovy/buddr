@@ -39,9 +39,9 @@ Buddr/
               grids, frame composition, clip timing)
   Animation/  AnimationClip / SheepClipID, SheepAnimator (pure state machine), SheepAnimationDriver (@Observable
               timer that plays it), SplitMix64
-  Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout), HerdrClient (typed CLI calls +
-              parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot, sources queried
-              concurrently), HerdrPoller (periodic loop on the main actor)
+  Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
+              (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot,
+              sources queried concurrently), HerdrPoller (periodic loop on the main actor)
   State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs
@@ -114,7 +114,8 @@ herdr api schema --json              # full JSON schema of the socket API (reque
   timeout. One slow or unreachable source must never block the others or the UI.
 - A timeout watcher must not hold the output pipe of the command being read, otherwise every call waits for the full
   timeout (lesson from the shell prototype). Likewise, a grandchild (e.g. `ssh`) can keep the pipe open after the
-  direct child exits – stop waiting for EOF shortly after the process exits.
+  direct child exits – stop waiting for EOF shortly after the process exits. Foundation starts the child as a process
+  group leader, so `ProcessRunner` signals the whole group (`kill(-pid, …)`) on timeout and cancellation.
 - Later (phase 4): event-driven updates over the socket instead of polling. Newline-delimited JSON over the Unix
   socket from `socket_path` (`~/.config/herdr/herdr.sock`, named sessions `~/.config/herdr/sessions/<name>/herdr.sock`).
   Request `{"id":"req_1","method":"agent.list","params":{}}`; `events.subscribe` answers with an ack line, then pushes
