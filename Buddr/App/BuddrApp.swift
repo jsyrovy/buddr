@@ -18,11 +18,17 @@ struct BuddrApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("Buddr", systemImage: "pawprint.fill") {
+        MenuBarExtra {
             Button("Quit Buddr") {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q")
+        } label: {
+            Image(
+                nsImage: .template(
+                    from: SheepSprites.menuBarIcon, pointsPerPixel: SheepSprites.menuBarIconPointsPerPixel)
+            )
+            .accessibilityLabel("Buddr")
         }
     }
 }

@@ -14,6 +14,8 @@ enum SheepSprites {
     static let headY = 1
     /// Opacity of the whole picture while the state is unknown.
     static let unknownOpacity = 0.45
+    /// Size of one menu bar icon pixel in points: a whole number of device pixels on every display.
+    static let menuBarIconPointsPerPixel = 1.0
 
     // MARK: Palette
 
@@ -140,6 +142,27 @@ enum SheepSprites {
         static let fleck = [
             "W"
         ]
+
+        /// The sheep as a one-color silhouette for the menu bar, where only the shape counts (the system tints it).
+        /// Drawn for the small size rather than taken from the sprites: wool, head and legs are filled, a gap keeps
+        /// the head apart from the body and the eye is a hole.
+        static let menuBarIcon = [
+            "..........OO..OO....",
+            "......OO.OOOOOOOOO..",
+            ".....OOOOOOOOOOOOOO.",
+            "..OOO.OOOOOOOOOOOOOO",
+            ".OOOOO.OOOOOOOOOOOOO",
+            "OOOOOOO.OOOOOOOOOOOO",
+            "OO.OOOO.OOOOOOOOOOOO",
+            "OOOOOOO.OOOOOOOOOOOO",
+            ".OOOOO.OOOOOOOOOOOOO",
+            "..OOO..OOOOOOOOOOOO.",
+            ".......OOOOOOOOOOOO.",
+            "........OO.OO.OO.O..",
+            "........O.O....O.O..",
+            "........O.O....O.O..",
+            "........O.O....O.O..",
+        ]
     }
 
     /// Every grid with a name, for validation in tests.
@@ -161,6 +184,7 @@ enum SheepSprites {
         ("smallDust", Grid.smallDust),
         ("largeDust", Grid.largeDust),
         ("fleck", Grid.fleck),
+        ("menuBarIcon", Grid.menuBarIcon),
     ]
 
     // MARK: Sprites
@@ -190,6 +214,8 @@ enum SheepSprites {
         static let largeDust = sprite(Grid.largeDust).outlined(with: outline)
         static let fleck = sprite(Grid.fleck)
     }
+
+    static let menuBarIcon = sprite(Grid.menuBarIcon)
 
     // MARK: Frames
 
