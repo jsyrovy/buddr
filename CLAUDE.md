@@ -36,7 +36,13 @@ Buddr/
   App/        @main App (MenuBarExtra with Quit), AppDelegate wiring, RuntimeEnvironment
   Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all pixel data)
+  Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout), HerdrClient (typed CLI calls +
+              parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot, sources queried
+              concurrently), HerdrPoller (periodic loop on the main actor)
+  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure
 BuddrTests/   Swift Testing tests, mirroring the app folders
+  Fixtures/   herdr CLI JSON outputs
+  Support/    fixture loader, FakeCommandRunner
 ```
 
 ## Conventions
@@ -44,7 +50,9 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
 - Everything in the repo (code, comments, docs, commit messages) is in English.
 - No third-party dependencies. No image assets: all graphics are drawn in code from pixel grids.
 - All sprite pixel data lives in one file (`SheepSprites.swift`) so the character can be swapped easily.
-- Swift 6 strict concurrency: UI types are `@MainActor`; data crossing actors is `Sendable`.
+- Swift 6 strict concurrency: UI types are `@MainActor`; data crossing actors is `Sendable`. Default actor isolation
+  is left at `nonisolated` (no `SWIFT_DEFAULT_ACTOR_ISOLATION`), and functions that must run off the main actor are
+  marked `@concurrent`. Locks: `OSAllocatedUnfairLock` (`Mutex` needs macOS 15).
 - The UI never waits on a subprocess: all `herdr` calls are async, off the main actor, with timeouts.
 - `herdr` is used read-only (state queries only). Never run commands that change sessions, panes or agents.
 
@@ -92,9 +100,13 @@ herdr api schema --json              # full JSON schema of the socket API (reque
   user). Decode unknown future values as `unknown`.
 - `agent list` / `workspace list` print JSON without `--json`; `session list` and `machine list` need `--json`.
   `machine list --json` is pretty-printed, the others are single-line.
-- Errors use the envelope `{"id":"…","error":{…}}` instead of `result`.
+- Errors use the envelope `{"error":{"code":"…","message":"…"},"id":"…"}` instead of `result`. The CLI prints it to
+  **stderr** with exit status 1 (stdout stays empty).
 - `--machine` must not be combined with `--session` / `--remote`; it uses the session saved in the machine profile.
   Use the profile `id` (labels may be ambiguous). Only query machines with `enabled: true`.
+- Buddr polls `session list --json`, then `agent list` and `workspace list` of every running session concurrently
+  (`HerdrStatusFetcher`). A failing `workspace list` only loses the labels (workspace IDs are shown instead); a
+  failing `agent list` makes the source a `SourceFailure`. The binary is looked up again on every poll.
 - Every subprocess gets a timeout (a few seconds local, ~15 s remote), `stdin = /dev/null`, and is terminated on
   timeout. One slow or unreachable source must never block the others or the UI.
 - A timeout watcher must not hold the output pipe of the command being read, otherwise every call waits for the full
@@ -130,3 +142,13 @@ A running animation finishes its cycle before the state machine switches to anot
   image from display"). Without it, render views offscreen with SwiftUI `ImageRenderer` in a throwaway test, and
   inspect the panel with `CGWindowListCopyWindowInfo` (owner `Buddr`, layer 3 = `.floating`). Note that
   `NSScreen.main` is the screen with keyboard focus, not necessarily the built-in display.
+- Fixtures in `BuddrTests/Fixtures` are real herdr 0.9.3 outputs, anonymized (home directory `/Users/me`, workspace
+  labels, session UUID): `session-list`, `agent-list`, `workspace-list`, `error`. Edited variants derived from the same
+  shapes: `session-list-multiple`, `agent-list-mixed` (all statuses, missing optional fields, a future status),
+  `agent-list-empty`. Never commit personal paths or names. Synchronized groups copy the JSON files flat into the test
+  bundle's `Resources/`; load them with `Fixture.data("name")`.
+- herdr logic is tested through `FakeCommandRunner` (canned output keyed by the joined arguments); `ProcessRunner` is
+  tested with real `/bin/sh` processes (timeouts, SIGTERM-ignoring children, grandchildren holding the pipe).
+- Logs: `os.Logger` subsystem `cz.jsyrovy.buddr`. Watch with
+  `/usr/bin/log stream --level info --predicate 'subsystem == "cz.jsyrovy.buddr"'` – in zsh, plain `log` is a shell
+  builtin.
