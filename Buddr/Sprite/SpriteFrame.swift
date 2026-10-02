@@ -9,4 +9,12 @@ struct SpriteLayer: Hashable, Sendable {
 struct SpriteFrame: Hashable, Sendable {
     var layers: [SpriteLayer]
     var opacity: Double = 1
+
+    /// The frame flipped horizontally within a canvas `canvasWidth` pixels wide.
+    func mirrored(canvasWidth: Int) -> SpriteFrame {
+        let flipped = layers.map { layer in
+            SpriteLayer(sprite: layer.sprite.mirrored(), x: canvasWidth - layer.x - layer.sprite.width, y: layer.y)
+        }
+        return SpriteFrame(layers: flipped, opacity: opacity)
+    }
 }

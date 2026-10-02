@@ -53,6 +53,12 @@ struct PixelSprite: Hashable, Sendable {
         return pixels[y * width + x]
     }
 
+    /// Returns the sprite flipped horizontally.
+    func mirrored() -> PixelSprite {
+        let flipped = (0..<height).flatMap { y in (0..<width).reversed().map { x in color(x: x, y: y) } }
+        return PixelSprite(width: width, height: height, pixels: flipped)
+    }
+
     /// Returns a sprite one pixel larger on every side, with an outline around all opaque pixels
     /// (including diagonal neighbours).
     func outlined(with outline: PixelColor) -> PixelSprite {

@@ -45,4 +45,17 @@ struct PixelSpriteTests {
         let expected = PixelSprite(rows: ["OOO.", "ORO.", "OOO."], palette: ["R": red, "O": black])
         #expect(outlined == expected)
     }
+
+    @Test func mirroringFlipsRows() {
+        let sprite = PixelSprite(rows: ["R..", "RR."], palette: palette)
+        #expect(sprite.mirrored() == PixelSprite(rows: ["..R", ".RR"], palette: palette))
+    }
+
+    @Test func mirroredFrameKeepsLayersInsideTheCanvas() {
+        let sprite = PixelSprite(rows: ["R."], palette: palette)
+        let frame = SpriteFrame(layers: [SpriteLayer(sprite: sprite, x: 1, y: 3)], opacity: 0.5)
+        #expect(
+            frame.mirrored(canvasWidth: 10)
+                == SpriteFrame(layers: [SpriteLayer(sprite: sprite.mirrored(), x: 7, y: 3)], opacity: 0.5))
+    }
 }

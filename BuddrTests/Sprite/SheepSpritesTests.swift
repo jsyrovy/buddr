@@ -11,8 +11,8 @@ struct SheepSpritesTests {
 
     @Test func bodyVariantsShareTheirSize() {
         let bodies = [
-            SheepSprites.Body.stand, SheepSprites.Body.trotA, SheepSprites.Body.trotB, SheepSprites.Body.jump,
-            SheepSprites.Body.lying,
+            SheepSprites.Body.stand, SheepSprites.Body.trotA, SheepSprites.Body.trotB, SheepSprites.Body.gallop,
+            SheepSprites.Body.jump, SheepSprites.Body.lying,
         ]
         #expect(Set(bodies.map(\.width)).count == 1)
         #expect(Set(bodies.map(\.height)).count == 1)
