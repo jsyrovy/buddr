@@ -37,7 +37,8 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 Buddr/
   App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
               wiring, RuntimeEnvironment
-  Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view),
+  Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), PanelPositionStore (last position in
+              UserDefaults), SheepView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and back)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
@@ -80,6 +81,9 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is
   released) the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu
   bar: SwiftUI `MenuBarExtra`.
+- Position: the origin after every drag is saved in `UserDefaults` (`panelOrigin`, `PanelPositionStore`). At launch
+  the panel goes there, moved into the `visibleFrame` of its screen or the nearest one (displays may have changed);
+  without a saved position it starts in the bottom-right corner of `NSScreen.main`. Escape moves are not saved.
 - Fullscreen: while a fullscreen window covers the display with the sheep, the sheep runs off the screen and comes
   back when it is gone. Details in "Fullscreen escape" below.
 - Data sources: local herdr sessions now; later all *enabled* saved machines, discovered dynamically (nothing

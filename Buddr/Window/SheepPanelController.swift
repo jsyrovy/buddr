@@ -1,7 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Owns the sheep panel: creates it with the SwiftUI content and places it on screen.
+/// Owns the sheep panel: creates it with the SwiftUI content and places it on screen, where the user left it last
+/// time.
 @MainActor
 final class SheepPanelController {
     static let defaultScale = 6
@@ -24,7 +25,7 @@ final class SheepPanelController {
         hostingView.sizingOptions = []
         panel.contentView = hostingView
         panel.onDragEnd = { [weak self] in
-            self?.keepOnScreen()
+            self?.dragEnded()
         }
         panel.onClick = { [weak self] in
             self?.onClick?()
@@ -32,7 +33,7 @@ final class SheepPanelController {
     }
 
     func show() {
-        moveToDefaultPosition()
+        moveToInitialPosition()
         panel.orderFrontRegardless()
     }
 
@@ -70,16 +71,24 @@ final class SheepPanelController {
         screen(for: frame).map { ScreenGeometry.clampedOrigin(of: frame, into: $0.visibleFrame) }
     }
 
-    /// Moves the panel back on screen after a drag, so it can't be dragged out of sight by accident.
-    private func keepOnScreen() {
+    /// Moves the panel back on screen after a drag, so it can't be dragged out of sight by accident, and remembers
+    /// the position for the next launch.
+    private func dragEnded() {
         if let origin = onScreenOrigin(for: panel.frame) {
             panel.setFrameOrigin(origin)
         }
+        PanelPositionStore.save(panel.frame.origin)
     }
 
-    private func moveToDefaultPosition() {
-        guard let visibleFrame = NSScreen.main?.visibleFrame else { return }
-        panel.setFrameOrigin(Self.defaultOrigin(panelSize: panel.frame.size, visibleFrame: visibleFrame))
+    /// The saved position, moved onto a screen (the screens may have changed since), or the default corner.
+    private func moveToInitialPosition() {
+        let size = panel.frame.size
+        let origin =
+            PanelPositionStore.load().flatMap { onScreenOrigin(for: NSRect(origin: $0, size: size)) }
+            ?? NSScreen.main.map { Self.defaultOrigin(panelSize: size, visibleFrame: $0.visibleFrame) }
+        if let origin {
+            panel.setFrameOrigin(origin)
+        }
     }
 
     /// Bottom-right corner of the visible screen area (above the Dock), `margin` away from the edges.
