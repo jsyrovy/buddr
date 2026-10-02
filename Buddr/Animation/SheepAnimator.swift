@@ -13,7 +13,6 @@ struct SheepAnimator {
     private(set) var clipID: SheepClipID
     private(set) var frameIndex = 0
 
-    private let clips: [SheepClipID: AnimationClip]
     private let sleepAfter: Duration
     private var random: SplitMix64
     /// Time spent with `status == .idle` since the status last changed.
@@ -22,12 +21,10 @@ struct SheepAnimator {
     private var cyclesInStatus = 0
 
     init(
-        status: AgentStatus = .unknown, clips: [SheepClipID: AnimationClip] = SheepSprites.clips,
-        sleepAfter: Duration = defaultSleepAfter, seed: UInt64 = .random(in: .min ... .max)
+        status: AgentStatus = .unknown, sleepAfter: Duration = defaultSleepAfter,
+        seed: UInt64 = .random(in: .min ... .max)
     ) {
-        precondition(SheepClipID.allCases.allSatisfy { clips[$0] != nil }, "Every clip needs frames")
         self.status = status
-        self.clips = clips
         self.sleepAfter = sleepAfter
         self.random = SplitMix64(seed: seed)
         self.clipID = .unknown
@@ -35,7 +32,7 @@ struct SheepAnimator {
     }
 
     var clip: AnimationClip {
-        clips[clipID]!
+        SheepSprites.clip(clipID)
     }
 
     var frame: AnimationFrame {

@@ -36,10 +36,7 @@ final class SheepAnimationDriver {
 
     private func advance() {
         animator.advance()
-        let next = animator.frame.sprite
-        // Assigning an equal value would still invalidate the view.
-        if next != sprite {
-            sprite = next
-        }
+        // @Observable skips the notification when the new frame equals the current one.
+        sprite = animator.frame.sprite
     }
 }

@@ -18,7 +18,7 @@ struct AnimationClip: Hashable, Sendable {
     }
 }
 
-/// Every clip the sheep can play. The pixels and timing of each clip live in `SheepSprites.clips`.
+/// Every clip the sheep can play. The pixels and timing of each clip live in `SheepSprites.clip(_:)`.
 enum SheepClipID: CaseIterable, Hashable, Sendable {
     case idleRest
     case idleBlink

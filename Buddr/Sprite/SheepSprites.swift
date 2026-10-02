@@ -36,9 +36,10 @@ enum SheepSprites {
 
     /// Raw character grids, kept separate from the built sprites so tests can validate them.
     enum Grid {
-        // The body is drawn first and the head on top of it, at (headX, headY) relative to the body.
+        // The body is drawn first and the head on top of it, at (headX, headY) relative to the body. Body variants
+        // differ only in their legs; head variants only in the eye or mouth row.
 
-        static let bodyStand = [
+        private static let wool = [
             ".......OO.OO....",
             "......OWWOWWOO..",
             "......OWWWWWWWO.",
@@ -48,118 +49,36 @@ enum SheepSprites {
             ".....OWWWWWWWwwO",
             ".....OWWWWWWwwwO",
             ".....OwwwwwwwwO.",
-            ".....OFO...OFO..",
-            ".....OFO...OFO..",
-            ".....OOO...OOO..",
         ]
+        private static let hips = ".....OFO...OFO.."
 
-        static let bodyTrotA = [
-            ".......OO.OO....",
-            "......OWWOWWOO..",
-            "......OWWWWWWWO.",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWwO",
-            ".....OWWWWWWWwwO",
-            ".....OWWWWWWwwwO",
-            ".....OwwwwwwwwO.",
-            ".....OFO...OFO..",
-            "....OFO.....OFO.",
-            "....OOO.....OOO.",
-        ]
-
-        static let bodyTrotB = [
-            ".......OO.OO....",
-            "......OWWOWWOO..",
-            "......OWWWWWWWO.",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWwO",
-            ".....OWWWWWWWwwO",
-            ".....OWWWWWWwwwO",
-            ".....OwwwwwwwwO.",
-            ".....OFO...OFO..",
-            "......OFO.OFO...",
-            "......OOO.OOO...",
-        ]
-
+        static let bodyStand = wool + [hips, hips, ".....OOO...OOO.."]
+        static let bodyTrotA = wool + [hips, "....OFO.....OFO.", "....OOO.....OOO."]
+        static let bodyTrotB = wool + [hips, "......OFO.OFO...", "......OOO.OOO..."]
         /// Legs tucked in, for jumps.
-        static let bodyJump = [
-            ".......OO.OO....",
-            "......OWWOWWOO..",
-            "......OWWWWWWWO.",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWwO",
-            ".....OWWWWWWWwwO",
-            ".....OWWWWWWwwwO",
-            ".....OwwwwwwwwO.",
-            ".....OFO...OFO..",
-            ".....OOO...OOO..",
-            "................",
-        ]
-
+        static let bodyJump = wool + [hips, ".....OOO...OOO..", "................"]
         /// Lying down, two pixels lower, legs folded.
-        static let bodyLying = [
-            "................",
-            "................",
-            ".......OO.OO....",
-            "......OWWOWWOO..",
-            "......OWWWWWWWO.",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWWO",
-            ".....OWWWWWWWWwO",
-            ".....OWWWWWWWwwO",
-            ".....OWWWWWWwwwO",
-            ".....OwwwwwwwwO.",
-            "....OFFOOOOFFO..",
-        ]
+        static let bodyLying = ["................", "................"] + wool + ["....OFFOOOOFFO.."]
 
-        static let head = [
-            "..OO...",
-            ".OWWO..",
-            "OPWWWO.",
-            "OFFFFO.",
-            "OFEOFFO",
-            "OFFFFFO",
-            ".OFFFO.",
-            "..OOO..",
-        ]
+        private static func head(eye: String = "OFEOFFO", mouth: String = ".OFFFO.") -> [String] {
+            [
+                "..OO...",
+                ".OWWO..",
+                "OPWWWO.",
+                "OFFFFO.",
+                eye,
+                "OFFFFFO",
+                mouth,
+                "..OOO..",
+            ]
+        }
 
-        static let headBlink = [
-            "..OO...",
-            ".OWWO..",
-            "OPWWWO.",
-            "OFFFFO.",
-            "OFOOFFO",
-            "OFFFFFO",
-            ".OFFFO.",
-            "..OOO..",
-        ]
-
+        static let headNormal = head()
+        static let headBlink = head(eye: "OFOOFFO")
         /// Eye turned forward.
-        static let headLook = [
-            "..OO...",
-            ".OWWO..",
-            "OPWWWO.",
-            "OFFFFO.",
-            "OEOFFFO",
-            "OFFFFFO",
-            ".OFFFO.",
-            "..OOO..",
-        ]
-
+        static let headLook = head(eye: "OEOFFFO")
         /// Mouth open, bleating.
-        static let headBleat = [
-            "..OO...",
-            ".OWWO..",
-            "OPWWWO.",
-            "OFFFFO.",
-            "OFEOFFO",
-            "OFFFFFO",
-            ".OPPFO.",
-            "..OOO..",
-        ]
+        static let headBleat = head(mouth: ".OPPFO.")
 
         static let checkBubble = [
             ".OOOOOOO.",
@@ -230,7 +149,7 @@ enum SheepSprites {
         ("bodyTrotB", Grid.bodyTrotB),
         ("bodyJump", Grid.bodyJump),
         ("bodyLying", Grid.bodyLying),
-        ("head", Grid.head),
+        ("headNormal", Grid.headNormal),
         ("headBlink", Grid.headBlink),
         ("headLook", Grid.headLook),
         ("headBleat", Grid.headBleat),
@@ -255,7 +174,7 @@ enum SheepSprites {
     }
 
     enum Head {
-        static let normal = sprite(Grid.head)
+        static let normal = sprite(Grid.headNormal)
         static let blink = sprite(Grid.headBlink)
         static let look = sprite(Grid.headLook)
         static let bleat = sprite(Grid.headBleat)
@@ -274,8 +193,6 @@ enum SheepSprites {
 
     // MARK: Frames
 
-    static let standingFrame = SpriteFrame(layers: sheep())
-
     /// Body and head layers; `dy` moves the whole sheep (negative is up), `headDY` only the head.
     static func sheep(
         body: PixelSprite = Body.stand, head: PixelSprite = Head.normal, dy: Int = 0, headDY: Int = 0
@@ -286,8 +203,20 @@ enum SheepSprites {
         ]
     }
 
-    private static func effect(_ sprite: PixelSprite, _ x: Int, _ y: Int) -> SpriteLayer {
-        SpriteLayer(sprite: sprite, x: x, y: y)
+    private static let checkBubble = SpriteLayer(sprite: Effect.checkBubble, x: 0, y: 0)
+    private static let exclamation = SpriteLayer(sprite: Effect.exclamation, x: 1, y: 0)
+    private static let asleep = sheep(body: Body.lying, head: Head.blink, headDY: 2)
+    private static let smallZ = SpriteLayer(sprite: Effect.smallZ, x: 9, y: 4)
+    private static let largeZ = SpriteLayer(sprite: Effect.largeZ, x: 13, y: 0)
+    private static let largeDust = SpriteLayer(sprite: Effect.largeDust, x: 17, y: 16)
+    private static let smallDust = SpriteLayer(sprite: Effect.smallDust, x: 18, y: 17)
+
+    private static func fleck(_ x: Int, _ y: Int) -> SpriteLayer {
+        SpriteLayer(sprite: Effect.fleck, x: x, y: y)
+    }
+
+    private static func question(_ y: Int) -> SpriteLayer {
+        SpriteLayer(sprite: Effect.question, x: 0, y: y)
     }
 
     private static func frame(
@@ -300,60 +229,66 @@ enum SheepSprites {
 
     // Keep every clip short (well under 1.5 s): a clip always plays to its end before the state machine switches.
 
-    static let clips: [SheepClipID: AnimationClip] = [
-        .idleRest: AnimationClip([
+    static func clip(_ id: SheepClipID) -> AnimationClip {
+        switch id {
+        case .idleRest: Clip.idleRest
+        case .idleBlink: Clip.idleBlink
+        case .idleLook: Clip.idleLook
+        case .sleeping: Clip.sleeping
+        case .working: Clip.working
+        case .blocked: Clip.blocked
+        case .doneJump: Clip.doneJump
+        case .doneHold: Clip.doneHold
+        case .unknown: Clip.unknown
+        }
+    }
+
+    private enum Clip {
+        static let idleRest = AnimationClip([
             frame(1_000, sheep())
-        ]),
-        .idleBlink: AnimationClip([
+        ])
+        static let idleBlink = AnimationClip([
             frame(150, sheep(head: Head.blink)),
             frame(250, sheep()),
-        ]),
-        .idleLook: AnimationClip([
+        ])
+        static let idleLook = AnimationClip([
             frame(700, sheep(head: Head.look, headDY: -1)),
             frame(300, sheep()),
-        ]),
-        .sleeping: AnimationClip([
-            frame(700, sheep(body: Body.lying, head: Head.blink, headDY: 2) + [effect(Effect.smallZ, 9, 4)]),
-            frame(
-                700,
-                sheep(body: Body.lying, head: Head.blink, headDY: 2) + [
-                    effect(Effect.smallZ, 9, 4), effect(Effect.largeZ, 13, 0),
-                ]),
-        ]),
-        .working: AnimationClip([
-            frame(150, sheep(body: Body.trotA) + [effect(Effect.largeDust, 17, 16), effect(Effect.fleck, 20, 7)]),
-            frame(
-                150,
-                sheep(dy: -1) + [
-                    effect(Effect.smallDust, 18, 17), effect(Effect.fleck, 21, 5), effect(Effect.fleck, 18, 6),
-                ]),
-            frame(150, sheep(body: Body.trotB) + [effect(Effect.largeDust, 17, 16), effect(Effect.fleck, 19, 4)]),
-            frame(150, sheep(dy: -1) + [effect(Effect.smallDust, 18, 17), effect(Effect.fleck, 20, 2)]),
-        ]),
-        .blocked: AnimationClip([
-            frame(150, sheep(head: Head.bleat) + [effect(Effect.exclamation, 1, 0)]),
-            frame(120, sheep(body: Body.jump, head: Head.bleat, dy: -2) + [effect(Effect.exclamation, 1, 0)]),
+        ])
+        static let sleeping = AnimationClip([
+            frame(700, asleep + [smallZ]),
+            frame(700, asleep + [smallZ, largeZ]),
+        ])
+        static let working = AnimationClip([
+            frame(150, sheep(body: Body.trotA) + [largeDust, fleck(20, 7)]),
+            frame(150, sheep(dy: -1) + [smallDust, fleck(21, 5), fleck(18, 6)]),
+            frame(150, sheep(body: Body.trotB) + [largeDust, fleck(19, 4)]),
+            frame(150, sheep(dy: -1) + [smallDust, fleck(20, 2)]),
+        ])
+        static let blocked = AnimationClip([
+            frame(150, sheep(head: Head.bleat) + [exclamation]),
+            frame(120, sheep(body: Body.jump, head: Head.bleat, dy: -2) + [exclamation]),
             frame(120, sheep(body: Body.jump, dy: -3)),
             frame(120, sheep(body: Body.jump, dy: -2)),
-            frame(150, sheep() + [effect(Effect.exclamation, 1, 0)]),
+            frame(150, sheep() + [exclamation]),
             frame(340, sheep()),
-        ]),
-        .doneJump: AnimationClip([
-            frame(150, sheep() + [effect(Effect.checkBubble, 0, 0)]),
-            frame(120, sheep(body: Body.jump, dy: -2) + [effect(Effect.checkBubble, 0, 0)]),
-            frame(120, sheep(body: Body.jump, dy: -3) + [effect(Effect.checkBubble, 0, 0)]),
-            frame(120, sheep(body: Body.jump, dy: -2) + [effect(Effect.checkBubble, 0, 0)]),
-            frame(290, sheep(head: Head.blink) + [effect(Effect.checkBubble, 0, 0)]),
-        ]),
-        .doneHold: AnimationClip([
-            frame(600, sheep(head: Head.blink) + [effect(Effect.checkBubble, 0, 0)]),
-            frame(400, sheep() + [effect(Effect.checkBubble, 0, 0)]),
-        ]),
-        .unknown: AnimationClip([
-            frame(800, sheep() + [effect(Effect.question, 0, 1)], opacity: unknownOpacity),
-            frame(800, sheep() + [effect(Effect.question, 0, 0)], opacity: unknownOpacity),
-        ]),
-    ]
+        ])
+        static let doneJump = AnimationClip([
+            frame(150, sheep() + [checkBubble]),
+            frame(120, sheep(body: Body.jump, dy: -2) + [checkBubble]),
+            frame(120, sheep(body: Body.jump, dy: -3) + [checkBubble]),
+            frame(120, sheep(body: Body.jump, dy: -2) + [checkBubble]),
+            frame(290, sheep(head: Head.blink) + [checkBubble]),
+        ])
+        static let doneHold = AnimationClip([
+            frame(600, sheep(head: Head.blink) + [checkBubble]),
+            frame(400, sheep() + [checkBubble]),
+        ])
+        static let unknown = AnimationClip([
+            frame(800, sheep() + [question(1)], opacity: unknownOpacity),
+            frame(800, sheep() + [question(0)], opacity: unknownOpacity),
+        ])
+    }
 
     private static func sprite(_ rows: [String]) -> PixelSprite {
         PixelSprite(rows: rows, palette: palette)
