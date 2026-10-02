@@ -1,0 +1,380 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		B0DD00000000000000000501 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B0DD00000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B0DD00000000000000000101;
+			remoteInfo = Buddr;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B0DD00000000000000000201 /* Buddr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Buddr.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0DD00000000000000000202 /* BuddrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BuddrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B0DD00000000000000000301 /* Buddr */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Buddr;
+			sourceTree = "<group>";
+		};
+		B0DD00000000000000000302 /* BuddrTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BuddrTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B0DD00000000000000000412 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0DD00000000000000000422 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B0DD00000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				B0DD00000000000000000301 /* Buddr */,
+				B0DD00000000000000000302 /* BuddrTests */,
+				B0DD00000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B0DD00000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B0DD00000000000000000201 /* Buddr.app */,
+				B0DD00000000000000000202 /* BuddrTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B0DD00000000000000000101 /* Buddr */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B0DD00000000000000000702 /* Build configuration list for PBXNativeTarget "Buddr" */;
+			buildPhases = (
+				B0DD00000000000000000411 /* Sources */,
+				B0DD00000000000000000412 /* Frameworks */,
+				B0DD00000000000000000413 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B0DD00000000000000000301 /* Buddr */,
+			);
+			name = Buddr;
+			packageProductDependencies = (
+			);
+			productName = Buddr;
+			productReference = B0DD00000000000000000201 /* Buddr.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B0DD00000000000000000102 /* BuddrTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B0DD00000000000000000703 /* Build configuration list for PBXNativeTarget "BuddrTests" */;
+			buildPhases = (
+				B0DD00000000000000000421 /* Sources */,
+				B0DD00000000000000000422 /* Frameworks */,
+				B0DD00000000000000000423 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B0DD00000000000000000502 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B0DD00000000000000000302 /* BuddrTests */,
+			);
+			name = BuddrTests;
+			packageProductDependencies = (
+			);
+			productName = BuddrTests;
+			productReference = B0DD00000000000000000202 /* BuddrTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B0DD00000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					B0DD00000000000000000101 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					B0DD00000000000000000102 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = B0DD00000000000000000101;
+					};
+				};
+			};
+			buildConfigurationList = B0DD00000000000000000701 /* Build configuration list for PBXProject "Buddr" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B0DD00000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B0DD00000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B0DD00000000000000000101 /* Buddr */,
+				B0DD00000000000000000102 /* BuddrTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B0DD00000000000000000413 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0DD00000000000000000423 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B0DD00000000000000000411 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0DD00000000000000000421 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B0DD00000000000000000502 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B0DD00000000000000000101 /* Buddr */;
+			targetProxy = B0DD00000000000000000501 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B0DD00000000000000000601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		B0DD00000000000000000602 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		B0DD00000000000000000611 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Buddr;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Jiří Syrový. MIT License.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cz.jsyrovy.buddr;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		B0DD00000000000000000612 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Buddr;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Jiří Syrový. MIT License.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cz.jsyrovy.buddr;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		B0DD00000000000000000621 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cz.jsyrovy.buddr.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Buddr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Buddr";
+			};
+			name = Debug;
+		};
+		B0DD00000000000000000622 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cz.jsyrovy.buddr.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Buddr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Buddr";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B0DD00000000000000000701 /* Build configuration list for PBXProject "Buddr" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0DD00000000000000000601 /* Debug */,
+				B0DD00000000000000000602 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B0DD00000000000000000702 /* Build configuration list for PBXNativeTarget "Buddr" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0DD00000000000000000611 /* Debug */,
+				B0DD00000000000000000612 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B0DD00000000000000000703 /* Build configuration list for PBXNativeTarget "BuddrTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0DD00000000000000000621 /* Debug */,
+				B0DD00000000000000000622 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B0DD00000000000000000001 /* Project object */;
+}
