@@ -9,6 +9,7 @@ agents. It is information only – it never focuses, attaches to, or sends anyth
 ```bash
 make build    # xcodebuild Debug build into build/DerivedData
 make test     # Swift Testing unit tests (hosted by the app)
+make coverage # tests + line coverage report of the app target (result bundle build/Test.xcresult)
 make run      # build, kill a running instance, open the app
 make install  # Release build into ~/Applications (INSTALL_DIR=…), restart it; make uninstall removes it
 make format   # xcrun swift-format, in place
@@ -171,3 +172,45 @@ Implementation (`SheepAnimator`):
 - Logs: `os.Logger` subsystem `cz.jsyrovy.buddr`. Watch with
   `/usr/bin/log stream --level info --predicate 'subsystem == "cz.jsyrovy.buddr"'` – in zsh, plain `log` is a shell
   builtin.
+
+### Test coverage
+
+`make coverage` runs the tests and prints line coverage of the app target (collection is enabled in the scheme, so
+Xcode shows it too). Line-level detail: `xcrun xccov view --archive --file <absolute path> build/Test.xcresult`. The
+per-file summary of `xccov` can report wrong line counts for small files (seen with `OneShotSignal.swift`); trust the
+line-level output.
+
+Coverage is a tool for finding untested behaviour, not a goal. Writing tests is cheap, maintaining and reviewing them
+is not: every test is a constraint on future changes. A test must assert observable behaviour (results, state
+transitions, the commands that were run), not just execute lines – a test that only raises the number makes
+refactoring harder and proves nothing. There is no global percentage target; the total is dominated by the UI layer,
+which is deliberately not unit-tested.
+
+Aim for ~100 %, every branch covered by a meaningful test – this is pure, deterministic logic where bugs hide and
+tests are cheap and stable:
+
+- `State/` – status decoding (including unknown future values) and priority aggregation.
+- `Herdr/` except `HerdrPoller` – output parsing, the error envelope, binary lookup, concurrent fetching and failure
+  isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by grandchildren.
+- `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
+- `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`.
+- Placement math in `SheepPanelController`.
+
+Worth testing, but only through a seam – test these when they gain behaviour, without real-time waiting:
+
+- `HerdrPoller`, `SheepAnimationDriver` – timer-driven loops. Drive them with an injected tick source or clock;
+  tests that sleep are slow and flaky, which is worse than no test.
+- `SpriteCanvas` – render with `ImageRenderer` and compare pixels with the grid (integer scale, no smoothing,
+  transparency). This checks the actual output, which line coverage of a `Canvas` closure cannot.
+
+Fine to leave uncovered:
+
+- `App/` – `BuddrMain`, `BuddrApp`, `AppDelegate` and the non-test branch of `RuntimeEnvironment`. Covering them
+  means starting the real panel, menu bar and herdr polling under tests, which defeats `TestHostApp` and makes tests
+  depend on the machine. Keep these files pure wiring instead: logic that needs a test moves into a testable type.
+- `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling. Check it by running the app.
+- Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
+  `ProcessRunner.signalProcessGroup`.
+
+Do not add abstractions to production code just to cover lines. A seam is justified when it makes meaningful behaviour
+testable (a clock for the poller), not to reach one more branch.

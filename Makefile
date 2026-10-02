@@ -1,23 +1,31 @@
-PROJECT      := Buddr.xcodeproj
-SCHEME       := Buddr
-CONFIG       ?= Debug
-DERIVED_DATA := build/DerivedData
-APP          := $(DERIVED_DATA)/Build/Products/$(CONFIG)/Buddr.app
-SOURCES      := Buddr BuddrTests
-ARCH         := $(shell uname -m)
-INSTALL_DIR  ?= $(HOME)/Applications
-RELEASE_APP  := $(DERIVED_DATA)/Build/Products/Release/Buddr.app
+PROJECT       := Buddr.xcodeproj
+SCHEME        := Buddr
+CONFIG        ?= Debug
+DERIVED_DATA  := build/DerivedData
+APP           := $(DERIVED_DATA)/Build/Products/$(CONFIG)/Buddr.app
+SOURCES       := Buddr BuddrTests
+ARCH          := $(shell uname -m)
+INSTALL_DIR   ?= $(HOME)/Applications
+RELEASE_APP   := $(DERIVED_DATA)/Build/Products/Release/Buddr.app
+RESULT_BUNDLE := build/Test.xcresult
 
-XCODEBUILD := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIG) \
+XCODEBUILD    := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIG) \
 	-destination 'platform=macOS,arch=$(ARCH)' -derivedDataPath $(DERIVED_DATA) -quiet
 
-.PHONY: build test run install uninstall format lint clean
+.PHONY: build test coverage run install uninstall format lint clean
 
 build:
 	$(XCODEBUILD) build
 
 test:
 	$(XCODEBUILD) test
+
+# Coverage collection is enabled in the scheme (app target only); this keeps the result bundle and prints the report.
+coverage:
+	rm -rf "$(RESULT_BUNDLE)"
+	$(XCODEBUILD) -resultBundlePath "$(RESULT_BUNDLE)" test
+	xcrun xccov view --report --only-targets "$(RESULT_BUNDLE)"
+	xcrun xccov view --report --files-for-target Buddr.app "$(RESULT_BUNDLE)"
 
 run: build
 	pkill -x Buddr || true
