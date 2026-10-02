@@ -37,7 +37,8 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 Buddr/
   App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
               wiring, RuntimeEnvironment
-  Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view)
+  Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view),
+              ScreenGeometry (screen choice, clamping)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing)
   Animation/  AnimationClip / SheepClipID, SheepAnimator (pure state machine), SheepAnimationDriver (@Observable
@@ -75,7 +76,8 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
   `performDrag(with:)`, which does not depend on how the SwiftUI hosting view handles the event (unlike
   `isMovableByWindowBackground`). When click/hover interaction is added (info bubble), distinguish clicks from drags
-  there. Menu bar: SwiftUI `MenuBarExtra`.
+  there. After a drag (the button is released) the panel is moved back into the `visibleFrame` of its screen, so it
+  can't be dragged out of sight. Menu bar: SwiftUI `MenuBarExtra`.
 - Data sources: local herdr sessions now; later all *enabled* saved machines, discovered dynamically (nothing
   hardcoded). Polling: local every ~2 s; remote every ~15 s (later). Sources are queried concurrently.
 - A failed source is reported as a failure (later: "⚠" badge + error in the info bubble); it never blocks the others.
@@ -194,7 +196,7 @@ tests are cheap and stable:
   isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by grandchildren.
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`.
-- Placement math in `SheepPanelController`.
+- Placement math in `SheepPanelController`, `ScreenGeometry`.
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 

@@ -18,6 +18,9 @@ final class SheepPanelController {
         // The content has a fixed size; don't let SwiftUI updates re-evaluate the window size on every frame.
         hostingView.sizingOptions = []
         panel.contentView = hostingView
+        panel.onDragEnd = { [weak self] in
+            self?.keepOnScreen()
+        }
     }
 
     func show() {
@@ -27,6 +30,25 @@ final class SheepPanelController {
 
     var frame: NSRect {
         panel.frame
+    }
+
+    /// The screen for a panel at `frame`: the one showing most of it, or the nearest one.
+    func screen(for frame: NSRect) -> NSScreen? {
+        let screens = NSScreen.screens
+        return ScreenGeometry.screen(for: frame, in: screens.map(\.frame)).map { screens[$0] }
+    }
+
+    /// Where a panel at `frame` may sit: moved into the visible area of its screen (outside the menu bar and the
+    /// Dock). `nil` without screens.
+    func onScreenOrigin(for frame: NSRect) -> NSPoint? {
+        screen(for: frame).map { ScreenGeometry.clampedOrigin(of: frame, into: $0.visibleFrame) }
+    }
+
+    /// Moves the panel back on screen after a drag, so it can't be dragged out of sight by accident.
+    private func keepOnScreen() {
+        if let origin = onScreenOrigin(for: panel.frame) {
+            panel.setFrameOrigin(origin)
+        }
     }
 
     private func moveToDefaultPosition() {
