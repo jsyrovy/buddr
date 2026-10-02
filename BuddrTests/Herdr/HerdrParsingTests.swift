@@ -15,6 +15,13 @@ struct HerdrParsingTests {
         #expect(sessions.map(\.running) == [true, false, true])
     }
 
+    @Test func parsesMachineList() throws {
+        let machines = try HerdrClient.parseMachines(Fixture.data("machine-list-mixed"))
+        #expect(machines.map(\.label) == ["Devbox", "Old laptop", "Pi"])
+        #expect(machines.map(\.enabled) == [true, false, true])
+        #expect(machines.first?.id == "3f9c2a7e5b1d4c6a8e0f2b4d6a8c0e1f")
+    }
+
     @Test func parsesAgentList() throws {
         let list: HerdrAgentList = try HerdrClient.parseResult(Fixture.data("agent-list"), command: "agent list")
         let agent = try #require(list.agents.first)

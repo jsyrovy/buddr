@@ -1,47 +1,9 @@
 import Testing
-import os
 
 @testable import Buddr
 
 @MainActor
 struct HerdrPollerTests {
-    /// Answers polls with the given snapshots in order; after the last one, a poll runs until it is cancelled.
-    final class ScriptedFetch: Sendable {
-        /// Reports every poll when it starts.
-        let calls: AsyncStream<Void>
-        private let callsContinuation: AsyncStream<Void>.Continuation
-        private let state: OSAllocatedUnfairLock<(count: Int, snapshots: [HerdrSnapshot])>
-
-        init(_ snapshots: [HerdrSnapshot]) {
-            (calls, callsContinuation) = AsyncStream.makeStream(of: Void.self)
-            state = OSAllocatedUnfairLock(initialState: (0, snapshots))
-        }
-
-        var count: Int {
-            state.withLock { $0.count }
-        }
-
-        func callAsFunction() async -> HerdrSnapshot {
-            let snapshot = state.withLock { state in
-                state.count += 1
-                return state.snapshots.isEmpty ? nil : state.snapshots.removeFirst()
-            }
-            callsContinuation.yield()
-            if let snapshot {
-                return snapshot
-            }
-            // Never fires, so this returns once the poll is cancelled. The result differs from every scripted
-            // snapshot, so delivering it would show up in the updates.
-            await OneShotSignal().wait()
-            return .empty
-        }
-    }
-
-    @MainActor
-    final class Recorder {
-        var snapshots: [HerdrSnapshot] = []
-    }
-
     private static let interval = Duration.seconds(2)
     private static let working = HerdrSnapshot(agents: [.stub(.working)], failures: [])
     private static let blocked = HerdrSnapshot(agents: [.stub(.blocked)], failures: [])
@@ -49,15 +11,15 @@ struct HerdrPollerTests {
         agents: [], failures: [SourceFailure(source: nil, message: "herdr executable not found")])
 
     private let sleeper = ManualSleeper()
-    private let delivered = Recorder()
+    private let delivered = SnapshotRecorder()
 
     private func poller(_ fetch: ScriptedFetch) -> HerdrPoller {
-        HerdrPoller(
-            interval: Self.interval, fetch: fetch.callAsFunction, sleep: sleeper.sleep(for:),
-            onUpdate: { [delivered] in delivered.snapshots.append($0) })
+        HerdrPoller(.init(interval: Self.interval, fetch: fetch.callAsFunction, sleep: sleeper.sleep(for:))) {
+            [delivered] in delivered.snapshots.append($0)
+        }
     }
 
-    @Test func forwardsOnlySnapshotsThatChanged() async {
+    @Test func forwardsEverySnapshotAndSleepsBetweenPolls() async {
         let fetch = ScriptedFetch([Self.working, Self.working, Self.failure, Self.failure, Self.blocked])
         let poller = poller(fetch)
         var sleeps = sleeper.sleeps.makeAsyncIterator()
@@ -73,7 +35,8 @@ struct HerdrPollerTests {
         }
         await poller.stop()
 
-        #expect(delivered.snapshots == [Self.working, Self.failure, Self.blocked])
+        // Unchanged snapshots are filtered by `HerdrMonitor`, after combining the feeds.
+        #expect(delivered.snapshots == [Self.working, Self.working, Self.failure, Self.failure, Self.blocked])
     }
 
     @Test func stopDiscardsAPollThatIsStillRunning() async {

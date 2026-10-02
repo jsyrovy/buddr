@@ -1,14 +1,15 @@
-/// A herdr server that agents are read from.
-///
-/// Remote machines will become another case (`--machine <id>`) – keep everything that depends on the kind of source
-/// switching over this enum.
+/// A herdr server that agents are read from. Keep everything that depends on the kind of source switching over this
+/// enum.
 enum HerdrSource: Hashable, Sendable {
     /// A running session on this Mac (`herdr --session <name>`).
     case localSession(String)
+    /// An enabled saved SSH machine (`herdr --machine <id>`), in the session saved in its profile.
+    case machine(id: String, label: String)
 
     var displayName: String {
         switch self {
         case .localSession(let name): "local/\(name)"
+        case .machine(_, let label): label
         }
     }
 }
@@ -37,6 +38,16 @@ struct HerdrSnapshot: Hashable, Sendable {
     var failures: [SourceFailure]
 
     static let empty = HerdrSnapshot(agents: [], failures: [])
+
+    /// The snapshots of independently polled sources as one. A failure reported by several parts (such as a missing
+    /// herdr) is kept once.
+    static func combining(_ parts: [HerdrSnapshot]) -> HerdrSnapshot {
+        var failures: [SourceFailure] = []
+        for failure in parts.flatMap(\.failures) where !failures.contains(failure) {
+            failures.append(failure)
+        }
+        return HerdrSnapshot(agents: parts.flatMap(\.agents), failures: failures)
+    }
 
     /// Aggregated state shown by the sheep; `unknown` when there are no agents.
     var status: AgentStatus {

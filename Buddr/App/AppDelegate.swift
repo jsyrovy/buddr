@@ -4,7 +4,7 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var animation: SheepAnimationDriver?
     private var panelController: SheepPanelController?
-    private var poller: HerdrPoller?
+    private var herdrMonitor: HerdrMonitor?
     private var fullscreenMonitor: FullscreenMonitor?
     private var escape: SheepEscape?
 
@@ -29,10 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fullscreenMonitor.start()
         self.fullscreenMonitor = fullscreenMonitor
 
-        let poller = HerdrPoller { snapshot in
+        let herdrMonitor = HerdrMonitor { snapshot in
             animation.setStatus(snapshot.status)
         }
-        poller.start()
-        self.poller = poller
+        herdrMonitor.start()
+        self.herdrMonitor = herdrMonitor
     }
 }

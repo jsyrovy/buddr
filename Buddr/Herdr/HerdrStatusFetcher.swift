@@ -1,26 +1,41 @@
 import Foundation
 
-/// Collects one `HerdrSnapshot`: discovers the running local sessions and queries all of them concurrently.
+/// Collects one `HerdrSnapshot` of a kind of source: discovers the sources and queries all of them concurrently.
 ///
 /// Never throws: every problem ends up in `HerdrSnapshot.failures`, and a failing source doesn't affect the others.
 struct HerdrStatusFetcher: Sendable {
     var locator = HerdrLocator()
     var runner: any CommandRunning = ProcessRunner()
-    /// Timeout of a single herdr command against a local session.
-    var localTimeout: Duration = .seconds(5)
 
+    /// Agents of all running local sessions.
     @concurrent
-    func fetch() async -> HerdrSnapshot {
+    func fetchSessions() async -> HerdrSnapshot {
+        await fetch { client in
+            try await client.sessions().filter(\.running).map { .localSession($0.name) }
+        }
+    }
+
+    /// Agents of all enabled saved machines. herdr connects with SSH batch mode, so a machine that would ask for
+    /// authentication fails (or times out) instead of waiting for input.
+    @concurrent
+    func fetchMachines() async -> HerdrSnapshot {
+        await fetch { client in
+            try await client.machines().filter(\.enabled).map { .machine(id: $0.id, label: $0.label) }
+        }
+    }
+
+    private func fetch(discover: (HerdrClient) async throws -> [HerdrSource]) async -> HerdrSnapshot {
         // Resolved on every poll, so installing herdr while Buddr runs just works.
         guard let executable = locator.locate() else {
             return HerdrSnapshot(
                 agents: [], failures: [SourceFailure(source: nil, error: HerdrError.executableNotFound)])
         }
-        let client = HerdrClient(executable: executable, runner: runner, timeout: localTimeout)
+
+        let client = HerdrClient(executable: executable, runner: runner)
 
         let sources: [HerdrSource]
         do {
-            sources = try await client.sessions().filter(\.running).map { .localSession($0.name) }
+            sources = try await discover(client)
         } catch {
             return HerdrSnapshot(agents: [], failures: [SourceFailure(source: nil, error: error)])
         }
@@ -32,7 +47,7 @@ struct HerdrStatusFetcher: Sendable {
             return await group.reduce(into: []) { $0.append($1) }
         }
 
-        // Keep the order of `session list`, so snapshots are stable between polls.
+        // Keep the order of the discovery, so snapshots are stable between polls.
         var snapshot = HerdrSnapshot.empty
         for (_, result) in results.sorted(by: { $0.0 < $1.0 }) {
             switch result {

@@ -28,36 +28,56 @@ enum HerdrError: Error, Equatable, Sendable, CustomStringConvertible {
 }
 
 extension HerdrSource {
-    /// Global herdr options that select this source. `--machine` (later) must not be combined with `--session`.
+    /// Global herdr options that select this source. `--machine` must not be combined with `--session`.
     var arguments: [String] {
         switch self {
         case .localSession(let name): ["--session", name]
+        case .machine(let id, _): ["--machine", id]
+        }
+    }
+
+    /// Timeout of a single herdr command against this source.
+    var timeout: Duration {
+        switch self {
+        case .localSession: HerdrClient.localTimeout
+        case .machine: .seconds(15)
         }
     }
 }
 
 /// Typed access to the read-only herdr CLI commands Buddr needs.
 struct HerdrClient: Sendable {
+    /// Timeout of commands that stay on this Mac, such as `session list` and `machine list`.
+    static let localTimeout: Duration = .seconds(5)
+
     let executable: URL
     let runner: any CommandRunning
-    let timeout: Duration
 
     func sessions() async throws -> [HerdrSession] {
-        try await run(["session", "list", "--json"], parse: Self.parseSessions)
+        try await run(["session", "list", "--json"], timeout: Self.localTimeout, parse: Self.parseSessions)
+    }
+
+    /// Saved SSH machine profiles. Reads the local configuration, doesn't connect to the machines.
+    func machines() async throws -> [HerdrMachine] {
+        try await run(["machine", "list", "--json"], timeout: Self.localTimeout, parse: Self.parseMachines)
     }
 
     func agents(on source: HerdrSource) async throws -> [HerdrAgent] {
-        let list: HerdrAgentList = try await run(source.arguments + ["agent", "list"], parse: Self.parseResult)
+        let list: HerdrAgentList = try await run(
+            source.arguments + ["agent", "list"], timeout: source.timeout, parse: Self.parseResult)
         return list.agents
     }
 
     func workspaces(on source: HerdrSource) async throws -> [HerdrWorkspace] {
-        let list: HerdrWorkspaceList = try await run(source.arguments + ["workspace", "list"], parse: Self.parseResult)
+        let list: HerdrWorkspaceList = try await run(
+            source.arguments + ["workspace", "list"], timeout: source.timeout, parse: Self.parseResult)
         return list.workspaces
     }
 
     /// Runs herdr and parses stdout of a successful run. herdr prints error envelopes to stderr with exit status 1.
-    private func run<T>(_ arguments: [String], parse: (Data, String) throws -> T) async throws -> T {
+    private func run<T>(
+        _ arguments: [String], timeout: Duration, parse: (Data, String) throws -> T
+    ) async throws -> T {
         let command = Self.commandName(arguments)
         let output: ProcessOutput
         do {
@@ -89,6 +109,10 @@ struct HerdrClient: Sendable {
 
     static func parseSessions(_ data: Data, command: String = "session list") throws -> [HerdrSession] {
         try decode(HerdrSessionList.self, from: data, command: command).sessions
+    }
+
+    static func parseMachines(_ data: Data, command: String = "machine list") throws -> [HerdrMachine] {
+        try decode([HerdrMachine].self, from: data, command: command)
     }
 
     /// Unwraps the `result` of an API response envelope, turning an `error` into `HerdrError.api`.

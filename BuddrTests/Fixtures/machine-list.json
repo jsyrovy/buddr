@@ -1,0 +1,18 @@
+[
+  {
+    "id": "3f9c2a7e5b1d4c6a8e0f2b4d6a8c0e1f",
+    "label": "Devbox",
+    "target": "me@devbox.example",
+    "session": "default",
+    "enabled": true,
+    "selected": false
+  },
+  {
+    "id": "8a1e4c7b2d5f3a6c9e0b1d4f7a2c5e8b",
+    "label": "Pi",
+    "target": "pi",
+    "session": "default",
+    "enabled": true,
+    "selected": false
+  }
+]

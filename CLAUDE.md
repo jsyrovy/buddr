@@ -46,12 +46,13 @@ Buddr/
   Animation/  AnimationClip / SheepClipID, SheepAnimator (pure state machine), SheepAnimationDriver (@Observable
               timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
-              (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot,
-              sources queried concurrently), HerdrPoller (periodic loop on the main actor)
+              (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
+              of local sessions or of saved machines, sources queried concurrently), HerdrPoller (periodic loop on
+              the main actor), HerdrMonitor (one poller per kind of source; combines, filters and logs changes)
   State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs
-  Support/    fixture loader, FakeCommandRunner, ManualSleeper, AgentRecord.stub
+  Support/    fixture loader, FakeCommandRunner, ManualSleeper, ScriptedFetch + SnapshotRecorder, AgentRecord.stub
 ```
 
 ## Conventions
@@ -86,11 +87,12 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   without a saved position it starts in the bottom-right corner of `NSScreen.main`. Escape moves are not saved.
 - Fullscreen: while a fullscreen window covers the display with the sheep, the sheep runs off the screen and comes
   back when it is gone. Details in "Fullscreen escape" below.
-- Data sources: local herdr sessions now; later all *enabled* saved machines, discovered dynamically (nothing
-  hardcoded). Polling: local every ~2 s; remote every ~15 s (later). Sources are queried concurrently.
+- Data sources: running local herdr sessions and all *enabled* saved machines, both discovered on every poll
+  (nothing hardcoded). `HerdrMonitor` polls them in independent loops – local every 2 s, machines every 15 s – so a
+  slow machine never delays local updates, and shows the combined snapshot. Sources are queried concurrently.
 - A failed source is reported as a failure (later: "⚠" badge + error in the info bubble); it never blocks the others.
-- Before implementing remote machines, verify whether `herdr --machine` can hang on an SSH authentication prompt; if
-  so, gate remote queries by `herdr machine status --json`.
+  A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
+  queries by `herdr machine status` (see "herdr CLI").
 - Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, non-herdr sources.
 
 ## herdr CLI
@@ -119,12 +121,20 @@ herdr api schema --json              # full JSON schema of the socket API (reque
 - Errors use the envelope `{"error":{"code":"…","message":"…"},"id":"…"}` instead of `result`. The CLI prints it to
   **stderr** with exit status 1 (stdout stays empty).
 - `--machine` must not be combined with `--session` / `--remote`; it uses the session saved in the machine profile.
-  Use the profile `id` (labels may be ambiguous). Only query machines with `enabled: true`.
+  Use the profile `id` (labels may be ambiguous). Only query machines with `enabled: true`. An unknown machine is a
+  plain-text error on stderr with exit status 2 (`Error: unknown machine '…'`), not an envelope.
+- `--machine` forwards the API request to the herdr server on the machine; Buddr never runs `ssh` itself. The
+  `agent list` output has the same shape as locally. herdr's own SSH connections (seen from the TUI client) use
+  `BatchMode=yes`, `NumberOfPasswordPrompts=0`, `ConnectTimeout=10` and a shared `ControlMaster` socket with
+  `ControlPersist=600`; with an open master, a `--machine` call took ~0.3 s and started no new `ssh` process. Whether
+  a call without a master uses the same options is unverified – the machine timeout covers a hang either way.
 - Buddr polls `session list --json`, then `agent list` and `workspace list` of every running session concurrently
-  (`HerdrStatusFetcher`). A failing `workspace list` only loses the labels (workspace IDs are shown instead); a
-  failing `agent list` makes the source a `SourceFailure`. The binary is looked up again on every poll.
-- Every subprocess gets a timeout (a few seconds local, ~15 s remote), `stdin = /dev/null`, and is terminated on
-  timeout. One slow or unreachable source must never block the others or the UI.
+  (`HerdrStatusFetcher.fetchSessions`); likewise `machine list --json` (local, doesn't connect) and the same two
+  commands with `--machine <id>` of every enabled machine (`fetchMachines`). A failing `workspace list` only loses
+  the labels (workspace IDs are shown instead); a failing `agent list` makes the source a `SourceFailure`. The binary
+  is looked up again on every poll.
+- Every subprocess gets a timeout (5 s local, 15 s for `--machine`; `HerdrSource.timeout`), `stdin = /dev/null`, and
+  is terminated on timeout. One slow or unreachable source must never block the others or the UI.
 - A timeout watcher must not hold the output pipe of the command being read, otherwise every call waits for the full
   timeout (lesson from the shell prototype). Likewise, a grandchild (e.g. `ssh`) can keep the pipe open after the
   direct child exits – stop waiting for EOF shortly after the process exits. Foundation starts the child as a process
@@ -217,10 +227,11 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
   bounds lie inside a screen, not just that it exists. Note that `NSScreen.main` is the screen with keyboard focus,
   not necessarily the built-in display.
 - Fixtures in `BuddrTests/Fixtures` are real herdr 0.9.3 outputs, anonymized (home directory `/Users/me`, workspace
-  labels, session UUID): `session-list`, `agent-list`, `workspace-list`, `error`. Edited variants derived from the same
-  shapes: `session-list-multiple`, `agent-list-mixed` (all statuses, missing optional fields, a future status),
-  `agent-list-empty`. Never commit personal paths or names. Synchronized groups copy the JSON files flat into the test
-  bundle's `Resources/`; load them with `Fixture.data("name")`.
+  labels, session UUID, machine IDs, labels and SSH targets): `session-list`, `agent-list`, `workspace-list`, `error`,
+  `machine-list`. Edited variants derived from the same shapes: `session-list-multiple`, `agent-list-mixed` (all
+  statuses, missing optional fields, a future status), `agent-list-empty`, `machine-list-mixed` (a disabled
+  machine). Never commit personal paths or names. Synchronized groups copy the JSON files flat into the test bundle's
+  `Resources/`; load them with `Fixture.data("name")`.
 - herdr logic is tested through `FakeCommandRunner` (canned output keyed by the joined arguments); `ProcessRunner` is
   tested with real `/bin/sh` processes (timeouts, SIGTERM-ignoring children, grandchildren holding the pipe).
 - Logs: `os.Logger` subsystem `cz.jsyrovy.buddr`. Watch with
@@ -244,8 +255,9 @@ Aim for ~100 %, every branch covered by a meaningful test – this is pure, dete
 tests are cheap and stable:
 
 - `State/` – status decoding (including unknown future values) and priority aggregation.
-- `Herdr/` except `HerdrPoller` – output parsing, the error envelope, binary lookup, concurrent fetching and failure
-  isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by grandchildren.
+- `Herdr/` except `HerdrPoller` and `HerdrMonitor` – output parsing, the error envelope, binary lookup, concurrent
+  fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
+  grandchildren.
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`.
 - Placement math in `SheepPanelController`, `ScreenGeometry`, `EscapeRoute`.
@@ -254,9 +266,10 @@ tests are cheap and stable:
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
-- `HerdrPoller`, `SheepAnimationDriver` – timer-driven loops. They take injectable `sleep` (and the poller `fetch`)
-  closures; tests pass `ManualSleeper`, which reports every sleep and suspends until `wake()`, so the loop is driven
-  step by step. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and returns once
+- `HerdrPoller`, `HerdrMonitor`, `SheepAnimationDriver` – timer-driven loops. They take injectable `sleep` (and the
+  pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass `ManualSleeper` (one
+  per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by step, and
+  `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and returns once
   the loop has ended, so tests can check that nothing happens after it.
 - `SpriteCanvas` – rendered with `ImageRenderer` and compared pixel by pixel with the grid (integer scale, no
   smoothing, transparency, layer order, opacity). This checks the actual output, which line coverage of a `Canvas`

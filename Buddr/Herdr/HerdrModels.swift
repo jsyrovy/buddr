@@ -10,6 +10,13 @@ struct HerdrSession: Decodable, Sendable, Equatable {
     let running: Bool
 }
 
+/// An entry of `herdr machine list --json` (a top-level array).
+struct HerdrMachine: Decodable, Sendable, Equatable {
+    let id: String
+    let label: String
+    let enabled: Bool
+}
+
 /// Envelope of socket API responses printed by `herdr … agent list` and friends.
 struct HerdrResponse<Result: Decodable & Sendable>: Decodable, Sendable {
     let result: Result?
