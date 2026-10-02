@@ -36,14 +36,4 @@ struct AgentStatusTests {
         let data = Data(#"["napping"]"#.utf8)
         #expect(try JSONDecoder().decode([AgentStatus].self, from: data) == [.unknown])
     }
-
-    @Test func snapshotStatusAggregatesItsAgents() {
-        let record = { (status: AgentStatus) in
-            AgentRecord(
-                source: .localSession("default"), workspace: "w", paneID: "p", agent: nil, status: status, title: "",
-                cwd: nil)
-        }
-        #expect(HerdrSnapshot.empty.status == .unknown)
-        #expect(HerdrSnapshot(agents: [record(.idle), record(.done)], failures: []).status == .done)
-    }
 }

@@ -29,4 +29,23 @@ struct HerdrLocatorTests {
         #expect(locator.directories == ["/opt/homebrew/bin", "/usr/bin", "/usr/local/bin"])
         #expect(locator.locate() == nil)
     }
+
+    @Test func skipsFilesThatAreNotExecutable() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fileManager.removeItem(at: root) }
+        let notExecutable = root.appendingPathComponent("plain")
+        let executable = root.appendingPathComponent("bin")
+        for (directory, permissions) in [(notExecutable, 0o644), (executable, 0o755)] {
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+            let created = fileManager.createFile(
+                atPath: directory.appendingPathComponent("herdr").path, contents: Data("#!/bin/sh\n".utf8),
+                attributes: [.posixPermissions: permissions])
+            try #require(created)
+        }
+
+        // The default check looks at the real file system.
+        let locator = HerdrLocator(searchPath: "\(notExecutable.path):\(executable.path)")
+        #expect(locator.locate()?.path == executable.appendingPathComponent("herdr").path)
+    }
 }

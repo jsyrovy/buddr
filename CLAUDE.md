@@ -48,7 +48,7 @@ Buddr/
   State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs
-  Support/    fixture loader, FakeCommandRunner
+  Support/    fixture loader, FakeCommandRunner, ManualSleeper, AgentRecord.stub
 ```
 
 ## Conventions
@@ -196,12 +196,15 @@ tests are cheap and stable:
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`.
 - Placement math in `SheepPanelController`.
 
-Worth testing, but only through a seam – test these when they gain behaviour, without real-time waiting:
+Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
-- `HerdrPoller`, `SheepAnimationDriver` – timer-driven loops. Drive them with an injected tick source or clock;
-  tests that sleep are slow and flaky, which is worse than no test.
-- `SpriteCanvas` – render with `ImageRenderer` and compare pixels with the grid (integer scale, no smoothing,
-  transparency). This checks the actual output, which line coverage of a `Canvas` closure cannot.
+- `HerdrPoller`, `SheepAnimationDriver` – timer-driven loops. They take injectable `sleep` (and the poller `fetch`)
+  closures; tests pass `ManualSleeper`, which reports every sleep and suspends until `wake()`, so the loop is driven
+  step by step. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and returns once
+  the loop has ended, so tests can check that nothing happens after it.
+- `SpriteCanvas` – rendered with `ImageRenderer` and compared pixel by pixel with the grid (integer scale, no
+  smoothing, transparency, layer order, opacity). This checks the actual output, which line coverage of a `Canvas`
+  closure cannot.
 
 Fine to leave uncovered:
 

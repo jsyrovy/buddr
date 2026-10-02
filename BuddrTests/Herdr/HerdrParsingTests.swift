@@ -60,6 +60,13 @@ struct HerdrParsingTests {
         }
     }
 
+    @Test func envelopeWithoutResultOrErrorIsInvalidOutput() {
+        #expect(throws: HerdrError.invalidOutput(command: "agent list", reason: "neither result nor error")) {
+            let _: HerdrAgentList = try HerdrClient.parseResult(
+                Data(#"{"id":"cli:agent:list"}"#.utf8), command: "agent list")
+        }
+    }
+
     @Test func garbageIsInvalidOutput() {
         #expect {
             let _: HerdrAgentList = try HerdrClient.parseResult(Data("not json".utf8), command: "agent list")

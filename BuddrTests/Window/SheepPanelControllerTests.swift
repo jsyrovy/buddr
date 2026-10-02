@@ -20,4 +20,13 @@ struct SheepPanelControllerTests {
         #expect(origin.x + size.width > visibleFrame.midX)
         #expect(origin.y < visibleFrame.midY)
     }
+
+    @Test func panelNeverTakesFocusAndFloatsOnEverySpace() {
+        let panel = SheepPanel(contentRect: NSRect(x: 0, y: 0, width: 10, height: 10))
+        #expect(!panel.canBecomeKey)
+        #expect(!panel.canBecomeMain)
+        #expect(panel.styleMask.contains(.nonactivatingPanel))
+        #expect(panel.level == .floating)
+        #expect(panel.collectionBehavior.isSuperset(of: [.canJoinAllSpaces, .stationary]))
+    }
 }
