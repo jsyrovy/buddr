@@ -3,7 +3,8 @@ import Observation
 /// Plays the sheep animation in real time and publishes the current picture to SwiftUI.
 ///
 /// Normally the frames come from the `SheepAnimator` state machine. A scripted clip (`play`, `loop`) takes over until
-/// `endScript()`; the state machine keeps its target status meanwhile and continues where it stopped.
+/// `endScript()`, an interjection (`interject`) until its last frame; the state machine keeps its target status
+/// meanwhile and continues where it stopped.
 @MainActor
 @Observable
 final class SheepAnimationDriver {
@@ -18,6 +19,8 @@ final class SheepAnimationDriver {
     private struct Script {
         let clip: AnimationClip
         let loops: Bool
+        /// Hands the animation back to the state machine after the last frame instead of holding it.
+        var handsBack = false
         var frameIndex = 0
         /// Resumed when a non-looping clip has played its last frame; the last frame stays on screen until the next
         /// script or `endScript()`.
@@ -73,6 +76,13 @@ final class SheepAnimationDriver {
         setScript(Script(clip: Self.oriented(clip, mirrored), loops: true))
     }
 
+    /// Shows `clip` once, starting right away, then hands the animation back to the state machine. Ignored while the
+    /// animation is stopped or another script (or interjection) plays.
+    func interject(_ clip: AnimationClip) {
+        guard task != nil, script == nil else { return }
+        setScript(Script(clip: clip, loops: false, handsBack: true))
+    }
+
     /// Hands the animation back to the state machine.
     func endScript() {
         setScript(nil)
@@ -119,14 +129,17 @@ final class SheepAnimationDriver {
         if var script {
             if script.frameIndex + 1 < script.clip.frames.count {
                 script.frameIndex += 1
+                self.script = script
             } else if script.loops {
                 script.frameIndex = 0
+                self.script = script
+            } else if script.handsBack {
+                self.script = nil
             } else {
                 // The last frame stays on screen.
                 finishScript()
                 return
             }
-            self.script = script
         } else {
             animator.advance()
             if animator.frameIndex == 0 {

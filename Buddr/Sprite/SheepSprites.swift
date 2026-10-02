@@ -30,6 +30,7 @@ enum SheepSprites {
         "G": PixelColor(red: 0x2F, green: 0xA8, blue: 0x4F),  // check mark
         "Q": PixelColor(red: 0x7A, green: 0xA2, blue: 0xF7),  // "?"
         "Z": PixelColor(red: 0x9A, green: 0xC0, blue: 0xFF),  // "z"
+        "H": PixelColor(red: 0xF2, green: 0x55, blue: 0x7A),  // heart
     ]
 
     static let outline = palette["O"]!
@@ -83,6 +84,17 @@ enum SheepSprites {
         static let headLook = head(eye: "OEOFFFO")
         /// Mouth open, bleating.
         static let headBleat = head(mouth: ".OPPFO.")
+        /// Eye closed and a blushing cheek, enjoying being petted.
+        static let headContent = [
+            "..OO...",
+            ".OWWO..",
+            "OPWWWO.",
+            "OFFFFO.",
+            "OFOOFFO",
+            "OPFFFFO",
+            ".OFFFO.",
+            "..OOO..",
+        ]
 
         static let checkBubble = [
             ".OOOOOOO.",
@@ -129,6 +141,22 @@ enum SheepSprites {
             "..Z..",
             ".Z...",
             "ZZZZZ",
+        ]
+
+        static let smallHeart = [
+            "HH.HH",
+            "HHHHH",
+            ".HHH.",
+            "..H..",
+        ]
+
+        static let largeHeart = [
+            ".HH.HH.",
+            "HHHHHHH",
+            "HHHHHHH",
+            ".HHHHH.",
+            "..HHH..",
+            "...H...",
         ]
 
         static let smallDust = [
@@ -179,11 +207,14 @@ enum SheepSprites {
         ("headBlink", Grid.headBlink),
         ("headLook", Grid.headLook),
         ("headBleat", Grid.headBleat),
+        ("headContent", Grid.headContent),
         ("checkBubble", Grid.checkBubble),
         ("exclamation", Grid.exclamation),
         ("question", Grid.question),
         ("smallZ", Grid.smallZ),
         ("largeZ", Grid.largeZ),
+        ("smallHeart", Grid.smallHeart),
+        ("largeHeart", Grid.largeHeart),
         ("smallDust", Grid.smallDust),
         ("largeDust", Grid.largeDust),
         ("fleck", Grid.fleck),
@@ -206,6 +237,7 @@ enum SheepSprites {
         static let blink = sprite(Grid.headBlink)
         static let look = sprite(Grid.headLook)
         static let bleat = sprite(Grid.headBleat)
+        static let content = sprite(Grid.headContent)
     }
 
     enum Effect {
@@ -214,6 +246,8 @@ enum SheepSprites {
         static let question = sprite(Grid.question).outlined(with: outline)
         static let smallZ = sprite(Grid.smallZ).outlined(with: outline)
         static let largeZ = sprite(Grid.largeZ).outlined(with: outline)
+        static let smallHeart = sprite(Grid.smallHeart).outlined(with: outline)
+        static let largeHeart = sprite(Grid.largeHeart).outlined(with: outline)
         static let smallDust = sprite(Grid.smallDust).outlined(with: outline)
         static let largeDust = sprite(Grid.largeDust).outlined(with: outline)
         static let fleck = sprite(Grid.fleck)
@@ -243,6 +277,14 @@ enum SheepSprites {
 
     private static func fleck(_ x: Int, _ y: Int) -> SpriteLayer {
         SpriteLayer(sprite: Effect.fleck, x: x, y: y)
+    }
+
+    private static func smallHeart(_ y: Int) -> SpriteLayer {
+        SpriteLayer(sprite: Effect.smallHeart, x: 3, y: y)
+    }
+
+    private static func largeHeart(_ y: Int) -> SpriteLayer {
+        SpriteLayer(sprite: Effect.largeHeart, x: 2, y: y)
     }
 
     private static func question(_ y: Int) -> SpriteLayer {
@@ -351,6 +393,21 @@ enum SheepSprites {
             frame(200, sheep()),
         ])
     }
+
+    // MARK: Petting
+
+    /// The reaction to a click: the sheep leans into the hand with its eye closed, a heart rises and it gives a small
+    /// happy hop. Played by the driver as an interjection, outside the state machine.
+    static let petted = AnimationClip([
+        frame(120, sheep(head: Head.content, headDY: 1)),
+        frame(160, sheep(head: Head.content) + [smallHeart(3)]),
+        frame(160, sheep(head: Head.content, headDY: 1) + [smallHeart(2)]),
+        frame(160, sheep(head: Head.content) + [largeHeart(1)]),
+        frame(160, sheep(head: Head.content, headDY: 1) + [largeHeart(0)]),
+        frame(120, sheep(body: Body.jump, head: Head.content, dy: -1) + [largeHeart(0)]),
+        frame(200, sheep(head: Head.content) + [largeHeart(0)]),
+        frame(200, sheep()),
+    ])
 
     private static func sprite(_ rows: [String]) -> PixelSprite {
         PixelSprite(rows: rows, palette: palette)

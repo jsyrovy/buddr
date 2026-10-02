@@ -127,6 +127,74 @@ struct SheepAnimationDriverTests {
         await driver.stop()
     }
 
+    // MARK: Interjections
+
+    private static let interjection = SheepSprites.petted
+
+    @Test func interjectShowsTheClipOnceAndHandsBackToTheStateMachine() async {
+        let animator = SheepAnimator(status: .working, seed: 7)
+        let driver = driver(animator)
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        driver.start()
+        _ = await sleeps.next()
+
+        // The interjection starts right away, each frame with its full duration.
+        driver.interject(Self.interjection)
+        for frame in Self.interjection.frames {
+            #expect(await sleeps.next() == frame.duration)
+            #expect(driver.sprite == frame.sprite)
+            sleeper.wake()
+        }
+        // The state machine continues where it stopped.
+        #expect(await sleeps.next() == animator.frame.duration)
+        #expect(driver.sprite == animator.frame.sprite)
+        await driver.stop()
+    }
+
+    @Test func interjectIsIgnoredWhileAScriptPlays() async {
+        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        driver.start()
+        _ = await sleeps.next()
+
+        driver.loop(Self.script)
+        _ = await sleeps.next()
+        driver.interject(Self.interjection)
+        #expect(driver.sprite == Self.script.frames[0].sprite)
+        sleeper.wake()
+        #expect(await sleeps.next() == Self.script.frames[1].duration)
+        #expect(driver.sprite == Self.script.frames[1].sprite)
+        await driver.stop()
+    }
+
+    @Test func interjectIsIgnoredWhileStopped() {
+        let animator = SheepAnimator(status: .working, seed: 7)
+        let driver = driver(animator)
+        driver.interject(Self.interjection)
+        #expect(driver.sprite == animator.frame.sprite)
+    }
+
+    /// The escape must not be cut short by a petting that was playing when it started.
+    @Test func aScriptReplacesAnInterjectionAndHoldsItsLastFrame() async {
+        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        driver.start()
+        _ = await sleeps.next()
+        driver.interject(Self.interjection)
+        _ = await sleeps.next()
+
+        let playing = Task { await driver.play(Self.script) }
+        for frame in Self.script.frames {
+            #expect(await sleeps.next() == frame.duration)
+            #expect(driver.sprite == frame.sprite)
+            sleeper.wake()
+        }
+        await playing.value
+        #expect(await sleeps.next() == Self.script.frames.last?.duration)
+        #expect(driver.sprite == Self.script.frames.last?.sprite)
+        await driver.stop()
+    }
+
     @Test func stopEndsAPendingPlay() async {
         let driver = driver(SheepAnimator(status: .working, seed: 7))
         var sleeps = sleeper.sleeps.makeAsyncIterator()

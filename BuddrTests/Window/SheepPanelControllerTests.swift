@@ -29,4 +29,13 @@ struct SheepPanelControllerTests {
         #expect(panel.level == .floating)
         #expect(panel.collectionBehavior.isSuperset(of: [.canJoinAllSpaces, .stationary]))
     }
+
+    @Test func aDragThatBarelyMovedThePanelIsAClick() {
+        let start = NSPoint(x: 100, y: 200)
+        let tolerance = SheepPanel.clickTolerance
+        #expect(SheepPanel.isClick(dragStart: start, dragEnd: start))
+        #expect(SheepPanel.isClick(dragStart: start, dragEnd: NSPoint(x: 100 - tolerance, y: 200 + tolerance)))
+        #expect(!SheepPanel.isClick(dragStart: start, dragEnd: NSPoint(x: 100 + tolerance + 1, y: 200)))
+        #expect(!SheepPanel.isClick(dragStart: start, dragEnd: NSPoint(x: 100, y: 200 - tolerance - 1)))
+    }
 }

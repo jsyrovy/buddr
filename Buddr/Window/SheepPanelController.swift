@@ -10,6 +10,8 @@ final class SheepPanelController {
 
     /// Points per sprite pixel.
     let scale: Int
+    /// Called when the sheep is clicked rather than dragged.
+    var onClick: (() -> Void)?
     private let panel: SheepPanel
 
     init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
@@ -23,6 +25,9 @@ final class SheepPanelController {
         panel.contentView = hostingView
         panel.onDragEnd = { [weak self] in
             self?.keepOnScreen()
+        }
+        panel.onClick = { [weak self] in
+            self?.onClick?()
         }
     }
 
@@ -48,7 +53,7 @@ final class SheepPanelController {
         panel.setFrameOrigin(origin)
     }
 
-    /// Whether the sheep can be dragged; off while it escapes, so it can't be grabbed on the run.
+    /// Whether the sheep can be dragged and clicked; off while it escapes, so it can't be grabbed on the run.
     func setInteractive(_ interactive: Bool) {
         panel.ignoresMouseEvents = !interactive
     }

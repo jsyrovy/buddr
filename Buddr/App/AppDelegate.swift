@@ -14,6 +14,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.animation = animation
 
         let panelController = SheepPanelController(animation: animation)
+        panelController.onClick = {
+            animation.interject(SheepSprites.petted)
+        }
         panelController.show()
         self.panelController = panelController
 

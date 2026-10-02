@@ -76,9 +76,10 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
 - Window: borderless, transparent, non-activating `NSPanel` (never steals focus), `level = .floating`, on all Spaces
   (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
   `performDrag(with:)`, which does not depend on how the SwiftUI hosting view handles the event (unlike
-  `isMovableByWindowBackground`). When click/hover interaction is added (info bubble), distinguish clicks from drags
-  there. After a drag (the button is released) the panel is moved back into the `visibleFrame` of its screen, so it
-  can't be dragged out of sight. Menu bar: SwiftUI `MenuBarExtra`.
+  `isMovableByWindowBackground`). A click is a drag that ended with the panel moved by at most
+  `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is
+  released) the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu
+  bar: SwiftUI `MenuBarExtra`.
 - Fullscreen: while a fullscreen window covers the display with the sheep, the sheep runs off the screen and comes
   back when it is gone. Details in "Fullscreen escape" below.
 - Data sources: local herdr sessions now; later all *enabled* saved machines, discovered dynamically (nothing
@@ -153,8 +154,12 @@ Implementation (`SheepAnimator`):
   switches to `sleeping` after 60 s of continuous `idle`. Any status change resets the idle timer.
 - `done` plays `doneJump` when it starts and then every 4th cycle, `doneHold` otherwise.
 - `unknown` is drawn at `SheepSprites.unknownOpacity`.
+- Petting: a click on the sheep interrupts the current clip right away (unlike a state change) with
+  `SheepSprites.petted` – eye closed, blushing, a rising heart, a small hop. `SheepAnimationDriver.interject` plays it
+  once and hands back to the state machine; it is ignored while a script (escape) or another interjection plays, and a
+  script replaces it.
 - The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
-  variants combine freely; effects (`!`, `?`, `z`, ✔ bubble, dust) are separate layers placed on the canvas.
+  variants combine freely; effects (`!`, `?`, `z`, ✔ bubble, dust, hearts) are separate layers placed on the canvas.
 
 ## Fullscreen escape
 

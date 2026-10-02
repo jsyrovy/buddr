@@ -21,6 +21,7 @@ struct SheepSpritesTests {
     @Test func headVariantsShareTheirSize() {
         let heads = [
             SheepSprites.Head.normal, SheepSprites.Head.blink, SheepSprites.Head.look, SheepSprites.Head.bleat,
+            SheepSprites.Head.content,
         ]
         #expect(Set(heads.map(\.width)).count == 1)
         #expect(Set(heads.map(\.height)).count == 1)
