@@ -34,7 +34,9 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 ```
 Buddr/
   App/        @main App (MenuBarExtra with Quit), AppDelegate wiring, RuntimeEnvironment
-BuddrTests/   Swift Testing tests
+  Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view)
+  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all pixel data)
+BuddrTests/   Swift Testing tests, mirroring the app folders
 ```
 
 ## Conventions
@@ -52,8 +54,14 @@ BuddrTests/   Swift Testing tests
   specific agent, and it avoids trademark issues. The current sheep is a placeholder; before settling on the final
   design, propose a few pixel-art variants to the user.
 - Sprites are drawn with SwiftUI `Canvas` at an integer scale without smoothing. Default scale 6; S/M/L (4/6/8) later.
+  Sprites are character grids (`.` = transparent, other characters = palette colors); a frame is a stack of sprites
+  placed on a fixed canvas (`SheepSprites.canvasWidth` × `canvasHeight`) with room for effects above the sheep.
+  Effect glyphs can be drawn without an outline and get one from `PixelSprite.outlined(with:)`.
 - Window: borderless, transparent, non-activating `NSPanel` (never steals focus), `level = .floating`, on all Spaces
-  (`.canJoinAllSpaces`, `.stationary`), dragged with the mouse. Menu bar: SwiftUI `MenuBarExtra`.
+  (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
+  `performDrag(with:)`, which does not depend on how the SwiftUI hosting view handles the event (unlike
+  `isMovableByWindowBackground`). When click/hover interaction is added (info bubble), distinguish clicks from drags
+  there. Menu bar: SwiftUI `MenuBarExtra`.
 - Data sources: local herdr sessions now; later all *enabled* saved machines, discovered dynamically (nothing
   hardcoded). Polling: local every ~2 s; remote every ~15 s (later). Sources are queried concurrently.
 - A failed source is reported as a failure (later: "⚠" badge + error in the info bubble); it never blocks the others.
@@ -118,3 +126,7 @@ A running animation finishes its cycle before the state machine switches to anot
 - Swift Testing (`import Testing`, `@Test`, `#expect`). The test bundle is hosted by the app (`TEST_HOST`), so
   `@testable import Buddr` works. `RuntimeEnvironment.isRunningTests` keeps the host app inert during tests (no
   panel, no polling, no menu bar item).
+- Checking the running app: `screencapture` needs the Screen Recording permission (without it: "could not create
+  image from display"). Without it, render views offscreen with SwiftUI `ImageRenderer` in a throwaway test, and
+  inspect the panel with `CGWindowListCopyWindowInfo` (owner `Buddr`, layer 3 = `.floating`). Note that
+  `NSScreen.main` is the screen with keyboard focus, not necessarily the built-in display.
