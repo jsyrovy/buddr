@@ -35,7 +35,10 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 Buddr/
   App/        @main App (MenuBarExtra with Quit), AppDelegate wiring, RuntimeEnvironment
   Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view)
-  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all pixel data)
+  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
+              grids, frame composition, clip timing)
+  Animation/  AnimationClip / SheepClipID, SheepAnimator (pure state machine), SheepAnimationDriver (@Observable
+              timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout), HerdrClient (typed CLI calls +
               parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot, sources queried
               concurrently), HerdrPoller (periodic loop on the main actor)
@@ -132,6 +135,17 @@ Aggregated state priority: **blocked > done > working > idle > unknown**. No age
 | `unknown` / no agents | dimmed / semi-transparent, "?" |
 
 A running animation finishes its cycle before the state machine switches to another one.
+
+Implementation (`SheepAnimator`):
+
+- The poller sets the target status (`snapshot.status`); the animator picks the next clip only when the current clip
+  has played its last frame. Keep every clip cycle short (tests enforce ≤ 1.6 s) so state changes show promptly.
+- `idle` picks `idleRest` / `idleBlink` / `idleLook` at random (seeded `SplitMix64`, deterministic in tests) and
+  switches to `sleeping` after 60 s of continuous `idle`. Any status change resets the idle timer.
+- `done` plays `doneJump` when it starts and then every 4th cycle, `doneHold` otherwise.
+- `unknown` is drawn at `SheepSprites.unknownOpacity`.
+- The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
+  variants combine freely; effects (`!`, `?`, `z`, ✔ bubble, dust) are separate layers placed on the canvas.
 
 ## Testing
 

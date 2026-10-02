@@ -10,11 +10,11 @@ final class SheepPanelController {
 
     private let panel: SheepPanel
 
-    init(scale: Int = defaultScale) {
+    init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
         let size = CGSize(
             width: SheepSprites.canvasWidth * scale, height: SheepSprites.canvasHeight * scale)
         panel = SheepPanel(contentRect: NSRect(origin: .zero, size: size))
-        let hostingView = NSHostingView(rootView: SheepView(scale: scale))
+        let hostingView = NSHostingView(rootView: SheepView(animation: animation, scale: scale))
         hostingView.frame = NSRect(origin: .zero, size: size)
         panel.contentView = hostingView
     }

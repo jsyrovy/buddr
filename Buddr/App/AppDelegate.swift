@@ -2,6 +2,7 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var animation: SheepAnimationDriver?
     private var panelController: SheepPanelController?
     private var poller: HerdrPoller?
 
@@ -9,12 +10,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The test bundle is hosted by the app; keep the host inert while tests run.
         guard !RuntimeEnvironment.isRunningTests else { return }
 
-        let panelController = SheepPanelController()
+        let animation = SheepAnimationDriver()
+        animation.start()
+        self.animation = animation
+
+        let panelController = SheepPanelController(animation: animation)
         panelController.show()
         self.panelController = panelController
 
-        // The snapshot drives the sheep once animations are wired up; for now the poller only logs.
-        let poller = HerdrPoller { _ in }
+        let poller = HerdrPoller { snapshot in
+            animation.setStatus(snapshot.status)
+        }
         poller.start()
         self.poller = poller
     }
