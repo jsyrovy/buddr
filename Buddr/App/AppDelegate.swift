@@ -2,6 +2,8 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let preferences = Preferences()
+
     private var animation: SheepAnimationDriver?
     private var panelController: SheepPanelController?
     private var herdrMonitor: HerdrMonitor?
@@ -29,9 +31,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fullscreenMonitor.start()
         self.fullscreenMonitor = fullscreenMonitor
 
+        let preferences = preferences
         let herdrMonitor = HerdrMonitor { snapshot in
             animation.setStatus(snapshot.status)
         }
+        let applyPreferences: @MainActor @Sendable () -> Void = {
+            herdrMonitor.setEnabled(preferences.watchesRemoteMachines, .machines)
+        }
+        applyPreferences()
+        preferences.onChange = applyPreferences
         herdrMonitor.start()
         self.herdrMonitor = herdrMonitor
     }

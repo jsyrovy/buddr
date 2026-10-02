@@ -36,7 +36,7 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 ```
 Buddr/
   App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
-              wiring, RuntimeEnvironment
+              wiring, Preferences (menu bar settings in UserDefaults), RuntimeEnvironment
   Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), PanelPositionStore (last position in
               UserDefaults), SheepView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
@@ -81,7 +81,9 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `isMovableByWindowBackground`). A click is a drag that ended with the panel moved by at most
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is
   released) the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu
-  bar: SwiftUI `MenuBarExtra`.
+  bar: SwiftUI `MenuBarExtra` with the settings as toggles ("Watch Remote Machines") and "Quit Buddr". A separate
+  Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate itself to show
+  one).
 - Position: the origin after every drag is saved in `UserDefaults` (`panelOrigin`, `PanelPositionStore`). At launch
   the panel goes there, moved into the `visibleFrame` of its screen or the nearest one (displays may have changed);
   without a saved position it starts in the bottom-right corner of `NSScreen.main`. Escape moves are not saved.
@@ -90,6 +92,10 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
 - Data sources: running local herdr sessions and all *enabled* saved machines, both discovered on every poll
   (nothing hardcoded). `HerdrMonitor` polls them in independent loops – local every 2 s, machines every 15 s – so a
   slow machine never delays local updates, and shows the combined snapshot. Sources are queried concurrently.
+- Remote machines can be switched off in the menu bar (`Preferences.watchesRemoteMachines`, `UserDefaults` key
+  `watchesRemoteMachines`, on by default). Off stops the machine poller – no `--machine` calls at all, a running one
+  is cancelled – and removes the machines' agents and failures from the snapshot at once
+  (`HerdrMonitor.setEnabled(_:_:)`); on polls them right away.
 - A failed source is reported as a failure (later: "⚠" badge + error in the info bubble); it never blocks the others.
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
@@ -270,7 +276,8 @@ Also aim high, but these need a seam or a rendering step – never real-time wai
   pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass `ManualSleeper` (one
   per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by step, and
   `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and returns once
-  the loop has ended, so tests can check that nothing happens after it.
+  the loop has ended, so tests can check that nothing happens after it. `HerdrPoller.cancel()` stops at once without
+  waiting (nothing is reported after it); a restarted loop waits for the cancelled one, so two never overlap.
 - `SpriteCanvas` – rendered with `ImageRenderer` and compared pixel by pixel with the grid (integer scale, no
   smoothing, transparency, layer order, opacity). This checks the actual output, which line coverage of a `Canvas`
   closure cannot.

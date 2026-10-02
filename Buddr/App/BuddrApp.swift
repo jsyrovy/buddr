@@ -19,6 +19,9 @@ struct BuddrApp: App {
 
     var body: some Scene {
         MenuBarExtra {
+            @Bindable var preferences = appDelegate.preferences
+            Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
+            Divider()
             Button("Quit Buddr") {
                 NSApplication.shared.terminate(nil)
             }
