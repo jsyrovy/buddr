@@ -9,6 +9,9 @@ DerivedData/
 # Editors
 .idea/
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Xcode user state
 xcuserdata/
 *.xcuserstate
