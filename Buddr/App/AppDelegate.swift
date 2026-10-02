@@ -7,9 +7,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var poller: HerdrPoller?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // The test bundle is hosted by the app; keep the host inert while tests run.
-        guard !RuntimeEnvironment.isRunningTests else { return }
-
         let animation = SheepAnimationDriver()
         animation.start()
         self.animation = animation

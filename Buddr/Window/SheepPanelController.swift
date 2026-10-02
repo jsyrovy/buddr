@@ -11,11 +11,10 @@ final class SheepPanelController {
     private let panel: SheepPanel
 
     init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
-        let size = CGSize(
-            width: SheepSprites.canvasWidth * scale, height: SheepSprites.canvasHeight * scale)
-        panel = SheepPanel(contentRect: NSRect(origin: .zero, size: size))
         let hostingView = NSHostingView(rootView: SheepView(animation: animation, scale: scale))
-        hostingView.frame = NSRect(origin: .zero, size: size)
+        // The content has a fixed size; don't let SwiftUI updates re-evaluate the window size on every frame.
+        hostingView.sizingOptions = []
+        panel = SheepPanel(contentRect: NSRect(origin: .zero, size: hostingView.fittingSize))
         panel.contentView = hostingView
     }
 

@@ -33,7 +33,8 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 
 ```
 Buddr/
-  App/        @main App (MenuBarExtra with Quit), AppDelegate wiring, RuntimeEnvironment
+  App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
+              wiring, RuntimeEnvironment
   Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), SheepView (root SwiftUI view)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing)
@@ -151,8 +152,9 @@ Implementation (`SheepAnimator`):
 ## Testing
 
 - Swift Testing (`import Testing`, `@Test`, `#expect`). The test bundle is hosted by the app (`TEST_HOST`), so
-  `@testable import Buddr` works. `RuntimeEnvironment.isRunningTests` keeps the host app inert during tests (no
-  panel, no polling, no menu bar item).
+  `@testable import Buddr` works. Under tests the `@main` entry point (`BuddrMain`) runs an empty `TestHostApp`
+  instead of `BuddrApp` (`RuntimeEnvironment.isRunningTests`), so no panel, polling or menu bar item starts and the
+  real app code needs no test guards.
 - Checking the running app: `screencapture` needs the Screen Recording permission (without it: "could not create
   image from display"). Without it, render views offscreen with SwiftUI `ImageRenderer` in a throwaway test, and
   inspect the panel with `CGWindowListCopyWindowInfo` (owner `Buddr`, layer 3 = `.floating`). Note that
