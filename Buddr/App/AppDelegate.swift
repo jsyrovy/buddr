@@ -34,12 +34,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let preferences = preferences
         let snapshots = snapshots
+        var previous = HerdrSnapshot.empty
         let herdrMonitor = HerdrMonitor { snapshot in
             snapshots.snapshot = snapshot
             animation.setStatus(snapshot.status)
+            if snapshot.hasAgentsNewlyNeedingAttention(since: previous) {
+                animation.replay()
+            }
+            previous = snapshot
         }
         let applyPreferences: @MainActor @Sendable () -> Void = {
             herdrMonitor.setEnabled(preferences.watchesRemoteMachines, .machines)
+            animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
         }
         applyPreferences()
         preferences.onChange = applyPreferences

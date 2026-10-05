@@ -4,7 +4,8 @@ import AppKit
 ///
 /// Running away: the current clip plays to its end, a startled hop, turning to the nearer edge, running until the
 /// panel is off the screen, then the panel is hidden. Coming back: the panel appears past the same edge and the sheep
-/// runs back home. Each way is played to its end; a change of mind meanwhile is handled right after it.
+/// runs back home. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
+/// animation (`AnimationMode.off`), the panel is just hidden and shown again.
 @MainActor
 final class SheepEscape {
     private static let frameInterval: Duration = .milliseconds(16)
@@ -45,6 +46,12 @@ final class SheepEscape {
 
     private func runAway() async {
         panel.setInteractive(false)
+        guard runs else {
+            home = panel.frame.origin
+            panel.setHidden(true)
+            isAway = true
+            return
+        }
         await animation.waitForCycleEnd()
         let frame = panel.frame
         guard wantsAway, let screen = panel.screen(for: frame) else {
@@ -80,6 +87,11 @@ final class SheepEscape {
             panel.setHidden(false)
             return
         }
+        guard runs else {
+            panel.setOrigin(target)
+            panel.setHidden(false)
+            return
+        }
         let route = EscapeRoute(panelFrame: NSRect(origin: target, size: homeFrame.size), screenFrame: screen.frame)
         panel.setOrigin(route.away)
         panel.setHidden(false)
@@ -87,6 +99,11 @@ final class SheepEscape {
         await move(from: route.away, to: route.home, duration: route.duration, easeOut: true)
         await animation.play(SheepSprites.Escape.arrive)
         animation.endScript()
+    }
+
+    /// The sheep runs off the screen and back only while it is animated at all; read at the start of each way.
+    private var runs: Bool {
+        animation.animationMode != .off
     }
 
     /// Moves the panel horizontally in steps of one sprite pixel, checked ~60 times a second.

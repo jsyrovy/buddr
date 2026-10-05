@@ -43,8 +43,8 @@ Buddr/
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and back)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing)
-  Animation/  AnimationClip / SheepClipID, SheepAnimator (pure state machine), SheepAnimationDriver (@Observable
-              timer that plays it), SplitMix64
+  Animation/  AnimationClip / SheepClipID, AnimationMode, SheepAnimator (pure state machine), SheepAnimationDriver
+              (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
               (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
               of local sessions or of saved machines, sources queried concurrently), HerdrPoller (periodic loop on
@@ -85,7 +85,8 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is
   released) the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu
   bar: SwiftUI `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the
-  rows) with the agent list, the settings as toggles ("Watch Remote Machines") and "Quit Buddr". A separate Settings
+  rows) with the agent list, the settings ("Animation" pop-ups, "Watch Remote Machines") and "Quit Buddr". A
+  segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt width. A separate Settings
   window is not worth it until there are more settings (an `LSUIElement` app has to activate itself to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section
   per source – "This Mac" (with the session name when several local sessions run), then the machines by label – in
@@ -112,6 +113,9 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   `watchesRemoteMachines`, on by default). Off stops the machine poller – no `--machine` calls at all, a running one
   is cancelled – and removes the machines' agents and failures from the snapshot at once
   (`HerdrMonitor.setEnabled(_:_:)`); on polls them right away.
+- Animation can be set in the menu bar (`Preferences.animationMode`, key `animationMode`: `off` / `onChange` /
+  `always`, default `always`; `Preferences.animationSeconds`, key `animationDurationSeconds`, one of 5 / 10 / 30 /
+  60 s, default 10). See "Animation modes" below.
 - A failed source is reported as a failure (⚠ + error in the menu bar list); it never blocks the others.
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
@@ -197,6 +201,22 @@ Implementation (`SheepAnimator`):
 - The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
   variants combine freely; effects (`!`, `?`, `z`, ✔ bubble, dust, hearts) are separate layers placed on the canvas.
 
+Animation modes (`AnimationMode`, set with `SheepAnimator.setAnimation(_:for:)`):
+
+- `always`: as above. `off`: a still pose of the state instead of its clip (`idleStill`, `sleepingStill` after the
+  usual 60 s, `workingStill`, `blockedStill`, `doneStill`, `unknownStill`) – one picture made of the clip's pictures,
+  so the state's sign ("!", ✔, "?", "zzz", flecks) still shows. `onChange`: animated until `animatesFor` has been
+  played since the last change, then the running clip finishes and still poses follow.
+- A change is a status change (`setStatus`) or `replay()`, which plays the current status from its start again
+  (`done` jumps again). `AppDelegate` calls it when an agent is newly `blocked` or `done`, which matters when the
+  aggregated status stays the same (`HerdrSnapshot.hasAgentsNewlyNeedingAttention(since:)`, agents keyed by source,
+  pane and status – agents of a source that comes back count as new). A newly working agent doesn't count.
+- Time is counted from played frames, so it pauses during scripts (escape, petting). Changing the mode or duration
+  takes effect when the clip ends; the time already played since the last change counts towards a new duration.
+- A still pose is one 500 ms frame, so a state change still shows within half a second.
+- Petting plays in every mode and hands back to the still pose. Without animation (`off`) the fullscreen escape
+  doesn't run: the panel is just hidden and shown again (`SheepEscape` reads `SheepAnimationDriver.animationMode`).
+
 ## Fullscreen escape
 
 Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
@@ -236,6 +256,8 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
 - The sheep faces left; running right uses mirrored frames (`SpriteFrame.mirrored(canvasWidth:)`). Escape clips are
   played as scripts by `SheepAnimationDriver` (`play` once, `loop`, `endScript`), outside the state machine, which
   keeps its target status and continues where it stopped.
+- With the animation mode `off` (`SheepAnimationDriver.animationMode`, read at the start of each way) the panel is
+  hidden right away, without waiting for the clip, and shown again at home.
 
 ## Testing
 

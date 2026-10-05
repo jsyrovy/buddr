@@ -30,4 +30,34 @@ struct PreferencesTests {
         #expect(changes == 1)
         #expect(!Preferences(defaults: defaults).watchesRemoteMachines)
     }
+
+    @Test func animatesAlwaysByDefault() {
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.animationMode == .always)
+        #expect(preferences.animationSeconds == Preferences.defaultAnimationSeconds)
+    }
+
+    @Test func animationIsSavedAndReported() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.animationMode = .onChange
+        preferences.animationSeconds = 30
+
+        #expect(changes == 2)
+        let reloaded = Preferences(defaults: defaults)
+        #expect(reloaded.animationMode == .onChange)
+        #expect(reloaded.animationSeconds == 30)
+    }
+
+    @Test func invalidSavedAnimationFallsBackToTheDefaults() {
+        defaults.set("sometimes", forKey: "animationMode")
+        defaults.set(7, forKey: "animationDurationSeconds")
+
+        let preferences = Preferences(defaults: defaults)
+
+        #expect(preferences.animationMode == .always)
+        #expect(preferences.animationSeconds == Preferences.defaultAnimationSeconds)
+    }
 }

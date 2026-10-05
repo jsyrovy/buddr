@@ -25,14 +25,17 @@ struct AgentListView: View {
                     .padding(12)
             }
             Divider()
-            HStack {
-                Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
-                    .toggleStyle(.checkbox)
-                Spacer()
-                Button("Quit Buddr") {
-                    NSApplication.shared.terminate(nil)
+            VStack(alignment: .leading, spacing: 8) {
+                AnimationSettings(preferences: preferences)
+                HStack {
+                    Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
+                        .toggleStyle(.checkbox)
+                    Spacer()
+                    Button("Quit Buddr") {
+                        NSApplication.shared.terminate(nil)
+                    }
+                    .keyboardShortcut("q")
                 }
-                .keyboardShortcut("q")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -45,6 +48,44 @@ struct AgentListView: View {
     /// "1 blocked · 2 working", or "No agents".
     private static func summary(_ counts: [AgentOverview.StatusCount]) -> String {
         counts.isEmpty ? "No agents" : counts.map { "\($0.count) \($0.status.rawValue)" }.joined(separator: " · ")
+    }
+}
+
+/// "Animation: Off / On Change / Always", and how long after a change in the `onChange` mode.
+private struct AnimationSettings: View {
+    @Bindable var preferences: Preferences
+
+    var body: some View {
+        HStack {
+            Picker("Animation", selection: $preferences.animationMode) {
+                ForEach(AnimationMode.allCases, id: \.self) { mode in
+                    Text(Self.title(mode)).tag(mode)
+                }
+            }
+            .fixedSize()
+            if preferences.animationMode == .onChange {
+                Picker("Animated for", selection: $preferences.animationSeconds) {
+                    ForEach(Preferences.animationSecondsChoices, id: \.self) { seconds in
+                        Text(Self.title(seconds: seconds)).tag(seconds)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+        }
+    }
+
+    private static func title(_ mode: AnimationMode) -> String {
+        switch mode {
+        case .off: "Off"
+        case .onChange: "On Change"
+        case .always: "Always"
+        }
+    }
+
+    /// "for 5 s", "for 1 min".
+    private static func title(seconds: Int) -> String {
+        seconds.isMultiple(of: 60) ? "for \(seconds / 60) min" : "for \(seconds) s"
     }
 }
 
