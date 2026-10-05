@@ -5,6 +5,7 @@ import Observation
 @MainActor
 @Observable
 final class Preferences {
+    // Keys, choices and defaults are mirrored in `Settings.read()` of scripts/measure.swift.
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
     private static let animationSecondsKey = "animationDurationSeconds"

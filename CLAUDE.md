@@ -12,6 +12,7 @@ make test     # Swift Testing unit tests (hosted by the app)
 make coverage # tests + line coverage report of the app target (result bundle build/Test.xcresult)
 make run      # build, kill a running instance, open the app
 make install  # Release build into ~/Applications (INSTALL_DIR=…), restart it; make uninstall removes it
+make measure  # CPU, wakeups, power and memory of the running app (scripts/measure.swift; ARGS="…")
 make format   # xcrun swift-format, in place
 make lint     # xcrun swift-format lint --strict
 make clean    # rm -rf build
@@ -59,6 +60,7 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs
   Support/    fixture loader, FakeCommandRunner, ManualSleeper, ScriptedFetch + SnapshotRecorder, AgentRecord.stub,
               HerdrSnapshot init that derives the queried sources
+scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage")
 ```
 
 ## Conventions
@@ -368,3 +370,29 @@ Fine to leave uncovered:
 
 Do not add abstractions to production code just to cover lines. A seam is justified when it makes meaningful behaviour
 testable (a clock for the poller), not to reach one more branch.
+
+## Measuring resource usage
+
+`scripts/measure.swift` measures the running app from outside – there is no measuring code in the app. Run it with
+`make -s measure ARGS="…"`: it is compiled once into `build/measure`, while running it through its shebang makes
+`xcrun swift` compile it every time and keep ~300 MB for the whole measurement. `--help` lists the options.
+
+- Every `--interval` (default 5 s) it reads the kernel's counters of the process (`proc_pid_rusage`, no root needed):
+  CPU of the app, CPU of its exited child processes (the herdr calls, which Activity Monitor and `top` don't show),
+  interrupt and idle wakeups, energy (the kernel's estimate in nJ, shown as mW) and `phys_footprint` (Activity
+  Monitor's "Memory"). `avg` is over the whole run, `p95` / `max` over the samples; CPU is in % of one core.
+- By default it runs until Ctrl-C (or `SIGTERM`) and prints a line per sample; `--duration` stops it. `--json` prints
+  JSON on stdout (messages on stderr) and requires `--duration`, so an agent never waits for a Ctrl-C – agents always
+  run it with `--json --duration …`.
+- Every run is saved as `build/measurements/<time>-<release|debug>[-<label>].json` (snake_case keys with the units in
+  the names, the summary before the samples). `show <file>` prints a saved run, `compare <a> <b>` a table with the
+  deltas; it refuses Release vs. Debug and warns when the settings, the power source or profiling differ or a run is
+  shorter than a minute.
+- Measure the Release build (`make install`) for absolute numbers; Debug (`-Onone`) only against other Debug runs. The
+  configuration is detected by `Buddr.debug.dylib` next to the executable and flagged in the output. A run also
+  records the menu bar settings as the app uses them (animation and remote machines change the cost a lot; the script
+  mirrors the keys, choices and defaults of `Preferences`) and warns when the app was built before the last commit,
+  started less than a minute ago, or the settings changed during the run.
+- `--profile` also records a Time Profiler trace (`xctrace`) next to the JSON; measuring starts once xctrace records
+  (it takes a few seconds to attach).
+- Several Buddr processes (a dev build next to the installed one, a test host) need `--pid`.

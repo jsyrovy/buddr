@@ -3,16 +3,17 @@ SCHEME        := Buddr
 CONFIG        ?= Debug
 DERIVED_DATA  := build/DerivedData
 APP           := $(DERIVED_DATA)/Build/Products/$(CONFIG)/Buddr.app
-SOURCES       := Buddr BuddrTests
+SOURCES       := Buddr BuddrTests scripts
 ARCH          := $(shell uname -m)
 INSTALL_DIR   ?= $(HOME)/Applications
 RELEASE_APP   := $(DERIVED_DATA)/Build/Products/Release/Buddr.app
 RESULT_BUNDLE := build/Test.xcresult
+MEASURE       := build/measure
 
 XCODEBUILD    := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIG) \
 	-destination 'platform=macOS,arch=$(ARCH)' -derivedDataPath $(DERIVED_DATA) -quiet
 
-.PHONY: build test coverage run install uninstall format lint clean
+.PHONY: build test coverage run install uninstall measure format lint clean
 
 build:
 	$(XCODEBUILD) build
@@ -43,6 +44,15 @@ install:
 uninstall:
 	pkill -x Buddr || true
 	rm -rf "$(INSTALL_DIR)/Buddr.app"
+
+# Measures the running Buddr (scripts/measure.swift --help); options in ARGS, e.g. make measure ARGS="--label idle".
+# Compiled once: running the script through `xcrun swift` compiles it every time and keeps ~300 MB for the run.
+measure: $(MEASURE)
+	$(MEASURE) $(ARGS)
+
+$(MEASURE): scripts/measure.swift
+	mkdir -p build
+	xcrun swiftc -O -o $@ $<
 
 format:
 	xcrun swift-format format --in-place --recursive --parallel $(SOURCES)
