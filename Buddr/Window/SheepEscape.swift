@@ -3,8 +3,8 @@ import AppKit
 /// Makes the sheep run off the screen while it should be away – a fullscreen window covers its display, or it hides
 /// (`SheepHiding`) – and come back once there is no reason left.
 ///
-/// Running away: the current clip plays to its end, a startled hop, turning to the nearer edge, running until the
-/// panel is off the screen, then the panel is hidden. Coming back: the panel appears past the same edge and the sheep
+/// Running away: the current clip plays to its end, a startled hop (or a yawn when the sheep only hides), turning to the
+/// nearer edge, running (walking) until the panel is off the screen, then the panel is hidden. Coming back: the panel appears past the same edge and the sheep
 /// runs back home. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
 /// animation (`AnimationMode.off`) or without any screen, the panel is just hidden and shown again.
 @MainActor
@@ -76,14 +76,26 @@ final class SheepEscape {
             hide()
             return
         }
+        // Hiding alone is no hurry: the sheep yawns and wanders off. A fullscreen window startles it.
+        let wandersOff = reasons == [.hiding]
+        if wandersOff {
+            await animation.play(SheepSprites.Escape.yawn)
+            guard wantsAway else {
+                // Something happened during the yawn.
+                animation.endScript()
+                panel.setInteractive(true)
+                return
+            }
+        } else {
+            await animation.play(SheepSprites.Escape.startle)
+        }
         home = frame.origin
-        let route = EscapeRoute(panelFrame: frame, screenFrame: screen.frame)
-        await animation.play(SheepSprites.Escape.startle)
+        let route = EscapeRoute(panelFrame: frame, screenFrame: screen.frame, pace: wandersOff ? .walk : .run)
         let towardsRight = route.edge == .right
         if towardsRight {
             await animation.play(SheepSprites.Escape.turn, mirrored: true)
         }
-        animation.loop(SheepSprites.Escape.run, mirrored: towardsRight)
+        animation.loop(wandersOff ? SheepSprites.Escape.walk : SheepSprites.Escape.run, mirrored: towardsRight)
         await move(from: route.home, to: route.away, duration: route.duration, easeOut: false)
         panel.setHidden(true)
         animation.endScript()

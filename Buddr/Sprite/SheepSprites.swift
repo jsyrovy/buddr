@@ -95,6 +95,17 @@ enum SheepSprites {
             ".OFFFO.",
             "..OOO..",
         ]
+        /// Eye closed and the mouth wide open, yawning.
+        static let headYawn = [
+            "..OO...",
+            ".OWWO..",
+            "OPWWWO.",
+            "OFFFFO.",
+            "OFOOFFO",
+            "OPPFFFO",
+            ".OPPFO.",
+            "..OOO..",
+        ]
 
         static let checkBubble = [
             ".OOOOOOO.",
@@ -208,6 +219,7 @@ enum SheepSprites {
         ("headLook", Grid.headLook),
         ("headBleat", Grid.headBleat),
         ("headContent", Grid.headContent),
+        ("headYawn", Grid.headYawn),
         ("checkBubble", Grid.checkBubble),
         ("exclamation", Grid.exclamation),
         ("question", Grid.question),
@@ -238,6 +250,7 @@ enum SheepSprites {
         static let look = sprite(Grid.headLook)
         static let bleat = sprite(Grid.headBleat)
         static let content = sprite(Grid.headContent)
+        static let yawn = sprite(Grid.headYawn)
     }
 
     enum Effect {
@@ -384,8 +397,9 @@ enum SheepSprites {
 
     // MARK: Escape
 
-    /// Clips of the escape from a fullscreen window and the return. They are played by `SheepEscape` rather than the
-    /// state machine; the sheep faces left, running right uses the mirrored frames.
+    /// Clips of leaving the screen – escaping from a fullscreen window or wandering off bored when it hides – and of
+    /// the return. They are played by `SheepEscape` rather than the state machine; the sheep faces left, moving right
+    /// uses the mirrored frames.
     enum Escape {
         /// A startled hop with an open mouth before running away.
         static let startle = AnimationClip([
@@ -394,6 +408,14 @@ enum SheepSprites {
             frame(100, sheep(body: Body.jump, head: Head.bleat, dy: -3)),
             frame(100, sheep(body: Body.jump, dy: -2)),
             frame(80, sheep()),
+        ])
+        /// A slow yawn with the head raised before wandering off.
+        static let yawn = AnimationClip([
+            frame(200, sheep()),
+            frame(150, sheep(head: Head.blink, headDY: -1)),
+            frame(600, sheep(head: Head.yawn, headDY: -1)),
+            frame(200, sheep(head: Head.blink)),
+            frame(200, sheep()),
         ])
         /// Standing still for a moment, shown mirrored when the sheep turns around.
         static let turn = AnimationClip([
@@ -405,6 +427,13 @@ enum SheepSprites {
             frame(80, sheep(body: Body.jump, dy: -1) + [smallDust]),
             frame(80, sheep(body: Body.trotB)),
             frame(80, sheep(body: Body.jump, dy: -1)),
+        ])
+        /// A slow walk with the head hanging and bobbing, looped while the panel moves.
+        static let walk = AnimationClip([
+            frame(180, sheep(body: Body.trotA, headDY: 1)),
+            frame(180, sheep()),
+            frame(180, sheep(body: Body.trotB, headDY: 1)),
+            frame(180, sheep()),
         ])
         /// Catching breath after coming back.
         static let arrive = AnimationClip([

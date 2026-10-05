@@ -7,8 +7,8 @@ struct EscapeRouteTests {
     private static let screen = CGRect(x: 0, y: 0, width: 1512, height: 949)
     private static let size = CGSize(width: 132, height: 120)
 
-    private static func route(x: CGFloat) -> EscapeRoute {
-        EscapeRoute(panelFrame: CGRect(origin: CGPoint(x: x, y: 24), size: size), screenFrame: screen)
+    private static func route(x: CGFloat, pace: EscapeRoute.Pace = .run) -> EscapeRoute {
+        EscapeRoute(panelFrame: CGRect(origin: CGPoint(x: x, y: 24), size: size), screenFrame: screen, pace: pace)
     }
 
     @Test func runsToTheNearerEdgeUntilThePanelIsOffTheScreen() {
@@ -37,7 +37,17 @@ struct EscapeRouteTests {
     @Test func shortDistancesAreRunAtConstantSpeedLongOnesInLimitedTime() {
         // From the default corner: 24 points margin plus the panel width.
         #expect(Self.route(x: 1356).duration == .seconds(156.0 / 150))
-        #expect(Self.route(x: 700).duration == EscapeRoute.maxDuration)
+        #expect(Self.route(x: 700).duration == EscapeRoute.Pace.run.maxDuration)
+    }
+
+    @Test func walkingIsSlowerOnTheSameWay() {
+        let walk = Self.route(x: 1430, pace: .walk)
+        #expect(walk.edge == .right)
+        #expect(walk.away == CGPoint(x: 1512, y: 24))
+        #expect(walk.duration == .seconds(82.0 / 45))
+        // From the default corner the walk is already limited.
+        #expect(Self.route(x: 1356, pace: .walk).duration == EscapeRoute.Pace.walk.maxDuration)
+        #expect(EscapeRoute.Pace.walk.maxDuration > EscapeRoute.Pace.run.maxDuration)
     }
 
     @Test func movesInWholeSpritePixelsAndReachesTheEnd() {

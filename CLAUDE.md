@@ -251,8 +251,9 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
   to the nearer of the left and right screen edges (tie: right) and gallops until the panel is completely past it;
   then the panel is hidden. Back: the panel appears past the same edge and the sheep runs home with an ease-out,
   catches breath and continues with the state machine. Neighbouring displays are deliberately ignored.
-- Speed: 150 pt/s, but one way never takes longer than 1.2 s (longer distances are run faster). The panel moves
-  ~60 times a second in whole sprite pixels (`scale` points) to keep the pixel-art look.
+- Speed (`EscapeRoute.Pace`): running 150 pt/s, but one way never takes longer than 1.2 s (longer distances are run
+  faster); walking (hiding) 45 pt/s, at most 3 s. The panel moves ~60 times a second in whole sprite pixels (`scale`
+  points) to keep the pixel-art look.
 - Each way plays to its end; if fullscreen ends before the clip does, the sheep doesn't leave at all. The panel
   ignores the mouse during the escape. If the home screen is gone, the sheep returns to the nearest one.
 - The sheep faces left; running right uses mirrored frames (`SpriteFrame.mirrored(canvasWidth:)`). Escape clips are
@@ -275,8 +276,11 @@ Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle
   (e.g. `idle` → `working` in `unlessNeeded`) keeps it hidden.
 - The sheep can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`SheepHiding.show()`), which
   calls it back until another `hideMinutes` of calm.
-- Moving uses `SheepEscape` (same route and running as the fullscreen escape; `off` animation just hides the panel).
-  `SheepEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the sheep is away while there is any.
+- Moving uses `SheepEscape` with the same route as the fullscreen escape. When hiding is the only reason, the sheep
+  leaves bored instead of startled: a yawn (`SheepSprites.Escape.yawn`; if the reason is gone by its end, it stays),
+  then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.
+  `off` animation just hides the panel.
+- `SheepEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the sheep is away while there is any.
 - Logs: category `hiding`.
 
 ## Testing

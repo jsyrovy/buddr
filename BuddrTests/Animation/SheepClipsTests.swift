@@ -8,6 +8,7 @@ struct SheepClipsTests {
         uniqueKeysWithValues: SheepClipID.allCases.map { ("\($0)", SheepSprites.clip($0)) } + [
             ("escapeStartle", SheepSprites.Escape.startle), ("escapeTurn", SheepSprites.Escape.turn),
             ("escapeRun", SheepSprites.Escape.run), ("escapeArrive", SheepSprites.Escape.arrive),
+            ("escapeYawn", SheepSprites.Escape.yawn), ("escapeWalk", SheepSprites.Escape.walk),
             ("petted", SheepSprites.petted),
         ])
     private static let clipNames = clips.keys.sorted()

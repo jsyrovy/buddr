@@ -1,17 +1,33 @@
 import CoreGraphics
 
-/// Where the sheep runs when it escapes: to the nearer of the left and right screen edges, until the panel is fully
-/// past it, and back the same way. Neighbouring displays are deliberately ignored.
+/// Where the sheep goes when it leaves the screen: to the nearer of the left and right screen edges, until the panel is
+/// fully past it, and back the same way. Neighbouring displays are deliberately ignored.
 struct EscapeRoute: Equatable {
     enum Edge: Equatable {
         case left
         case right
     }
 
-    /// Running speed on short distances.
-    static let pointsPerSecond: CGFloat = 150
-    /// Longer distances are run faster, so one way never takes longer than this.
-    static let maxDuration: Duration = .milliseconds(1200)
+    enum Pace: Equatable {
+        case run
+        case walk
+
+        /// Speed on short distances.
+        var pointsPerSecond: CGFloat {
+            switch self {
+            case .run: 150
+            case .walk: 45
+            }
+        }
+
+        /// Longer distances are covered faster, so one way never takes longer than this.
+        var maxDuration: Duration {
+            switch self {
+            case .run: .milliseconds(1200)
+            case .walk: .seconds(3)
+            }
+        }
+    }
 
     let edge: Edge
     /// Panel origin in its normal position, where the sheep comes back to.
@@ -21,8 +37,8 @@ struct EscapeRoute: Equatable {
     /// Time of one way.
     let duration: Duration
 
-    /// `panelFrame` and `screenFrame` are in AppKit screen coordinates. On a tie the sheep runs right.
-    init(panelFrame: CGRect, screenFrame: CGRect) {
+    /// `panelFrame` and `screenFrame` are in AppKit screen coordinates. On a tie the sheep goes right.
+    init(panelFrame: CGRect, screenFrame: CGRect, pace: Pace = .run) {
         let distanceLeft = panelFrame.maxX - screenFrame.minX
         let distanceRight = screenFrame.maxX - panelFrame.minX
         edge = distanceLeft < distanceRight ? .left : .right
@@ -30,7 +46,7 @@ struct EscapeRoute: Equatable {
         let awayX = edge == .left ? screenFrame.minX - panelFrame.width : screenFrame.maxX
         away = CGPoint(x: awayX, y: panelFrame.minY)
         let distance = abs(awayX - panelFrame.minX)
-        duration = min(Self.maxDuration, .seconds(Double(distance / Self.pointsPerSecond)))
+        duration = min(pace.maxDuration, .seconds(Double(distance / pace.pointsPerSecond)))
     }
 
     /// Panel x after `time` (0…1) of the way from `from` to `to`, in whole steps of `step` points (one sprite pixel)
