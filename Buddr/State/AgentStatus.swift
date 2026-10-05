@@ -19,6 +19,11 @@ enum AgentStatus: String, Sendable, CaseIterable, Comparable {
         }
     }
 
+    /// Waiting for the user, or finished and not yet seen.
+    var needsAttention: Bool {
+        self == .blocked || self == .done
+    }
+
     /// The most urgent status (blocked > done > working > idle > unknown); `unknown` when there are no agents.
     static func aggregate(_ statuses: some Sequence<AgentStatus>) -> AgentStatus {
         statuses.max() ?? .unknown

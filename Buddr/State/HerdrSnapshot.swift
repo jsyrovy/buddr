@@ -57,6 +57,25 @@ struct HerdrSnapshot: Hashable, Sendable {
     var status: AgentStatus {
         AgentStatus.aggregate(agents.map(\.status))
     }
+
+    /// Whether an agent is `blocked` or `done` that wasn't in that status in `previous` – including agents that weren't
+    /// there at all, such as those of a source that is back after a failure.
+    func hasAgentsNewlyNeedingAttention(since previous: HerdrSnapshot) -> Bool {
+        let before = Set(previous.agents.map(AttentionKey.init))
+        return agents.contains { $0.status.needsAttention && !before.contains(AttentionKey($0)) }
+    }
+
+    private struct AttentionKey: Hashable {
+        let source: HerdrSource
+        let paneID: String
+        let status: AgentStatus
+
+        init(_ agent: AgentRecord) {
+            source = agent.source
+            paneID = agent.paneID
+            status = agent.status
+        }
+    }
 }
 
 extension Array where Element: Equatable {

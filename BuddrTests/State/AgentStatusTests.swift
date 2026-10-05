@@ -36,4 +36,8 @@ struct AgentStatusTests {
         let data = Data(#"["napping"]"#.utf8)
         #expect(try JSONDecoder().decode([AgentStatus].self, from: data) == [.unknown])
     }
+
+    @Test func onlyBlockedAndDoneNeedAttention() {
+        #expect(AgentStatus.allCases.filter(\.needsAttention) == [.blocked, .done])
+    }
 }
