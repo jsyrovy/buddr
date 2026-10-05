@@ -92,9 +92,9 @@ final class SheepAnimationDriver {
 
     /// Shows `clip` once, starting right away, then hands the animation back to the state machine. Ignored while the
     /// animation is stopped or another script (or interjection) plays.
-    func interject(_ clip: AnimationClip) {
+    func interject(_ clip: AnimationClip, mirrored: Bool = false) {
         guard task != nil, script == nil else { return }
-        setScript(Script(clip: clip, loops: false, handsBack: true))
+        setScript(Script(clip: Self.oriented(clip, mirrored), loops: false, handsBack: true))
     }
 
     /// Hands the animation back to the state machine.

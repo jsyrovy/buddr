@@ -24,6 +24,9 @@ struct BuddrApp: App {
             ) {
                 appDelegate.agentListOpened()
             }
+            #if DEBUG
+                .environment(appDelegate.debug)
+            #endif
         } label: {
             Image(
                 nsImage: .template(

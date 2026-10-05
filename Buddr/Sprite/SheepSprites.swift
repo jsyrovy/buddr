@@ -458,6 +458,18 @@ enum SheepSprites {
         frame(200, sheep()),
     ])
 
+    /// Every clip with a name: the state machine's, the escape's and the petting reaction.
+    static let allClips: [(name: String, clip: AnimationClip)] =
+        SheepClipID.allCases.map { ("\($0)", clip($0)) } + [
+            ("escapeStartle", Escape.startle),
+            ("escapeYawn", Escape.yawn),
+            ("escapeTurn", Escape.turn),
+            ("escapeRun", Escape.run),
+            ("escapeWalk", Escape.walk),
+            ("escapeArrive", Escape.arrive),
+            ("petted", petted),
+        ]
+
     private static func sprite(_ rows: [String]) -> PixelSprite {
         PixelSprite(rows: rows, palette: palette)
     }

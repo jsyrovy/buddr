@@ -34,6 +34,11 @@ struct AgentListView: View {
                     .padding(12)
             }
             Divider()
+            #if DEBUG
+                DebugSection()
+                    .padding(8)
+                Divider()
+            #endif
             VStack(alignment: .leading, spacing: 8) {
                 AnimationSettings(preferences: preferences)
                 HideSettings(preferences: preferences)

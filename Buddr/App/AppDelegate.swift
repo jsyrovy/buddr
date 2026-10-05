@@ -5,6 +5,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = Preferences()
     let snapshots = SnapshotStore()
     let hiding = SheepHiding()
+    #if DEBUG
+        let debug = DebugControls()
+    #endif
 
     private var animation: SheepAnimationDriver?
     private var panelController: SheepPanelController?
@@ -41,11 +44,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let preferences = preferences
         let snapshots = snapshots
+        #if DEBUG
+            let debug = debug
+        #endif
+        let applyStatus: @MainActor @Sendable () -> Void = {
+            var status = snapshots.snapshot?.status ?? .unknown
+            #if DEBUG
+                status = debug.statusOverride ?? status
+            #endif
+            animation.setStatus(status)
+            hiding.setStatus(status)
+        }
+        #if DEBUG
+            debug.animation = animation
+            debug.escape = escape
+            debug.onStatusOverrideChange = applyStatus
+        #endif
         var previous = HerdrSnapshot.empty
         let herdrMonitor = HerdrMonitor { snapshot in
             snapshots.snapshot = snapshot
-            animation.setStatus(snapshot.status)
-            hiding.setStatus(snapshot.status)
+            applyStatus()
             if snapshot.hasAgentsNewlyNeedingAttention(since: previous) {
                 animation.replay()
             }

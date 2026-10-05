@@ -3,14 +3,8 @@ import Testing
 @testable import Buddr
 
 struct SheepClipsTests {
-    /// Every clip by name: the state machine's, the escape's and the petting reaction.
-    private static let clips: [String: AnimationClip] = Dictionary(
-        uniqueKeysWithValues: SheepClipID.allCases.map { ("\($0)", SheepSprites.clip($0)) } + [
-            ("escapeStartle", SheepSprites.Escape.startle), ("escapeTurn", SheepSprites.Escape.turn),
-            ("escapeRun", SheepSprites.Escape.run), ("escapeArrive", SheepSprites.Escape.arrive),
-            ("escapeYawn", SheepSprites.Escape.yawn), ("escapeWalk", SheepSprites.Escape.walk),
-            ("petted", SheepSprites.petted),
-        ])
+    /// Names are unique: building the dictionary traps otherwise.
+    private static let clips = Dictionary(uniqueKeysWithValues: SheepSprites.allClips.map { ($0.name, $0.clip) })
     private static let clipNames = clips.keys.sorted()
 
     @Test(arguments: clipNames)

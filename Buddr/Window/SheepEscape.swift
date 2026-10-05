@@ -34,6 +34,21 @@ final class SheepEscape {
     enum Reason: Hashable {
         case fullscreen
         case hiding
+        #if DEBUG
+            /// Sent away by hand from the debug section of the menu bar list.
+            case debug(startled: Bool)
+        #endif
+
+        /// Whether the sheep leaves startled; it wanders off bored when no reason is.
+        var startles: Bool {
+            switch self {
+            case .fullscreen: true
+            case .hiding: false
+            #if DEBUG
+                case .debug(let startled): startled
+            #endif
+            }
+        }
     }
 
     func setAway(_ away: Bool, for reason: Reason) {
@@ -77,7 +92,7 @@ final class SheepEscape {
             return
         }
         // Hiding alone is no hurry: the sheep yawns and wanders off. A fullscreen window startles it.
-        let wandersOff = reasons == [.hiding]
+        let wandersOff = !reasons.contains(where: \.startles)
         if wandersOff {
             await animation.play(SheepSprites.Escape.yawn)
             guard wantsAway else {

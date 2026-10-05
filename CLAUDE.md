@@ -53,6 +53,8 @@ Buddr/
   State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure,
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
+  Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the sheep away, override the
+              status), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs
   Support/    fixture loader, FakeCommandRunner, ManualSleeper, ScriptedFetch + SnapshotRecorder, AgentRecord.stub,
@@ -121,6 +123,11 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
 - A failed source is reported as a failure (⚠ + error in the menu bar list); it never blocks the others.
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
+- Debug builds (`#if DEBUG`, set in the Debug configuration) show an orange "DEBUG" box in the menu bar list
+  (`DebugSection`, `DebugControls`): a button for every clip (`SheepSprites.allClips`), played once over whatever
+  plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" / "Come Back" (`SheepEscape.Reason.debug(startled:)`); and a status override
+  that replaces the herdr status for the animation and hiding (not for the list). Release builds contain none of it;
+  check with `CONFIG=Release make build` after touching it.
 - Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, non-herdr sources.
 
 ## herdr CLI
