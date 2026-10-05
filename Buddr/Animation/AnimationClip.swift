@@ -36,4 +36,11 @@ enum SheepClipID: CaseIterable, Hashable, Sendable {
     case doneJump
     case doneHold
     case unknown
+    /// Still poses, shown instead of the clips above while the sheep is not animated (`AnimationMode`).
+    case idleStill
+    case sleepingStill
+    case workingStill
+    case blockedStill
+    case doneStill
+    case unknownStill
 }

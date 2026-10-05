@@ -16,6 +16,17 @@ struct SheepAnimatorTests {
         animator.advance()
     }
 
+    /// Advances frame by frame until at least `duration` has been played; returns the time played.
+    @discardableResult
+    private func play(_ duration: Duration, _ animator: inout SheepAnimator) -> Duration {
+        var elapsed = Duration.zero
+        while elapsed < duration {
+            elapsed += animator.frame.duration
+            animator.advance()
+        }
+        return elapsed
+    }
+
     @Test(arguments: [
         (AgentStatus.working, SheepClipID.working),
         (.blocked, .blocked),
@@ -121,11 +132,7 @@ struct SheepAnimatorTests {
 
     @Test func leavingIdleResetsTheSleepTimer() {
         var animator = SheepAnimator(status: .idle, sleepAfter: .seconds(10), seed: 3)
-        var elapsed = Duration.zero
-        while elapsed < .seconds(8) {
-            elapsed += animator.frame.duration
-            animator.advance()
-        }
+        play(.seconds(8), &animator)
         animator.setStatus(.working)
         finishCycle(&animator)
         #expect(animator.clipID == .working)
@@ -154,5 +161,110 @@ struct SheepAnimatorTests {
             }
         }
         #expect(sequence(seed: 9) == sequence(seed: 9))
+    }
+
+    private static let stillPoses: Set<SheepClipID> = [
+        .idleStill, .sleepingStill, .workingStill, .blockedStill, .doneStill, .unknownStill,
+    ]
+
+    @Test(arguments: [
+        (AgentStatus.idle, SheepClipID.idleStill), (.working, .workingStill), (.blocked, .blockedStill),
+        (.done, .doneStill), (.unknown, .unknownStill),
+    ])
+    func withoutAnimationTheStatusShowsAStillPose(status: AgentStatus, still: SheepClipID) {
+        var animator = SheepAnimator(status: .working, mode: .off, sleepAfter: .seconds(3_600), seed: 1)
+        animator.setStatus(status)
+        for _ in 0..<5 {
+            finishCycle(&animator)
+            #expect(animator.clipID == still)
+        }
+    }
+
+    @Test func withoutAnimationIdleFallsAsleepAsAStillPose() {
+        var animator = SheepAnimator(status: .idle, mode: .off, sleepAfter: .seconds(10), seed: 1)
+        #expect(animator.clipID == .idleStill)
+        let elapsed = play(.seconds(10), &animator)
+        #expect(animator.clipID == .sleepingStill)
+        #expect(elapsed < .seconds(11))
+    }
+
+    @Test func onChangeAnimatesForTheGivenTimeAfterAStatusChange() {
+        var animator = SheepAnimator(status: .working, mode: .onChange, animatesFor: .seconds(3), seed: 1)
+        let elapsed = play(.seconds(3), &animator)
+        // The clip that was playing at 3 s finished first.
+        #expect(animator.clipID == .workingStill)
+        #expect(animator.frameIndex == 0)
+        #expect(elapsed < .seconds(3) + SheepSprites.clip(.working).cycleDuration)
+
+        animator.setStatus(.blocked)
+        finishCycle(&animator)
+        #expect(animator.clipID == .blocked)
+        play(.seconds(2), &animator)
+        #expect(animator.clipID == .blocked)
+        play(.seconds(2), &animator)
+        #expect(animator.clipID == .blockedStill)
+    }
+
+    @Test func replayAnimatesTheSameStatusAgainFromItsStart() {
+        var animator = SheepAnimator(status: .done, mode: .onChange, animatesFor: .seconds(2), seed: 1)
+        play(.seconds(3), &animator)
+        #expect(animator.clipID == .doneStill)
+
+        animator.replay()
+        #expect(animator.clipID == .doneStill)
+        finishCycle(&animator)
+        #expect(animator.clipID == .doneJump)
+        play(.seconds(3), &animator)
+        #expect(animator.clipID == .doneStill)
+    }
+
+    @Test func replayJumpsAgainWhileAlwaysAnimated() {
+        var animator = SheepAnimator(status: .done, seed: 1)
+        finishCycle(&animator)
+        #expect(animator.clipID == .doneHold)
+        animator.replay()
+        finishCycle(&animator)
+        #expect(animator.clipID == .doneJump)
+    }
+
+    @Test func changingTheAnimationTakesEffectWhenTheClipEnds() throws {
+        var animator = SheepAnimator(status: .working, seed: 1)
+        try #require(animator.clip.frames.count > 1)
+        animator.advance()
+        animator.setAnimation(.off, for: .seconds(10))
+        #expect(animator.clipID == .working)
+        advanceToLastFrame(&animator)
+        animator.advance()
+        #expect(animator.clipID == .workingStill)
+
+        animator.setAnimation(.always, for: .seconds(10))
+        finishCycle(&animator)
+        #expect(animator.clipID == .working)
+    }
+
+    @Test func onChangeCountsTheTimeSinceTheLastChange() {
+        var animator = SheepAnimator(status: .working, seed: 1)
+        play(.seconds(5), &animator)
+
+        // Already animated for longer since the last change: still right away.
+        animator.setAnimation(.onChange, for: .seconds(3))
+        finishCycle(&animator)
+        #expect(animator.clipID == .workingStill)
+
+        // A longer time lets it move again for the rest of it.
+        animator.setAnimation(.onChange, for: .seconds(8))
+        finishCycle(&animator)
+        #expect(animator.clipID == .working)
+        play(.seconds(3), &animator)
+        #expect(animator.clipID == .workingStill)
+    }
+
+    @Test(arguments: [AgentStatus.idle, .working, .blocked, .done, .unknown])
+    func alwaysAnimatedNeverShowsAStillPose(status: AgentStatus) {
+        var animator = SheepAnimator(status: status, sleepAfter: .seconds(5), seed: 1)
+        for _ in 0..<50 {
+            #expect(!Self.stillPoses.contains(animator.clipID))
+            finishCycle(&animator)
+        }
     }
 }

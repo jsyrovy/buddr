@@ -41,6 +41,20 @@ final class SheepAnimationDriver {
         animator.setStatus(status)
     }
 
+    /// See `SheepAnimator.replay()`.
+    func replay() {
+        animator.replay()
+    }
+
+    var animationMode: AnimationMode {
+        animator.mode
+    }
+
+    /// See `SheepAnimator.setAnimation(_:for:)`.
+    func setAnimation(_ mode: AnimationMode, for duration: Duration) {
+        animator.setAnimation(mode, for: duration)
+    }
+
     func start() {
         guard task == nil else { return }
         startLoop()

@@ -40,7 +40,21 @@ struct SheepClipsTests {
     @Test(arguments: SheepClipID.allCases)
     func onlyTheUnknownStateIsDimmed(id: SheepClipID) {
         let clip = SheepSprites.clip(id)
-        let expected = id == .unknown ? SheepSprites.unknownOpacity : 1
+        let expected = [.unknown, .unknownStill].contains(id) ? SheepSprites.unknownOpacity : 1
         #expect(clip.frames.allSatisfy { $0.sprite.opacity == expected })
+    }
+
+    /// A still pose is one short frame (a state change waits for it to end) made of the pictures of its state's clip,
+    /// so it shows the same sign ("!", "zzz", …).
+    @Test(arguments: [
+        (SheepClipID.idleStill, SheepClipID.idleRest), (.sleepingStill, .sleeping), (.workingStill, .working),
+        (.blockedStill, .blocked), (.doneStill, .doneHold), (.unknownStill, .unknown),
+    ])
+    func stillPosesAreOneShortFrameOfTheirClipsPictures(still: SheepClipID, animated: SheepClipID) {
+        let frames = SheepSprites.clip(still).frames
+        #expect(frames.count == 1)
+        #expect(frames.allSatisfy { $0.duration <= .milliseconds(500) })
+        let clipLayers = Set(SheepSprites.clip(animated).frames.flatMap(\.sprite.layers))
+        #expect(Set(frames.flatMap(\.sprite.layers)).isSubset(of: clipLayers))
     }
 }
