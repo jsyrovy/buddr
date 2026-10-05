@@ -36,7 +36,6 @@ struct Measurement: Codable {
     var durationS: Double
     var intervalS: Double
     var endReason: EndReason
-    var profiled: Bool
     var tracePath: String?
     var app: AppInfo
     var repo: RepoInfo?
@@ -148,7 +147,7 @@ extension Stat {
     init(avg: Double, over values: [Double]) {
         let sorted = values.sorted()
         let p95 = sorted[Swift.max(0, Int((Double(sorted.count) * 0.95).rounded(.up)) - 1)]
-        self.init(avg: avg, p95: p95, max: sorted.last ?? avg)
+        self.init(avg: avg, p95: p95, max: sorted[sorted.count - 1])
     }
 }
 
@@ -304,7 +303,7 @@ func executablePath(_ pid: pid_t) -> String? {
     var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
     let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
     guard length > 0 else { return nil }
-    return String(decoding: buffer.prefix(Int(length)).map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    return string(buffer.prefix(Int(length)))
 }
 
 /// Debug builds put the app's code into `Buddr.debug.dylib` next to the executable (`ENABLE_DEBUG_DYLIB`).
@@ -333,7 +332,11 @@ func sysctlString(_ name: String) -> String? {
     guard sysctlbyname(name, nil, &size, nil, 0) == 0 else { return nil }
     var buffer = [CChar](repeating: 0, count: size)
     guard sysctlbyname(name, &buffer, &size, nil, 0) == 0 else { return nil }
-    return String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    return string(buffer.prefix { $0 != 0 })
+}
+
+func string(_ characters: some Sequence<CChar>) -> String {
+    String(decoding: characters.map { UInt8(bitPattern: $0) }, as: UTF8.self)
 }
 
 func powerSource() -> PowerSource {
@@ -354,10 +357,10 @@ func repoInfo() -> RepoInfo? {
     func git(_ arguments: String...) -> String? {
         run("/usr/bin/git", ["-C", repoRoot.path] + arguments)
     }
-    guard let commit = git("rev-parse", "--short", "HEAD"), let status = git("status", "--porcelain"),
-        let lastCommitAt = git("log", "-1", "--format=%cI")
+    guard let head = git("log", "-1", "--format=%h %cI")?.split(separator: " "), head.count == 2,
+        let status = git("status", "--porcelain")
     else { return nil }
-    return RepoInfo(commit: commit, dirty: !status.isEmpty, lastCommitAt: lastCommitAt)
+    return RepoInfo(commit: String(head[0]), dirty: !status.isEmpty, lastCommitAt: String(head[1]))
 }
 
 /// Trimmed stdout of a command that succeeded.
@@ -479,8 +482,9 @@ func record(_ options: Options) {
     }
     // Read after the setup above, which would otherwise end up in the first sample.
     guard let first = Counters.read(pid: pid) else { fail("can't read the counters of process \(pid)") }
+    let builtAt = buildDate(path) ?? startedAt
     let app = AppInfo(
-        pid: pid, path: path, configuration: configuration, builtAt: (buildDate(path) ?? startedAt).iso8601,
+        pid: pid, path: path, configuration: configuration, builtAt: builtAt.iso8601,
         uptimeS: round3(Double(first.time - min(first.startTime, first.time)) / 1e9))
 
     var samples: [Sample] = []
@@ -514,7 +518,7 @@ func record(_ options: Options) {
 
     var warnings: [String] = []
     if configuration == .debug { warnings.append(debugWarning) }
-    if let repo, let built = Date.parse(app.builtAt), let committed = Date.parse(repo.lastCommitAt), built < committed {
+    if let repo, let committed = Date.parse(repo.lastCommitAt), builtAt < committed {
         warnings.append("The app was built before the last commit; it may not match the repo.")
     }
     if app.uptimeS < 60 {
@@ -543,14 +547,14 @@ func record(_ options: Options) {
     }
     let measurement = Measurement(
         schema: 1, label: options.label, startedAt: startedAt.iso8601, durationS: duration,
-        intervalS: options.interval, endReason: endReason, profiled: tracePath != nil, tracePath: tracePath, app: app,
+        intervalS: options.interval, endReason: endReason, tracePath: tracePath, app: app,
         repo: repo, system: system, settings: settings,
         summary: Summary(
             cpuPercent: stat(\.cpuPercent), childrenCpuPercent: stat(\.childrenCpuPercent),
             wakeupsPerS: stat(\.wakeupsPerS), idleWakeupsPerS: stat(\.idleWakeupsPerS), powerMw: stat(\.powerMw),
             footprintMb: Footprint(
                 start: megabytes(first.footprint), end: megabytes(last.footprint),
-                max: max(megabytes(first.footprint), samples.map(\.footprintMb).max() ?? 0),
+                max: ([megabytes(first.footprint)] + samples.map(\.footprintMb)).max()!,
                 lifetimeMax: megabytes(last.lifetimeMaxFootprint))),
         warnings: warnings, samples: samples)
 
@@ -561,12 +565,11 @@ func record(_ options: Options) {
     }
     if options.json {
         printJSON(measurement, samples: options.samples)
-        printError("Saved \(displayPath(file.path))")
     } else {
         printSummary(measurement)
         print()
-        print("Saved \(displayPath(file.path))")
     }
+    printProgress("Saved \(displayPath(file.path))", json: options.json)
 }
 
 func target(_ pid: pid_t?) -> (pid: pid_t, path: String) {
@@ -634,28 +637,30 @@ func compare(_ options: Options) {
         warnings.append("\(name): \(shortRunWarning(run.durationS))")
     }
 
-    let metrics = comparedMetrics.map { metric in
+    let rows = comparedMetrics.map { metric in
         let valueA = a.summary[keyPath: metric.value]
         let valueB = b.summary[keyPath: metric.value]
-        return Comparison.Metric(
-            name: metric.name, a: valueA, b: valueB, delta: round3(valueB - valueA),
-            deltaPercent: valueA == 0 ? nil : round3((valueB - valueA) / valueA * 100))
+        return (
+            label: metric.label,
+            metric: Comparison.Metric(
+                name: metric.name, a: valueA, b: valueB, delta: round3(valueB - valueA),
+                deltaPercent: valueA == 0 ? nil : round3((valueB - valueA) / valueA * 100))
+        )
     }
     let comparison = Comparison(
         a: Comparison.Run(a, file: options.files[0]), b: Comparison.Run(b, file: options.files[1]),
-        metrics: metrics, warnings: warnings)
+        metrics: rows.map(\.metric), warnings: warnings)
 
     if options.json {
-        printJSON(comparison)
+        print(json(comparison))
         return
     }
     print("A  \(runLine(a))")
     print("B  \(runLine(b))")
     print()
     print(pad("", 20) + pad("A", 10, right: true) + pad("B", 10, right: true) + pad("Δ", 10, right: true))
-    // `metrics` is mapped from `comparedMetrics`, so the two have the same order.
-    for (metric, compared) in zip(metrics, comparedMetrics) {
-        var line = pad(compared.label, 20) + pad(number(metric.a), 10, right: true)
+    for (label, metric) in rows {
+        var line = pad(label, 20) + pad(number(metric.a), 10, right: true)
         line += pad(number(metric.b), 10, right: true) + pad(signed(metric.delta), 10, right: true)
         if let percent = metric.deltaPercent { line += "  (\(String(format: "%+.0f", percent)) %)" }
         print(line)
@@ -745,6 +750,7 @@ func runLine(_ measurement: Measurement) -> String {
 
 extension Measurement {
     var startedText: String { Date.parse(startedAt)?.displayStamp ?? startedAt }
+    var profiled: Bool { tracePath != nil }
 }
 
 func printWarnings(_ warnings: [String]) {
@@ -792,10 +798,6 @@ let decoder: JSONDecoder = {
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     return decoder
 }()
-
-func printJSON(_ value: some Encodable) {
-    print(json(value))
-}
 
 /// Pretty-printed JSON of the result types with snake_case keys in declaration order (`JSONEncoder` orders them at
 /// random, which buries the summary); plain values are written by `JSONEncoder`. Objects of plain values in an array
