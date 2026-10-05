@@ -20,6 +20,11 @@ make clean    # rm -rf build
 
 Run `make lint test` after every change. `CONFIG=Release make build` builds Release.
 
+CI (`.github/workflows/ci.yml`, GitHub Actions on pushes to `main` and pull requests) runs `make lint`,
+`make coverage` and `CONFIG=Release make build` in one job; the steps run even after an earlier one fails, and the
+result bundle is uploaded when something fails. It uses the `xcode-27` runner image (a preview; `macos-26` only has
+Xcode 26).
+
 ## Toolchain and project
 
 - Xcode 27 / Swift 6.4, deployment target macOS 14, Swift 6 language mode (complete strict concurrency).
