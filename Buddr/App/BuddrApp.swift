@@ -19,7 +19,9 @@ struct BuddrApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AgentListView(store: appDelegate.snapshots, preferences: appDelegate.preferences) {
+            AgentListView(
+                store: appDelegate.snapshots, preferences: appDelegate.preferences, hiding: appDelegate.hiding
+            ) {
                 appDelegate.agentListOpened()
             }
         } label: {

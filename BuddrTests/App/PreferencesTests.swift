@@ -60,4 +60,34 @@ struct PreferencesTests {
         #expect(preferences.animationMode == .always)
         #expect(preferences.animationSeconds == Preferences.defaultAnimationSeconds)
     }
+
+    @Test func neverHidesByDefault() {
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.hideMode == .never)
+        #expect(preferences.hideMinutes == Preferences.defaultHideMinutes)
+    }
+
+    @Test func hidingIsSavedAndReported() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.hideMode = .unlessNeeded
+        preferences.hideMinutes = 15
+
+        #expect(changes == 2)
+        let reloaded = Preferences(defaults: defaults)
+        #expect(reloaded.hideMode == .unlessNeeded)
+        #expect(reloaded.hideMinutes == 15)
+    }
+
+    @Test func invalidSavedHidingFallsBackToTheDefaults() {
+        defaults.set("sometimes", forKey: "hideMode")
+        defaults.set(7, forKey: "hideAfterMinutes")
+
+        let preferences = Preferences(defaults: defaults)
+
+        #expect(preferences.hideMode == .never)
+        #expect(preferences.hideMinutes == Preferences.defaultHideMinutes)
+    }
 }

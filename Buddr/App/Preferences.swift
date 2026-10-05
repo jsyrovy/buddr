@@ -8,10 +8,15 @@ final class Preferences {
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
     private static let animationSecondsKey = "animationDurationSeconds"
+    private static let hideModeKey = "hideMode"
+    private static let hideMinutesKey = "hideAfterMinutes"
 
     /// The choices for `animationSeconds`.
     static let animationSecondsChoices = [5, 10, 30, 60]
     static let defaultAnimationSeconds = 10
+    /// The choices for `hideMinutes`.
+    static let hideMinutesChoices = [1, 5, 15, 30]
+    static let defaultHideMinutes = 5
 
     /// Whether agents on saved herdr machines count, besides local sessions. On by default.
     var watchesRemoteMachines: Bool {
@@ -37,6 +42,22 @@ final class Preferences {
         }
     }
 
+    /// When the sheep hides on its own. Never by default.
+    var hideMode: HideMode {
+        didSet {
+            defaults.set(hideMode.rawValue, forKey: Self.hideModeKey)
+            onChange?()
+        }
+    }
+
+    /// How long the sheep waits before it hides, one of `hideMinutesChoices`.
+    var hideMinutes: Int {
+        didSet {
+            defaults.set(hideMinutes, forKey: Self.hideMinutesKey)
+            onChange?()
+        }
+    }
+
     /// Called after a preference changed.
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
 
@@ -50,5 +71,8 @@ final class Preferences {
         // A value that isn't offered in the menu (none saved, or edited by hand) falls back to the default.
         let seconds = defaults.integer(forKey: Self.animationSecondsKey)
         animationSeconds = Self.animationSecondsChoices.contains(seconds) ? seconds : Self.defaultAnimationSeconds
+        hideMode = defaults.string(forKey: Self.hideModeKey).flatMap { HideMode(rawValue: $0) } ?? .never
+        let minutes = defaults.integer(forKey: Self.hideMinutesKey)
+        hideMinutes = Self.hideMinutesChoices.contains(minutes) ? minutes : Self.defaultHideMinutes
     }
 }

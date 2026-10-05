@@ -6,6 +6,7 @@ import SwiftUI
 struct AgentListView: View {
     let store: SnapshotStore
     @Bindable var preferences: Preferences
+    let hiding: SheepHiding
     /// Called when the list is shown, to poll right away.
     let onOpen: @MainActor () -> Void
 
@@ -13,10 +14,18 @@ struct AgentListView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let snapshot = store.snapshot {
                 let overview = AgentOverview(snapshot)
-                Text(Self.summary(overview.statusCounts))
-                    .font(.headline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                HStack {
+                    Text(Self.summary(overview.statusCounts))
+                        .font(.headline)
+                    Spacer()
+                    if hiding.isHidden {
+                        Button("Show Sheep") {
+                            hiding.show()
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 Divider()
                 OverviewList(overview: overview)
             } else {
@@ -27,6 +36,7 @@ struct AgentListView: View {
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 AnimationSettings(preferences: preferences)
+                HideSettings(preferences: preferences)
                 HStack {
                     Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
                         .toggleStyle(.checkbox)
@@ -86,6 +96,39 @@ private struct AnimationSettings: View {
     /// "for 5 s", "for 1 min".
     private static func title(seconds: Int) -> String {
         seconds.isMultiple(of: 60) ? "for \(seconds / 60) min" : "for \(seconds) s"
+    }
+}
+
+/// "Hide: Never / When Idle / Unless Needed", and after how long.
+private struct HideSettings: View {
+    @Bindable var preferences: Preferences
+
+    var body: some View {
+        HStack {
+            Picker("Hide", selection: $preferences.hideMode) {
+                ForEach(HideMode.allCases, id: \.self) { mode in
+                    Text(Self.title(mode)).tag(mode)
+                }
+            }
+            .fixedSize()
+            if preferences.hideMode != .never {
+                Picker("Hide after", selection: $preferences.hideMinutes) {
+                    ForEach(Preferences.hideMinutesChoices, id: \.self) { minutes in
+                        Text("after \(minutes) min").tag(minutes)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+        }
+    }
+
+    private static func title(_ mode: HideMode) -> String {
+        switch mode {
+        case .never: "Never"
+        case .whenIdle: "When Idle"
+        case .unlessNeeded: "Unless Needed"
+        }
     }
 }
 

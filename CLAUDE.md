@@ -40,7 +40,8 @@ Buddr/
   Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement), PanelPositionStore (last position in
               UserDefaults), SheepView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
-              FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and back)
+              FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and
+              back), HideMode (pure) + SheepHiding (hides the sheep after a while of calm)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing)
   Animation/  AnimationClip / SheepClipID, AnimationMode, SheepAnimator (pure state machine), SheepAnimationDriver
@@ -82,12 +83,12 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
   `performDrag(with:)`, which does not depend on how the SwiftUI hosting view handles the event (unlike
   `isMovableByWindowBackground`). A click is a drag that ended with the panel moved by at most
-  `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is
-  released) the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu
-  bar: SwiftUI `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the
-  rows) with the agent list, the settings ("Animation" pop-ups, "Watch Remote Machines") and "Quit Buddr". A
-  segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt width. A separate Settings
-  window is not worth it until there are more settings (an `LSUIElement` app has to activate itself to show one).
+  `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is released)
+  the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
+  `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
+  agent list, the settings ("Animation" and "Hide" pop-ups, "Watch Remote Machines") and "Quit Buddr". A segmented
+  "Off | On Change | Always" control plus the duration doesn't fit the 360 pt width. A separate Settings window is not
+  worth it until there are more settings (an `LSUIElement` app has to activate itself to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section
   per source – "This Mac" (with the session name when several local sessions run), then the machines by label – in
   the order of discovery (`HerdrSnapshot.sources`, so sources without agents and failed ones show up too). A failed
@@ -106,6 +107,7 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   without a saved position it starts in the bottom-right corner of `NSScreen.main`. Escape moves are not saved.
 - Fullscreen: while a fullscreen window covers the display with the sheep, the sheep runs off the screen and comes
   back when it is gone. Details in "Fullscreen escape" below.
+- Hiding: the sheep can leave the screen on its own after a while of calm. Details in "Hiding" below.
 - Data sources: running local herdr sessions and all *enabled* saved machines, both discovered on every poll
   (nothing hardcoded). `HerdrMonitor` polls them in independent loops – local every 2 s, machines every 15 s – so a
   slow machine never delays local updates, and shows the combined snapshot. Sources are queried concurrently.
@@ -259,6 +261,24 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
 - With the animation mode `off` (`SheepAnimationDriver.animationMode`, read at the start of each way) the panel is
   hidden right away, without waiting for the clip, and shown again at home.
 
+## Hiding
+
+Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle` / `unlessNeeded`, default `never`;
+`Preferences.hideMinutes`, key `hideAfterMinutes`, one of 1 / 5 / 15 / 30 min, default 5).
+
+- Calm (`HideMode.isCalm`): `whenIdle` – the aggregated status is `idle` or `unknown`; `unlessNeeded` – it is not
+  `blocked` or `done` (agents may work). `unknown` (no agents, herdr not running) counts as calm, so a hidden sheep
+  doesn't show "?" when herdr goes away.
+- `SheepHiding` hides the sheep after `hideMinutes` of continuous calm and brings it back as soon as the status isn't
+  calm. The countdown (real time) starts again on every status change, settings change, petting and `show()`; at
+  launch the sheep is visible and the countdown runs from the start. While hidden, a change between two calm statuses
+  (e.g. `idle` → `working` in `unlessNeeded`) keeps it hidden.
+- The sheep can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`SheepHiding.show()`), which
+  calls it back until another `hideMinutes` of calm.
+- Moving uses `SheepEscape` (same route and running as the fullscreen escape; `off` animation just hides the panel).
+  `SheepEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the sheep is away while there is any.
+- Logs: category `hiding`.
+
 ## Testing
 
 - Swift Testing (`import Testing`, `@Test`, `#expect`). The test bundle is hosted by the app (`TEST_HOST`), so
@@ -307,18 +327,19 @@ tests are cheap and stable:
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`.
 - Placement math in `SheepPanelController`, `ScreenGeometry`, `EscapeRoute`.
+- `HideMode` – which statuses are calm in each mode.
 - `FullscreenDetector` – window list parsing and the covering rules (notch, zoomed windows, other displays, layers);
   `FullscreenDebounce` – on right away, off only after the delay.
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
-- `HerdrPoller`, `HerdrMonitor`, `SheepAnimationDriver` – timer-driven loops. They take injectable `sleep` (and the
-  pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass `ManualSleeper` (one
-  per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by step, and
-  `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and returns once
-  the loop has ended, so tests can check that nothing happens after it. `HerdrPoller.cancel()` stops at once without
-  waiting (nothing is reported after it); a restarted loop waits for the cancelled one, so two never overlap.
-  `refresh()` is checked the same way: a sleep reported by `ManualSleeper` ends without `wake()`.
+- `HerdrPoller`, `HerdrMonitor`, `SheepAnimationDriver`, `SheepHiding` – timer-driven loops. They take injectable
+  `sleep` (and the pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass
+  `ManualSleeper` (one per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by
+  step, and `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and
+  returns once the loop has ended, so tests can check that nothing happens after it. `HerdrPoller.cancel()` stops at
+  once without waiting (nothing is reported after it); a restarted loop waits for the cancelled one, so two never
+  overlap. `refresh()` is checked the same way: a sleep reported by `ManualSleeper` ends without `wake()`.
 - `SpriteCanvas` – rendered with `ImageRenderer` and compared pixel by pixel with the grid (integer scale, no
   smoothing, transparency, layer order, opacity). This checks the actual output, which line coverage of a `Canvas`
   closure cannot.

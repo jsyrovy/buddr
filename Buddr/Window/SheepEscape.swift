@@ -1,18 +1,20 @@
 import AppKit
 
-/// Makes the sheep run off the screen while a fullscreen window covers its display, and come back afterwards.
+/// Makes the sheep run off the screen while it should be away – a fullscreen window covers its display, or it hides
+/// (`SheepHiding`) – and come back once there is no reason left.
 ///
 /// Running away: the current clip plays to its end, a startled hop, turning to the nearer edge, running until the
 /// panel is off the screen, then the panel is hidden. Coming back: the panel appears past the same edge and the sheep
 /// runs back home. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
-/// animation (`AnimationMode.off`), the panel is just hidden and shown again.
+/// animation (`AnimationMode.off`) or without any screen, the panel is just hidden and shown again.
 @MainActor
 final class SheepEscape {
     private static let frameInterval: Duration = .milliseconds(16)
 
     private let panel: SheepPanelController
     private let animation: SheepAnimationDriver
-    private var wantsAway = false
+    /// Why the sheep should be away; it is away while there is any.
+    private var reasons: Set<Reason> = []
     private var isAway = false
     private var task: Task<Void, Never>?
     /// Panel origin to come back to, kept from the start of an escape until the sheep is back.
@@ -29,8 +31,17 @@ final class SheepEscape {
         return NSRect(origin: home, size: panel.frame.size)
     }
 
-    func setAway(_ away: Bool) {
-        wantsAway = away
+    enum Reason: Hashable {
+        case fullscreen
+        case hiding
+    }
+
+    func setAway(_ away: Bool, for reason: Reason) {
+        if away {
+            reasons.insert(reason)
+        } else {
+            reasons.remove(reason)
+        }
         guard task == nil else { return }
         task = Task {
             while wantsAway != isAway {
@@ -44,20 +55,25 @@ final class SheepEscape {
         }
     }
 
+    private var wantsAway: Bool {
+        !reasons.isEmpty
+    }
+
     private func runAway() async {
         panel.setInteractive(false)
         guard runs else {
-            home = panel.frame.origin
-            panel.setHidden(true)
-            isAway = true
+            hide()
             return
         }
         await animation.waitForCycleEnd()
-        let frame = panel.frame
-        guard wantsAway, let screen = panel.screen(for: frame) else {
-            // Fullscreen ended before the clip did, or there is no screen at all.
+        guard wantsAway else {
+            // The reason went away before the clip ended.
             panel.setInteractive(true)
-            wantsAway = false
+            return
+        }
+        let frame = panel.frame
+        guard let screen = panel.screen(for: frame) else {
+            hide()
             return
         }
         home = frame.origin
@@ -71,6 +87,13 @@ final class SheepEscape {
         await move(from: route.home, to: route.away, duration: route.duration, easeOut: false)
         panel.setHidden(true)
         animation.endScript()
+        isAway = true
+    }
+
+    /// Hides the panel right away, without running.
+    private func hide() {
+        home = panel.frame.origin
+        panel.setHidden(true)
         isAway = true
     }
 
