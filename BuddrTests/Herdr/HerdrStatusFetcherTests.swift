@@ -62,23 +62,20 @@ struct HerdrStatusFetcherTests {
         #expect(snapshot.agents.map(\.workspace) == ["wG"])
     }
 
-    @Test func sessionsAreQueriedConcurrently() async throws {
-        let delay = Duration.milliseconds(400)
+    @Test(.timeLimit(.minutes(1))) func sessionsAreQueriedConcurrently() async throws {
+        // Every command waits until all four run at once; querying them one by one would hang until the time limit.
+        let barrier = CommandBarrier(count: 4)
         let runner = FakeCommandRunner([
             "session list --json": try .fixture("session-list-multiple"),
-            "--session default agent list": try .fixture("agent-list", delay: delay),
-            "--session default workspace list": try .fixture("workspace-list", delay: delay),
-            "--session work agent list": try .fixture("agent-list", delay: delay),
-            "--session work workspace list": try .fixture("workspace-list", delay: delay),
+            "--session default agent list": try .fixture("agent-list", barrier: barrier),
+            "--session default workspace list": try .fixture("workspace-list", barrier: barrier),
+            "--session work agent list": try .fixture("agent-list", barrier: barrier),
+            "--session work workspace list": try .fixture("workspace-list", barrier: barrier),
         ])
-        let clock = ContinuousClock()
-        let start = clock.now
         let snapshot = await fetcher(runner).fetchSessions()
-        let elapsed = clock.now - start
 
+        #expect(snapshot.failures.isEmpty)
         #expect(snapshot.agents.count == 2)
-        // Four commands of 400 ms each; sequentially this would take 1.6 s.
-        #expect(elapsed < .milliseconds(1_200))
     }
 
     @Test func missingHerdrIsAFailureWithoutAgents() async {

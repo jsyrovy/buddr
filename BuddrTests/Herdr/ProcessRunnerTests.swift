@@ -7,6 +7,9 @@ import Testing
 struct ProcessRunnerTests {
     private let shell = URL(fileURLWithPath: "/bin/sh")
     private let clock = ContinuousClock()
+    /// Upper bound for what has to end early: far above the expected < 1 s, yet well below the `sleep 10` of the
+    /// scripts, so a loaded machine doesn't fail the tests but a process left running does.
+    private let promptly = Duration.seconds(5)
 
     private func sh(
         _ script: String, timeout: Duration = .seconds(5), runner: ProcessRunner = ProcessRunner()
@@ -39,37 +42,46 @@ struct ProcessRunnerTests {
         await #expect(throws: ProcessRunnerError.timedOut(.milliseconds(300))) {
             try await sh("sleep 10", timeout: .milliseconds(300))
         }
-        #expect(clock.now - start < .seconds(2))
+        #expect(clock.now - start < promptly)
     }
 
     @Test func killsProcessesThatIgnoreSigterm() async {
         let runner = ProcessRunner(killGracePeriod: .milliseconds(200), outputGracePeriod: .milliseconds(200))
         let start = clock.now
         await #expect(throws: ProcessRunnerError.timedOut(.milliseconds(300))) {
-            try await sh("trap '' TERM; sleep 3", timeout: .milliseconds(300), runner: runner)
+            try await sh("trap '' TERM; sleep 10", timeout: .milliseconds(300), runner: runner)
         }
-        #expect(clock.now - start < .seconds(2))
+        #expect(clock.now - start < promptly)
     }
 
     @Test func timeoutAlsoStopsGrandchildren() async throws {
         let pidFile = FileManager.default.temporaryDirectory.appendingPathComponent("buddr-\(UUID().uuidString).pid")
         defer { try? FileManager.default.removeItem(at: pidFile) }
         await #expect(throws: ProcessRunnerError.timedOut(.milliseconds(300))) {
-            try await sh("sleep 5 & echo $! > '\(pidFile.path)'; wait", timeout: .milliseconds(300))
+            try await sh("sleep 10 & echo $! > '\(pidFile.path)'; wait", timeout: .milliseconds(300))
         }
         let grandchild = try #require(
             pid_t(String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
-        try await Task.sleep(for: .milliseconds(100))
+        // The signal is sent, but the grandchild may take a moment to exit and be reaped.
+        let deadline = clock.now + promptly
+        while kill(grandchild, 0) == 0 && clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         #expect(kill(grandchild, 0) != 0, "the background sleep should have been killed with its parent")
     }
 
     @Test func doesNotWaitForGrandchildrenHoldingThePipe() async throws {
-        // The background `sleep` inherits stdout and keeps it open after `sh` exits.
+        // The background `sleep` inherits stdout and keeps it open after `sh` exits; its PID goes to stderr.
         let start = clock.now
-        let output = try await sh("sleep 3 & printf done", timeout: .seconds(10))
+        let output = try await sh("sleep 10 & echo $! >&2; printf done", timeout: .seconds(20))
+        let elapsed = clock.now - start
+        let grandchild = try #require(
+            pid_t(String(decoding: output.stderr, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)))
+        kill(grandchild, SIGKILL)
+
         #expect(output.exitStatus == 0)
         #expect(output.stdout == Data("done".utf8))
-        #expect(clock.now - start < .milliseconds(2_000))
+        #expect(elapsed < promptly)
     }
 
     @Test func cancellationKillsTheProcess() async {
@@ -79,7 +91,7 @@ struct ProcessRunnerTests {
         task.cancel()
         let result = await task.result
         #expect(throws: CancellationError.self) { try result.get() }
-        #expect(clock.now - start < .seconds(1))
+        #expect(clock.now - start < promptly)
     }
 
     @Test func reportsLaunchFailures() async {
