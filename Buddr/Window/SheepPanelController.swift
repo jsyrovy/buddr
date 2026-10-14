@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Owns the sheep panel: creates it with the SwiftUI content and places it on screen, where the user left it last
-/// time.
+/// time. Also owns the name plate under the sheep, a child window of the sheep panel; room for it is always kept
+/// below the panel.
 @MainActor
 final class SheepPanelController {
     static let defaultScale = 6
@@ -14,6 +15,12 @@ final class SheepPanelController {
     /// Called when the sheep is clicked rather than dragged.
     var onClick: (() -> Void)?
     private let panel: SheepPanel
+    private let plate: NamePlatePanel
+    /// Text of the name plate; `nil` without a plate.
+    private var plateText: String?
+    /// Whether the plate is hidden although it has a text, while the sheep runs away and back.
+    private var isPlateSuppressed = false
+    private var screenObserver: NSObjectProtocol?
 
     init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
         self.scale = scale
@@ -24,6 +31,7 @@ final class SheepPanelController {
         // The content has a fixed size; don't let SwiftUI updates re-evaluate the window size on every frame.
         hostingView.sizingOptions = []
         panel.contentView = hostingView
+        plate = NamePlatePanel(scale: NamePlateLayout.plateScale(sheepScale: scale))
         panel.onDragEnd = { [weak self] in
             self?.dragEnded()
         }
@@ -35,6 +43,14 @@ final class SheepPanelController {
     func show() {
         moveToInitialPosition()
         panel.orderFrontRegardless()
+        updatePlate()
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.layoutPlate()
+            }
+        }
     }
 
     /// Hides the panel (for example while a fullscreen window covers its display) or shows it again in place.
@@ -44,6 +60,7 @@ final class SheepPanelController {
         } else {
             panel.orderFrontRegardless()
         }
+        updatePlate()
     }
 
     var frame: NSRect {
@@ -52,6 +69,56 @@ final class SheepPanelController {
 
     func setOrigin(_ origin: NSPoint) {
         panel.setFrameOrigin(origin)
+        layoutPlate()
+    }
+
+    /// Shows `text` on the plate under the sheep, or no plate for `nil`.
+    func setNamePlate(_ text: String?) {
+        guard text != plateText else { return }
+        plateText = text
+        if let text {
+            plate.setText(text)
+        }
+        updatePlate()
+    }
+
+    /// Hides the plate while the sheep runs away and back; it shows again (if it has a text) when lifted.
+    func setNamePlateSuppressed(_ suppressed: Bool) {
+        isPlateSuppressed = suppressed
+        updatePlate()
+    }
+
+    private var showsPlate: Bool {
+        plateText != nil && !isPlateSuppressed && panel.isVisible
+    }
+
+    /// Shows the plate as a child of the sheep panel while it should be seen, otherwise takes it away. Done explicitly
+    /// rather than relying on how AppKit orders child windows with their parent.
+    private func updatePlate() {
+        if showsPlate {
+            layoutPlate()
+            if plate.parent == nil {
+                panel.addChildWindow(plate, ordered: .above)
+            }
+            plate.orderFrontRegardless()
+        } else {
+            if plate.parent != nil {
+                panel.removeChildWindow(plate)
+            }
+            plate.orderOut(nil)
+        }
+    }
+
+    /// Places a visible plate under the sheep, inside the visible area of the sheep's screen. A child window moves
+    /// with its parent on its own, but keeping it on screen depends on where the sheep is.
+    private func layoutPlate() {
+        guard showsPlate, let screen = screen(for: panel.frame) else { return }
+        let frame = NamePlateLayout.frame(
+            plateSize: plate.frame.size, sheepFrame: panel.frame, visibleFrame: screen.visibleFrame,
+            plateScale: plate.scale)
+        if frame.origin != plate.frame.origin {
+            plate.setFrameOrigin(frame.origin)
+        }
     }
 
     /// Whether the sheep can be dragged and clicked; off while it escapes, so it can't be grabbed on the run.
@@ -66,16 +133,31 @@ final class SheepPanelController {
     }
 
     /// Where a panel at `frame` may sit: moved into the visible area of its screen (outside the menu bar and the
-    /// Dock). `nil` without screens.
+    /// Dock), with room for the name plate below it. `nil` without screens.
     func onScreenOrigin(for frame: NSRect) -> NSPoint? {
-        screen(for: frame).map { ScreenGeometry.clampedOrigin(of: frame, into: $0.visibleFrame) }
+        screen(for: frame).map {
+            Self.onScreenOrigin(of: frame, in: $0.visibleFrame, reservedBelow: reservedBelow)
+        }
+    }
+
+    /// Room for the name plate below the panel.
+    private var reservedBelow: CGFloat {
+        NamePlateLayout.reservedHeight(sheepScale: scale)
+    }
+
+    /// Origin that moves a panel at `frame` into `visibleFrame`, together with `reservedBelow` points below it.
+    static func onScreenOrigin(of frame: NSRect, in visibleFrame: NSRect, reservedBelow: CGFloat) -> NSPoint {
+        let extended = NSRect(
+            x: frame.minX, y: frame.minY - reservedBelow, width: frame.width, height: frame.height + reservedBelow)
+        let origin = ScreenGeometry.clampedOrigin(of: extended, into: visibleFrame)
+        return NSPoint(x: origin.x, y: origin.y + reservedBelow)
     }
 
     /// Moves the panel back on screen after a drag, so it can't be dragged out of sight by accident, and remembers
     /// the position for the next launch.
     private func dragEnded() {
         if let origin = onScreenOrigin(for: panel.frame) {
-            panel.setFrameOrigin(origin)
+            setOrigin(origin)
         }
         PanelPositionStore.save(panel.frame.origin)
     }
@@ -85,14 +167,17 @@ final class SheepPanelController {
         let size = panel.frame.size
         let origin =
             PanelPositionStore.load().flatMap { onScreenOrigin(for: NSRect(origin: $0, size: size)) }
-            ?? NSScreen.main.map { Self.defaultOrigin(panelSize: size, visibleFrame: $0.visibleFrame) }
+            ?? NSScreen.main.map {
+                Self.defaultOrigin(panelSize: size, visibleFrame: $0.visibleFrame, reservedBelow: reservedBelow)
+            }
         if let origin {
             panel.setFrameOrigin(origin)
         }
     }
 
-    /// Bottom-right corner of the visible screen area (above the Dock), `margin` away from the edges.
-    static func defaultOrigin(panelSize: CGSize, visibleFrame: NSRect) -> NSPoint {
-        NSPoint(x: visibleFrame.maxX - panelSize.width - margin, y: visibleFrame.minY + margin)
+    /// Bottom-right corner of the visible screen area (above the Dock), `margin` away from the edges, with
+    /// `reservedBelow` points for the name plate between the panel and the bottom margin.
+    static func defaultOrigin(panelSize: CGSize, visibleFrame: NSRect, reservedBelow: CGFloat) -> NSPoint {
+        NSPoint(x: visibleFrame.maxX - panelSize.width - margin, y: visibleFrame.minY + margin + reservedBelow)
     }
 }
