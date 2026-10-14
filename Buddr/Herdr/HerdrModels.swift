@@ -42,6 +42,9 @@ struct HerdrAgent: Decodable, Sendable, Equatable {
     let foregroundCwd: String?
     let terminalTitle: String?
     let terminalTitleStripped: String?
+    /// Counter of the agent's status changes, increasing across the whole herdr server (not comparable between
+    /// servers). Missing in older herdr versions.
+    let stateChangeSeq: UInt64?
 }
 
 /// `result` of `workspace list`

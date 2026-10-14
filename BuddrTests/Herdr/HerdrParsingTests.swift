@@ -34,6 +34,7 @@ struct HerdrParsingTests {
         #expect(agent.foregroundCwd == "/Users/me/code/buddr")
         #expect(agent.terminalTitle == "◑ buddr impl1")
         #expect(agent.terminalTitleStripped == "buddr impl1")
+        #expect(agent.stateChangeSeq == 44)
     }
 
     @Test func parsesAgentsWithMissingOptionalFieldsAndFutureStatuses() throws {
@@ -43,6 +44,8 @@ struct HerdrParsingTests {
         #expect(idle.agent == nil)
         #expect(idle.cwd == nil)
         #expect(idle.terminalTitle == nil)
+        // Older herdr versions don't print `state_change_seq`.
+        #expect(idle.stateChangeSeq == nil)
     }
 
     @Test func parsesEmptyAgentList() throws {
@@ -102,5 +105,6 @@ struct HerdrParsingTests {
         #expect(records[2].cwd == "/Users/me/code/website")
         #expect(records[3].cwd == nil)
         #expect(records[3].agent == nil)
+        #expect(records.map(\.stateChangeSeq) == [41, 47, 52, nil, 58])
     }
 }

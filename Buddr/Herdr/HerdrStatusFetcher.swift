@@ -87,7 +87,8 @@ extension AgentRecord {
                 agent: agent.agent,
                 status: agent.agentStatus,
                 title: agent.terminalTitleStripped ?? agent.terminalTitle ?? "",
-                cwd: agent.foregroundCwd ?? agent.cwd)
+                cwd: agent.foregroundCwd ?? agent.cwd,
+                stateChangeSeq: agent.stateChangeSeq)
         }
     }
 }

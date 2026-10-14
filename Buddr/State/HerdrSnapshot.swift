@@ -28,6 +28,8 @@ struct AgentRecord: Hashable, Sendable {
     let status: AgentStatus
     let title: String
     let cwd: String?
+    /// herdr's `state_change_seq`, comparable only between agents of the same source.
+    let stateChangeSeq: UInt64?
 }
 
 /// A source that could not be queried, or a failure before any source was known (`source == nil`).
