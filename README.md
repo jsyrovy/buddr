@@ -12,7 +12,9 @@ an agent is busy, waiting for you, or done – it never gets in your way.
 | idle | blinks, looks around, falls asleep after a while |
 | no agents / unknown | is dimmed, with a "?" |
 
-With several agents, the most urgent state wins: blocked > done > working > idle > unknown.
+With several agents, the most urgent state wins: blocked > done > working > idle > unknown. While the sheep is
+blocked or done, a small plate under it names the agent – `[machine · ]workspace · title`, with `+N` when more agents
+wait for you.
 
 > **Status:** early development (MVP). The sheep is a placeholder; the final design comes later.
 
