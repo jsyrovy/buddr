@@ -66,17 +66,19 @@ struct HerdrSnapshot: Hashable, Sendable {
         let before = Set(previous.agents.map(AttentionKey.init))
         return agents.contains { $0.status.needsAttention && !before.contains(AttentionKey($0)) }
     }
+}
 
-    private struct AttentionKey: Hashable {
-        let source: HerdrSource
-        let paneID: String
-        let status: AgentStatus
+/// An agent in one status, for noticing agents that got into a status: the same pane in another status has another
+/// key.
+struct AttentionKey: Hashable, Sendable {
+    let source: HerdrSource
+    let paneID: String
+    let status: AgentStatus
 
-        init(_ agent: AgentRecord) {
-            source = agent.source
-            paneID = agent.paneID
-            status = agent.status
-        }
+    init(_ agent: AgentRecord) {
+        source = agent.source
+        paneID = agent.paneID
+        status = agent.status
     }
 }
 
