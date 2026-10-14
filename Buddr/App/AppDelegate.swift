@@ -56,14 +56,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             #endif
             animation.setStatus(status)
             hiding.setStatus(status)
-            let plate = namePlates.update(with: snapshot, status: status)
+            var plate = namePlates.update(with: snapshot, status: status)
+            #if DEBUG
+                plate = debug.namePlate(plate, for: status)
+            #endif
             panelController.setNamePlate(
                 plate.map { PixelFont.truncated($0, maxWidth: SheepSprites.Plate.maxTextWidth) })
         }
         #if DEBUG
             debug.animation = animation
             debug.escape = escape
-            debug.onStatusOverrideChange = applyStatus
+            debug.onChange = applyStatus
         #endif
         var previous = HerdrSnapshot.empty
         let herdrMonitor = HerdrMonitor { snapshot in

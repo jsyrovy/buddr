@@ -15,6 +15,8 @@
                         .font(.caption.bold())
                         .foregroundStyle(.orange)
                     Spacer()
+                    Toggle("Long Name", isOn: $controls.longNamePlate)
+                        .toggleStyle(.checkbox)
                     Picker("Status", selection: $controls.statusOverride) {
                         Text("herdr").tag(AgentStatus?.none)
                         ForEach(AgentStatus.allCases, id: \.self) { status in
