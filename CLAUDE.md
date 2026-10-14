@@ -43,12 +43,12 @@ Xcode 26).
 Buddr/
   App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
               wiring, Preferences (menu bar settings in UserDefaults), RuntimeEnvironment
-  Window/     SheepPanel (NSPanel), SheepPanelController (creation, placement, the name plate window),
-              PanelPositionStore (last position in UserDefaults), SheepView (root SwiftUI view),
+  Window/     FloatingPanel (shared NSPanel setup), SheepPanel, SheepPanelController (creation, placement, the name
+              plate window), PanelPositionStore (last position in UserDefaults), SheepView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and
               back), HideMode (pure) + SheepHiding (hides the sheep after a while of calm), NamePlatePanel (child
-              NSPanel) + NamePlateView + NamePlateLayout (pure: plate scale, reserved room, placement)
+              panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing, the plate's look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / SheepClipID, AnimationMode, SheepAnimator (pure state machine), SheepAnimationDriver
@@ -57,9 +57,9 @@ Buddr/
               (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
               of local sessions or of saved machines, sources queried concurrently), HerdrPoller (periodic loop on
               the main actor), HerdrMonitor (one poller per kind of source; combines, filters and logs changes)
-  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure /
-              AttentionKey, AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list),
-              NamePlate + NamePlateTracker (pure: which agent the plate names, its text)
+  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure,
+              AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
+              (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
   Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the sheep away, override the
               status, a long name plate), DebugSection (its orange box in the menu bar list)
@@ -90,8 +90,8 @@ scripts/      measure.swift (resource usage of the running app, see "Measuring r
   Sprites are character grids (`.` = transparent, other characters = palette colors); a frame is a stack of sprites
   placed on a fixed canvas (`SheepSprites.canvasWidth` × `canvasHeight`) with room for effects above the sheep.
   Effect glyphs can be drawn without an outline and get one from `PixelSprite.outlined(with:)`.
-- Window: borderless, transparent, non-activating `NSPanel` (never steals focus), `level = .floating`, on all Spaces
-  (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
+- Window: borderless, transparent, non-activating `NSPanel` (`FloatingPanel`, never steals focus), `level = .floating`,
+  on all Spaces (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
   `performDrag(with:)`, which does not depend on how the SwiftUI hosting view handles the event (unlike
   `isMovableByWindowBackground`). A click is a drag that ended with the panel moved by at most
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is released)
@@ -243,8 +243,8 @@ Animation modes (`AnimationMode`, set with `SheepAnimator.setAnimation(_:for:)`)
   played since the last change, then the running clip finishes and still poses follow.
 - A change is a status change (`setStatus`) or `replay()`, which plays the current status from its start again
   (`done` jumps again). `AppDelegate` calls it when an agent is newly `blocked` or `done`, which matters when the
-  aggregated status stays the same (`HerdrSnapshot.hasAgentsNewlyNeedingAttention(since:)`, agents keyed by source,
-  pane and status – agents of a source that comes back count as new). A newly working agent doesn't count.
+  aggregated status stays the same (`AttentionTracker.hasNewArrivals`, agents keyed by source, pane and status –
+  agents of a source that comes back count as new). A newly working agent doesn't count.
 - Time is counted from played frames, so it pauses during scripts (escape, petting). Changing the mode or duration
   takes effect when the clip ends; the time already played since the last change counts towards a new duration.
 - A still pose is one 500 ms frame, so a state change still shows within half a second.
@@ -323,17 +323,19 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   in `HideMode.unlessNeeded`. It names one agent in that status, the one that got into it last, and adds `+N` for the
   others in it; agents in a lower status are not counted. Text: `[machine label · ]workspace · title` – the machine
   label only for remote sources; the title is `AgentRecord.displayTitle`, dropped when it equals the workspace label.
-- Order without clocks (`NamePlateTracker`): every `AttentionKey` (source, pane, status) gets an increasing arrival
-  number when it first shows up as `blocked` / `done` and loses it once it is gone, so an agent that leaves and comes
-  back is new. Ties within one poll (e.g. at launch): `state_change_seq`, then `agent list` order.
+- Order without clocks (`AttentionTracker`, which also tells `replay()` about new arrivals): every agent keyed by
+  source, pane and status gets an increasing arrival number when it first shows up as `blocked` / `done` and loses it
+  once it is gone, so an agent that leaves and comes back is new. Ties within one poll (e.g. at launch):
+  `state_change_seq`, then `agent list` order.
 - Font (`PixelFont`): 5×7 px, proportional, 2 rows for descenders, 1 px between glyphs, glyphs taken from the mockup
   (`1` redrawn so it doesn't read as `l`). Lowercase letters with a caron, acute or ring get the mark in the two rows
   above the x-height (`í` without its dot); after an ascender a caron becomes an apostrophe to the right (`ď`, `ť`,
   `ľ`). Capitals and other marks are drawn without the mark; characters without a glyph become `?`. The font lives in
-  its own file (not part of the character); the plate's colors (outline and wool), padding, gap and
+  its own file (not part of the character); the plate's colors (outline and wool), padding, gap, pixel size and
   `maxTextWidth` (100 px) are in `SheepSprites.Plate`.
-- Truncation by pixel width (`PixelFont.truncated(_:maxWidth:)`): only the title is shortened, ending in `…`; the
-  prefix and `+N` are kept. If even those don't fit, the whole text is cut at the end.
+- Truncation by pixel width (`SheepSprites.Plate.text(for:maxWidth:)`, on `PixelFont.shortened`, one pass over the
+  text): only the title is shortened, ending in `…`; the prefix and `+N` are kept. If even those don't fit, the whole
+  text is cut at the end.
 - A separate child window (`NamePlatePanel`), not a bigger sheep panel: the plate is wider than the sheep, and growing
   `SheepPanel` would break the clamping, `EscapeRoute` distances, the saved position and the click / drag area. The
   plate panel is borderless, transparent, non-activating, `ignoresMouseEvents`, with the sheep panel's level and
@@ -342,8 +344,8 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   orders child windows with their parent.
 - Placement (`NamePlateLayout`): centered under the sheep (the body is centered on the canvas), `Plate.gap` below the
   feet, moved horizontally into the `visibleFrame` of the sheep's screen; never mirrored or moved above the sheep.
-  Re-laid out on every `setOrigin`, after a drag and on screen parameter changes. Plate pixel: `max(1, scale / 3)`
-  points (2 at the default scale 6).
+  Re-laid out on every `setOrigin`, after a drag and on screen parameter changes. Plate pixel: the sheep's scale
+  divided by `Plate.pixelDivisor`, at least one point (2 at the default scale 6).
 - The text follows the snapshot right away, without waiting for the running clip (≤ 1.6 s of mismatch). The plate is
   redrawn only when its text changes. It stays in every animation mode and while petted, leaves with the sheep
   (fullscreen, hiding), and is hidden during the escape run itself (`SheepEscape` suppresses it once the startle or
@@ -390,7 +392,7 @@ Aim for ~100 %, every branch covered by a meaningful test – this is pure, dete
 tests are cheap and stable:
 
 - `State/` – status decoding (including unknown future values), priority aggregation, `AgentOverview` grouping and
-  ordering, `NamePlateTracker` arrival order and `NamePlate` text.
+  ordering, `AttentionTracker` arrivals and order, `NamePlate` text.
 - `Herdr/` except `HerdrPoller` and `HerdrMonitor` – output parsing, the error envelope, binary lookup, concurrent
   fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
   grandchildren.
@@ -421,9 +423,9 @@ Fine to leave uncovered:
 - `App/` – `BuddrMain`, `BuddrApp`, `AppDelegate` and the non-test branch of `RuntimeEnvironment`. Covering them
   means starting the real panel, menu bar and herdr polling under tests, which defeats `TestHostApp` and makes tests
   depend on the machine. Keep these files pure wiring instead: logic that needs a test moves into a testable type.
-- `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling, `FullscreenMonitor` (notifications,
-  window server queries), `SheepEscape` (moving the real panel in real time), `NamePlatePanel` / `NamePlateView` and
-  showing the plate in `SheepPanelController`. Check them by running the app.
+- `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling, `FullscreenMonitor` (notifications, window
+  server queries), `SheepEscape` (moving the real panel in real time), `NamePlatePanel` and showing the plate in
+  `SheepPanelController`. Check them by running the app.
 - `Menu/` – `AgentListView` (layout only; the logic is in `AgentOverview`). Check it with `ImageRenderer` or the app.
 - Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
   `ProcessRunner.signalProcessGroup`.

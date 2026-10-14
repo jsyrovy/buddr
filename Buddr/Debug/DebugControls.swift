@@ -27,7 +27,7 @@
         /// The plate shown for `status` instead of `plate`: the long sample, or a placeholder when the status is
         /// overridden and no agent is in it, so the plate can be checked without agents.
         func namePlate(_ plate: NamePlate?, for status: AgentStatus) -> NamePlate? {
-            guard status.needsAttention, plate != nil || statusOverride == status else { return plate }
+            guard status.needsAttention, plate != nil || statusOverride != nil else { return plate }
             if longNamePlate {
                 return NamePlate(
                     prefix: "Devbox · a-workspace-with-a-long-name",

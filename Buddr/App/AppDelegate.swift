@@ -47,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
             let debug = debug
         #endif
-        var namePlates = NamePlateTracker()
+        var attention = AttentionTracker()
         let applyStatus: @MainActor () -> Void = {
             let snapshot = snapshots.snapshot ?? .empty
             var status = snapshot.status
@@ -56,26 +56,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             #endif
             animation.setStatus(status)
             hiding.setStatus(status)
-            var plate = namePlates.update(with: snapshot, status: status)
+            var plate = attention.update(with: snapshot, status: status)
             #if DEBUG
                 plate = debug.namePlate(plate, for: status)
             #endif
-            panelController.setNamePlate(
-                plate.map { PixelFont.truncated($0, maxWidth: SheepSprites.Plate.maxTextWidth) })
+            panelController.setNamePlate(plate)
+            if attention.hasNewArrivals {
+                // Even when the aggregated status stays the same.
+                animation.replay()
+            }
         }
         #if DEBUG
             debug.animation = animation
             debug.escape = escape
             debug.onChange = applyStatus
         #endif
-        var previous = HerdrSnapshot.empty
         let herdrMonitor = HerdrMonitor { snapshot in
             snapshots.snapshot = snapshot
             applyStatus()
-            if snapshot.hasAgentsNewlyNeedingAttention(since: previous) {
-                animation.replay()
-            }
-            previous = snapshot
         }
         let applyPreferences: @MainActor @Sendable () -> Void = {
             herdrMonitor.setEnabled(preferences.watchesRemoteMachines, .machines)

@@ -928,11 +928,6 @@ enum PixelFont {
         ],
     ]
 
-    /// Every glyph with its character, for validation in tests.
-    static let allGlyphs: [(character: Character, rows: [String])] = glyphs.sorted { $0.key < $1.key }.map {
-        ($0.key, $0.value)
-    }
-
     /// Combining marks drawn above lowercase letters, centered (leaning right).
     private static let marks: [Unicode.Scalar: [String]] = [
         caron: [
@@ -1015,8 +1010,12 @@ enum PixelFont {
 
     /// Width of `text` in pixels.
     static func width(of text: String) -> Int {
-        let widths = text.map { glyph(for: $0)[0].count }
+        let widths = text.map(glyphWidth)
         return widths.reduce(0, +) + spacing * max(0, widths.count - 1)
+    }
+
+    private static func glyphWidth(_ character: Character) -> Int {
+        glyphs[character]?[0].count ?? glyph(for: character)[0].count
     }
 
     /// `text` in one line, `height` pixels tall, ink in `color`.
@@ -1028,35 +1027,27 @@ enum PixelFont {
         return PixelSprite(width: rows[0].count, height: height, pixels: pixels)
     }
 
-    /// The text of `plate`, at most `maxWidth` pixels wide: the title is shortened with `…`, keeping the machine and
-    /// workspace before it and the `+N` after it. When even those don't fit, the whole text is cut at the end.
-    static func truncated(_ plate: NamePlate, maxWidth: Int) -> String {
-        let text = plate.text
-        guard width(of: text) > maxWidth else { return text }
-        var title = Substring(plate.title)
-        while !title.isEmpty {
-            title.removeLast()
-            let shortened = plate.text(title: title.trimmingTrailingWhitespace() + String(ellipsis))
-            if width(of: shortened) <= maxWidth { return shortened }
+    /// `before + text + after`, with `text` shortened with `…` if needed to be at most `maxWidth` pixels wide; `nil`
+    /// when not even `before + "…" + after` fits. Spaces before the `…` are dropped.
+    static func shortened(
+        _ text: String, between before: String = "", and after: String = "", maxWidth: Int
+    )
+        -> String?
+    {
+        if width(of: before + text + after) <= maxWidth {
+            return before + text + after
         }
-        return truncated(text, maxWidth: maxWidth)
-    }
-
-    /// `text` cut at the end with `…` to be at most `maxWidth` pixels wide; empty if not even `…` fits.
-    static func truncated(_ text: String, maxWidth: Int) -> String {
-        guard width(of: text) > maxWidth else { return text }
-        var kept = Substring(text)
-        while !kept.isEmpty {
-            kept.removeLast()
-            let shortened = kept.trimmingTrailingWhitespace() + String(ellipsis)
-            if width(of: shortened) <= maxWidth { return shortened }
+        // Every kept character adds its glyph and one spacing to the shortest text.
+        var budget = maxWidth - width(of: before + String(ellipsis) + after)
+        guard budget >= 0 else { return nil }
+        var kept = text.startIndex
+        while kept < text.endIndex {
+            budget -= glyphWidth(text[kept]) + spacing
+            guard budget >= 0 else { break }
+            kept = text.index(after: kept)
         }
-        return ""
-    }
-}
-
-extension Substring {
-    fileprivate func trimmingTrailingWhitespace() -> String {
-        String(self[..<(lastIndex { !$0.isWhitespace }.map(index(after:)) ?? startIndex)])
+        let start = text[..<kept]
+        let trimmed = start[..<(start.lastIndex { !$0.isWhitespace }.map(start.index(after:)) ?? start.startIndex)]
+        return before + trimmed + String(ellipsis) + after
     }
 }

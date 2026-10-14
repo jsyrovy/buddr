@@ -33,31 +33,4 @@ struct HerdrSnapshotTests {
         #expect(HerdrSnapshot.empty.status == .unknown)
         #expect(HerdrSnapshot(agents: [.stub(.idle), .stub(.done)], failures: []).status == .done)
     }
-
-    @Test func agentsNewlyBlockedOrDoneNeedAttention() {
-        let before = HerdrSnapshot(agents: [.stub(.blocked, pane: "p1"), .stub(.working, pane: "p2")], failures: [])
-
-        // Another agent blocked, or a waiting one done.
-        let secondBlocked = HerdrSnapshot(
-            agents: [.stub(.blocked, pane: "p1"), .stub(.blocked, pane: "p2")], failures: [])
-        #expect(secondBlocked.hasAgentsNewlyNeedingAttention(since: before))
-        let firstDone = HerdrSnapshot(agents: [.stub(.done, pane: "p1"), .stub(.working, pane: "p2")], failures: [])
-        #expect(firstDone.hasAgentsNewlyNeedingAttention(since: before))
-        // An agent that wasn't there, also one in a pane of the same ID on another source.
-        let machine = HerdrSource.machine(id: "m1", label: "Devbox")
-        let appeared = HerdrSnapshot(agents: before.agents + [.stub(.done, source: machine, pane: "p1")], failures: [])
-        #expect(appeared.hasAgentsNewlyNeedingAttention(since: before))
-        #expect(HerdrSnapshot(agents: [.stub(.blocked)], failures: []).hasAgentsNewlyNeedingAttention(since: .empty))
-    }
-
-    @Test func otherChangesNeedNoAttention() {
-        let before = HerdrSnapshot(agents: [.stub(.blocked, pane: "p1"), .stub(.working, pane: "p2")], failures: [])
-
-        #expect(!before.hasAgentsNewlyNeedingAttention(since: before))
-        let idle = HerdrSnapshot(agents: [.stub(.blocked, pane: "p1"), .stub(.idle, pane: "p2")], failures: [])
-        #expect(!idle.hasAgentsNewlyNeedingAttention(since: before))
-        let blockedGone = HerdrSnapshot(agents: [.stub(.working, pane: "p2")], failures: [])
-        #expect(!blockedGone.hasAgentsNewlyNeedingAttention(since: before))
-        #expect(!HerdrSnapshot.empty.hasAgentsNewlyNeedingAttention(since: before))
-    }
 }

@@ -16,8 +16,8 @@ final class SheepPanelController {
     var onClick: (() -> Void)?
     private let panel: SheepPanel
     private let plate: NamePlatePanel
-    /// Text of the name plate; `nil` without a plate.
-    private var plateText: String?
+    /// What the name plate shows; `nil` without a plate.
+    private var namePlate: NamePlate?
     /// Whether the plate is hidden although it has a text, while the sheep runs away and back.
     private var isPlateSuppressed = false
     private var screenObserver: NSObjectProtocol?
@@ -72,24 +72,24 @@ final class SheepPanelController {
         layoutPlate()
     }
 
-    /// Shows `text` on the plate under the sheep, or no plate for `nil`.
-    func setNamePlate(_ text: String?) {
-        guard text != plateText else { return }
-        plateText = text
-        if let text {
-            plate.setText(text)
+    /// Shows `namePlate` under the sheep, or no plate for `nil`. The plate is drawn only when it changes.
+    func setNamePlate(_ namePlate: NamePlate?) {
+        guard namePlate != self.namePlate else { return }
+        self.namePlate = namePlate
+        if let namePlate {
+            plate.show(namePlate)
         }
         updatePlate()
     }
 
-    /// Hides the plate while the sheep runs away and back; it shows again (if it has a text) when lifted.
+    /// Hides the plate while the sheep runs away and back; it shows again (if there is one) when lifted.
     func setNamePlateSuppressed(_ suppressed: Bool) {
         isPlateSuppressed = suppressed
         updatePlate()
     }
 
     private var showsPlate: Bool {
-        plateText != nil && !isPlateSuppressed && panel.isVisible
+        namePlate != nil && !isPlateSuppressed && panel.isVisible
     }
 
     /// Shows the plate as a child of the sheep panel while it should be seen, otherwise takes it away. Done explicitly

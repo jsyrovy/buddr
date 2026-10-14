@@ -1,10 +1,10 @@
 import AppKit
 
-/// Borderless, transparent, non-activating floating panel that hosts the sheep.
+/// The floating panel that hosts the sheep.
 ///
-/// It never becomes key or main, so clicking it does not steal focus from the active app. A mouse down on the sheep
-/// drags the panel; when the button is released before the panel has moved, it was a click.
-final class SheepPanel: NSPanel {
+/// A mouse down on the sheep drags the panel; when the button is released before the panel has moved, it was a click.
+/// Clicking it does not steal focus from the active app (`FloatingPanel`).
+final class SheepPanel: FloatingPanel {
     /// How far the panel may move during a click, in points: a click with a slightly shaking hand moves it a little.
     static let clickTolerance: CGFloat = 2
 
@@ -12,23 +12,6 @@ final class SheepPanel: NSPanel {
     var onDragEnd: (() -> Void)?
     /// Called after `onDragEnd` when the panel has not moved (more than `clickTolerance`) between press and release.
     var onClick: (() -> Void)?
-
-    init(contentRect: NSRect) {
-        super.init(
-            contentRect: contentRect, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        isFloatingPanel = true
-        level = .floating
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = false
-        hidesOnDeactivate = false
-        isReleasedWhenClosed = false
-        animationBehavior = .none
-    }
-
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
         // Dragging is handled here rather than with `isMovableByWindowBackground`, so it does not depend on how the

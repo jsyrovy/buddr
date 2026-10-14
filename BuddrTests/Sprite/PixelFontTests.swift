@@ -5,7 +5,7 @@ import Testing
 struct PixelFontTests {
     private static let white = PixelColor(red: 255, green: 255, blue: 255)
 
-    @Test(arguments: PixelFont.allGlyphs.map(\.character))
+    @Test(arguments: PixelFont.glyphs.keys.sorted())
     func glyphIsValid(character: Character) throws {
         let rows = try #require(PixelFont.glyphs[character])
         #expect(rows.count == 7 || rows.count == 9)
@@ -73,42 +73,38 @@ struct PixelFontTests {
         #expect(sprite.color(x: 2, y: 2) == Self.white)
     }
 
-    // MARK: Truncation
+    // MARK: Shortening
 
     @Test func aTextThatFitsIsKept() {
-        let plate = NamePlate(prefix: "buddr", title: "test123", more: 2)
-        #expect(PixelFont.truncated(plate, maxWidth: 100) == "buddr · test123  +2")
+        #expect(
+            PixelFont.shortened("test123", between: "buddr · ", and: "  +2", maxWidth: 100) == "buddr · test123  +2")
+        #expect(PixelFont.shortened("", maxWidth: 0) == "")
     }
 
-    @Test func onlyTheTitleIsShortened() {
-        let plate = NamePlate(prefix: "Devbox · api", title: "Refactor-the-escape-route-of-the-sheep", more: 2)
-        let text = PixelFont.truncated(plate, maxWidth: 150)
-        #expect(text.hasPrefix("Devbox · api · Refactor"))
+    @Test func onlyTheMiddleIsShortenedAsLittleAsPossible() throws {
+        let title = "Refactor-the-escape-route"
+        let text = try #require(PixelFont.shortened(title, between: "buddr · ", and: "  +2", maxWidth: 110))
+        #expect(text.hasPrefix("buddr · Refactor"))
         #expect(text.hasSuffix("…  +2"))
-        #expect(PixelFont.width(of: text) <= 150)
-        // As long as possible: one more character would not fit.
-        let kept = text.dropFirst("Devbox · api · ".count).dropLast("…  +2".count)
-        let longer = plate.text(title: String(plate.title.prefix(kept.count + 1)) + "…")
-        #expect(PixelFont.width(of: longer) > 150)
+        #expect(PixelFont.width(of: text) <= 110)
+        // One more character would not fit.
+        let kept = text.dropFirst("buddr · ".count).dropLast("…  +2".count)
+        #expect(PixelFont.width(of: "buddr · " + title.prefix(kept.count + 1) + "…  +2") > 110)
     }
 
     @Test func spacesBeforeTheEllipsisAreDropped() {
-        let plate = NamePlate(prefix: "buddr", title: "ab cdefghij", more: 0)
-        let maxWidth = PixelFont.width(of: "buddr · ab c")
-        #expect(PixelFont.truncated(plate, maxWidth: maxWidth) == "buddr · ab…")
+        let maxWidth = PixelFont.width(of: "ab c")
+        #expect(PixelFont.shortened("ab cdefghij", maxWidth: maxWidth) == "ab…")
     }
 
-    @Test func theWholeTitleMayGo() {
-        let plate = NamePlate(prefix: "buddr", title: "test123", more: 0)
-        #expect(PixelFont.truncated(plate, maxWidth: PixelFont.width(of: "buddr · …")) == "buddr · …")
+    @Test func theWholeMiddleMayGo() {
+        #expect(
+            PixelFont.shortened("test123", between: "buddr · ", maxWidth: PixelFont.width(of: "buddr · …"))
+                == "buddr · …")
     }
 
-    @Test func aPrefixThatDoesNotFitIsCutAtTheEnd() {
-        let plate = NamePlate(prefix: "A very long machine label · workspace", title: "title", more: 3)
-        let text = PixelFont.truncated(plate, maxWidth: 60)
-        #expect(text.hasPrefix("A very"))
-        #expect(text.hasSuffix("…"))
-        #expect(PixelFont.width(of: text) <= 60)
-        #expect(PixelFont.truncated(NamePlate(prefix: "buddr", title: "", more: 0), maxWidth: 2) == "")
+    @Test func nothingWhenNotEvenTheEllipsisFits() {
+        #expect(PixelFont.shortened("test123", between: "buddr · ", maxWidth: 30) == nil)
+        #expect(PixelFont.shortened("buddr", maxWidth: 2) == nil)
     }
 }
