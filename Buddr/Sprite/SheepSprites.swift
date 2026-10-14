@@ -470,6 +470,38 @@ enum SheepSprites {
             ("petted", petted),
         ]
 
+    // MARK: Name plate
+
+    /// The plate under the sheep naming the agent it reports (`NamePlate`): light text in `PixelFont` on a dark plate
+    /// with cut corners. Drawn with its own, smaller pixels (`NamePlateLayout.plateScale(sheepScale:)`).
+    enum Plate {
+        static let fill = outline
+        static let text = palette["W"]!
+        /// Plate pixels between the text and the left and right edges.
+        static let paddingX = 3
+        /// Plate pixels above the text and below its descender rows, so text without descenders looks centered.
+        static let paddingTop = 3
+        static let paddingBottom = 1
+        /// Plate pixels between the sheep's feet and the plate.
+        static let gap = 2
+        /// Longest text in plate pixels; longer ones are shortened (`PixelFont.truncated(_:maxWidth:)`).
+        static let maxTextWidth = 100
+        static let height = paddingTop + PixelFont.height + paddingBottom
+
+        static func sprite(for text: String) -> PixelSprite {
+            let label = PixelFont.sprite(for: text, color: Plate.text)
+            let width = label.width + 2 * paddingX
+            let pixels = (0..<height).flatMap { y in
+                (0..<width).map { x -> PixelColor? in
+                    let isCorner = (x == 0 || x == width - 1) && (y == 0 || y == height - 1)
+                    if isCorner { return nil }
+                    return label.color(x: x - paddingX, y: y - paddingTop) ?? fill
+                }
+            }
+            return PixelSprite(width: width, height: height, pixels: pixels)
+        }
+    }
+
     private static func sprite(_ rows: [String]) -> PixelSprite {
         PixelSprite(rows: rows, palette: palette)
     }
