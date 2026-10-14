@@ -4,8 +4,9 @@ import AppKit
 /// (`SheepHiding`) – and come back once there is no reason left.
 ///
 /// Running away: the current clip plays to its end, a startled hop (or a yawn when the sheep only hides), turning to the
-/// nearer edge, running (walking) until the panel is off the screen, then the panel is hidden. Coming back: the panel appears past the same edge and the sheep
-/// runs back home. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
+/// nearer edge, running (walking) until the panel is off the screen, then the panel is hidden. Coming back: the panel
+/// appears past the same edge and the sheep runs back home. The name plate is hidden from the start of the run until
+/// the sheep is back. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
 /// animation (`AnimationMode.off`) or without any screen, the panel is just hidden and shown again.
 @MainActor
 final class SheepEscape {
@@ -104,6 +105,8 @@ final class SheepEscape {
         } else {
             await animation.play(SheepSprites.Escape.startle)
         }
+        // The plate stays home: it would be cut off at the screen edge, and it comes back after the sheep.
+        panel.setNamePlateSuppressed(true)
         home = frame.origin
         let route = EscapeRoute(panelFrame: frame, screenFrame: screen.frame, pace: wandersOff ? .walk : .run)
         let towardsRight = route.edge == .right
@@ -129,6 +132,7 @@ final class SheepEscape {
         defer {
             home = nil
             panel.setInteractive(true)
+            panel.setNamePlateSuppressed(false)
             isAway = false
         }
         // The screen may have gone meanwhile; the sheep then comes back to the nearest one.

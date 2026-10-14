@@ -47,13 +47,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
             let debug = debug
         #endif
-        let applyStatus: @MainActor @Sendable () -> Void = {
-            var status = snapshots.snapshot?.status ?? .unknown
+        var namePlates = NamePlateTracker()
+        let applyStatus: @MainActor () -> Void = {
+            let snapshot = snapshots.snapshot ?? .empty
+            var status = snapshot.status
             #if DEBUG
                 status = debug.statusOverride ?? status
             #endif
             animation.setStatus(status)
             hiding.setStatus(status)
+            let plate = namePlates.update(with: snapshot, status: status)
+            panelController.setNamePlate(
+                plate.map { PixelFont.truncated($0, maxWidth: SheepSprites.Plate.maxTextWidth) })
         }
         #if DEBUG
             debug.animation = animation
