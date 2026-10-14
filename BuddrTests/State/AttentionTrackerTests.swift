@@ -31,7 +31,8 @@ struct AttentionTrackerTests {
             .stub(.done, pane: "p1", title: "finished"), .stub(.blocked, pane: "p2", title: "asking"),
             .stub(.working, pane: "p3"))
         #expect(
-            tracker.update(with: snapshot, status: .blocked) == NamePlate(prefix: "buddr", title: "asking", more: 0))
+            tracker.update(with: snapshot, status: .blocked)
+                == NamePlate(machine: nil, workspace: "buddr", title: "asking", more: 0))
     }
 
     @Test func theNewestArrivalWinsAcrossPolls() {

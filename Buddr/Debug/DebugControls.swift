@@ -30,10 +30,10 @@
             guard status.needsAttention, plate != nil || statusOverride != nil else { return plate }
             if longNamePlate {
                 return NamePlate(
-                    prefix: "Devbox · a-workspace-with-a-long-name",
+                    machine: "Devbox", workspace: "a-workspace-with-a-long-name",
                     title: "Refactor the escape route so that the sheep always finds its way back home", more: 3)
             }
-            return plate ?? NamePlate(prefix: "debug", title: status.rawValue, more: 0)
+            return plate ?? NamePlate(machine: nil, workspace: "debug", title: status.rawValue, more: 0)
         }
 
         /// Plays `clip` right away in place of whatever plays.

@@ -90,4 +90,60 @@ struct PreferencesTests {
         #expect(preferences.hideMode == .never)
         #expect(preferences.hideMinutes == Preferences.defaultHideMinutes)
     }
+
+    // MARK: Name plate
+
+    @Test func showsTheWholeNamePlateByDefault() {
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.showsNamePlate)
+        #expect(preferences.namePlateFields == NamePlate.Field.all)
+        #expect(preferences.shownNamePlateFields == NamePlate.Field.all)
+    }
+
+    @Test func namePlateIsSavedAndReported() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.setNamePlate(.machine, shown: false)
+        preferences.showsNamePlate = false
+
+        #expect(changes == 2)
+        #expect(preferences.shownNamePlateFields.isEmpty)
+        let reloaded = Preferences(defaults: defaults)
+        #expect(!reloaded.showsNamePlate)
+        #expect(reloaded.namePlateFields == [.workspace, .title])
+    }
+
+    @Test func hidingTheLastPartTurnsTheNamePlateOffWithAllPartsForLater() {
+        let preferences = Preferences(defaults: defaults)
+        preferences.setNamePlate(.machine, shown: false)
+        preferences.setNamePlate(.workspace, shown: false)
+
+        preferences.setNamePlate(.title, shown: false)
+
+        #expect(!preferences.showsNamePlate)
+        #expect(preferences.namePlateFields == NamePlate.Field.all)
+        preferences.showsNamePlate = true
+        #expect(preferences.shownNamePlateFields == NamePlate.Field.all)
+    }
+
+    @Test func turningTheNamePlateOnKeepsTheChosenParts() {
+        let preferences = Preferences(defaults: defaults)
+        preferences.setNamePlate(.machine, shown: false)
+        preferences.showsNamePlate = false
+
+        preferences.showsNamePlate = true
+
+        #expect(preferences.namePlateFields == [.workspace, .title])
+        preferences.setNamePlate(.machine, shown: true)
+        #expect(preferences.namePlateFields == NamePlate.Field.all)
+    }
+
+    @Test func invalidSavedNamePlatePartsFallBackToAll() {
+        defaults.set(["badge"], forKey: "namePlateFields")
+        #expect(Preferences(defaults: defaults).namePlateFields == NamePlate.Field.all)
+        defaults.set(["title", "badge"], forKey: "namePlateFields")
+        #expect(Preferences(defaults: defaults).namePlateFields == [.title])
+    }
 }

@@ -16,8 +16,11 @@ final class SheepPanelController {
     var onClick: (() -> Void)?
     private let panel: SheepPanel
     private let plate: NamePlatePanel
-    /// What the name plate shows; `nil` without a plate.
+    /// The agent the name plate names, and which of its parts are shown.
     private var namePlate: NamePlate?
+    private var namePlateFields = NamePlate.Field.all
+    /// What the name plate shows; `nil` without a plate.
+    private var label: NamePlate.Label?
     /// Whether the plate is hidden although it has a text, while the sheep runs away and back.
     private var isPlateSuppressed = false
     private var screenObserver: NSObjectProtocol?
@@ -72,12 +75,25 @@ final class SheepPanelController {
         layoutPlate()
     }
 
-    /// Shows `namePlate` under the sheep, or no plate for `nil`. The plate is drawn only when it changes.
+    /// Names `namePlate` on the plate under the sheep, or shows no plate for `nil`.
     func setNamePlate(_ namePlate: NamePlate?) {
-        guard namePlate != self.namePlate else { return }
         self.namePlate = namePlate
-        if let namePlate {
-            plate.show(namePlate)
+        updateLabel()
+    }
+
+    /// The parts of the name the plate shows; none turns it off.
+    func setNamePlateFields(_ fields: Set<NamePlate.Field>) {
+        namePlateFields = fields
+        updateLabel()
+    }
+
+    /// Draws the plate only when its text changes.
+    private func updateLabel() {
+        let label = namePlate?.label(showing: namePlateFields)
+        guard label != self.label else { return }
+        self.label = label
+        if let label {
+            plate.show(label)
         }
         updatePlate()
     }
@@ -89,7 +105,7 @@ final class SheepPanelController {
     }
 
     private var showsPlate: Bool {
-        namePlate != nil && !isPlateSuppressed && panel.isVisible
+        label != nil && !isPlateSuppressed && panel.isVisible
     }
 
     /// Shows the plate as a child of the sheep panel while it should be seen, otherwise takes it away. Done explicitly

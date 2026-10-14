@@ -5,12 +5,15 @@ import Observation
 @MainActor
 @Observable
 final class Preferences {
-    // Keys, choices and defaults are mirrored in `Settings.read()` of scripts/measure.swift.
+    // Keys, choices and defaults of the settings that change the cost (all but the name plate) are mirrored in
+    // `Settings.read()` of scripts/measure.swift.
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
     private static let animationSecondsKey = "animationDurationSeconds"
     private static let hideModeKey = "hideMode"
     private static let hideMinutesKey = "hideAfterMinutes"
+    private static let showsNamePlateKey = "showsNamePlate"
+    private static let namePlateFieldsKey = "namePlateFields"
 
     /// The choices for `animationSeconds`.
     static let animationSecondsChoices = [5, 10, 30, 60]
@@ -59,6 +62,42 @@ final class Preferences {
         }
     }
 
+    /// Whether a plate under the sheep names the agent it reports. On by default.
+    var showsNamePlate: Bool {
+        didSet {
+            defaults.set(showsNamePlate, forKey: Self.showsNamePlateKey)
+            onChange?()
+        }
+    }
+
+    /// The parts of the name plate that are shown, all by default; never empty (`setNamePlate(_:shown:)`).
+    private(set) var namePlateFields: Set<NamePlate.Field> {
+        didSet {
+            defaults.set(
+                NamePlate.Field.allCases.filter(namePlateFields.contains).map(\.rawValue),
+                forKey: Self.namePlateFieldsKey)
+            onChange?()
+        }
+    }
+
+    /// The name plate parts to show now: none while the plate is off.
+    var shownNamePlateFields: Set<NamePlate.Field> {
+        showsNamePlate ? namePlateFields : []
+    }
+
+    /// Shows or hides one part of the name plate. Hiding the last one turns the plate off instead, with all parts
+    /// shown when it is turned on again, so the plate is never on without parts.
+    func setNamePlate(_ field: NamePlate.Field, shown: Bool) {
+        if shown {
+            namePlateFields.insert(field)
+        } else if namePlateFields == [field] {
+            showsNamePlate = false
+            namePlateFields = NamePlate.Field.all
+        } else {
+            namePlateFields.remove(field)
+        }
+    }
+
     /// Called after a preference changed.
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
 
@@ -75,5 +114,10 @@ final class Preferences {
         hideMode = defaults.string(forKey: Self.hideModeKey).flatMap { HideMode(rawValue: $0) } ?? .never
         let minutes = defaults.integer(forKey: Self.hideMinutesKey)
         hideMinutes = Self.hideMinutesChoices.contains(minutes) ? minutes : Self.defaultHideMinutes
+        let fields = Set(
+            (defaults.stringArray(forKey: Self.namePlateFieldsKey) ?? []).compactMap(NamePlate.Field.init(rawValue:)))
+        // Without a saved part to show (none saved, or edited by hand), the plate shows all of them.
+        namePlateFields = fields.isEmpty ? NamePlate.Field.all : fields
+        showsNamePlate = defaults.object(forKey: Self.showsNamePlateKey) as? Bool ?? true
     }
 }

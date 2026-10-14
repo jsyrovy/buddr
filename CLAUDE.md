@@ -97,9 +97,10 @@ scripts/      measure.swift (resource usage of the running app, see "Measuring r
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
-  agent list, the settings ("Animation" and "Hide" pop-ups, "Watch Remote Machines") and "Quit Buddr". A segmented
-  "Off | On Change | Always" control plus the duration doesn't fit the 360 pt width. A separate Settings window is not
-  worth it until there are more settings (an `LSUIElement` app has to activate itself to show one).
+  agent list, the settings ("Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote Machines") and
+  "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt width. A
+  separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate itself
+  to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section
   per source – "This Mac" (with the session name when several local sessions run), then the machines by label – in
   the order of discovery (`HerdrSnapshot.sources`, so sources without agents and failed ones show up too). A failed
@@ -323,6 +324,17 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   in `HideMode.unlessNeeded`. It names one agent in that status, the one that got into it last, and adds `+N` for the
   others in it; agents in a lower status are not counted. Text: `[machine label · ]workspace · title` – the machine
   label only for remote sources; the title is `AgentRecord.displayTitle`, dropped when it equals the workspace label.
+- Set in the menu bar: "Name Plate" turns it on and off (`Preferences.showsNamePlate`, key `showsNamePlate`, on by
+  default), and while on, a checkbox per part – Machine, Workspace, Title (`Preferences.namePlateFields`,
+  `NamePlate.Field`, key `namePlateFields`, an array of the names, all by default) – picks what it shows. `+N` is
+  always shown. Unchecking the last part turns the plate off and checks all parts for the next time
+  (`Preferences.setNamePlate(_:shown:)`), so the plate is never on without parts. The room below the sheep is
+  reserved even while the plate is off, so switching it never moves the sheep. The row is 329 of the 336 pt
+  available – no room for a longer label.
+- `AttentionTracker` names the agent with all its parts (`NamePlate`); the parts are chosen where the plate is shown
+  (`SheepPanelController.setNamePlateFields`, `NamePlate.label(showing:)`), so a settings change applies at once
+  without re-running the status. The title repeating the workspace is dropped only when the workspace is shown. When
+  the chosen parts have no text for the agent (only Machine for a local agent), there is no plate.
 - Order without clocks (`AttentionTracker`, which also tells `replay()` about new arrivals): every agent keyed by
   source, pane and status gets an increasing arrival number when it first shows up as `blocked` / `done` and loses it
   once it is gone, so an agent that leaves and comes back is new. Ties within one poll (e.g. at launch):

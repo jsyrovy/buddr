@@ -42,6 +42,7 @@ struct AgentListView: View {
             VStack(alignment: .leading, spacing: 8) {
                 AnimationSettings(preferences: preferences)
                 HideSettings(preferences: preferences)
+                NamePlateSettings(preferences: preferences)
                 HStack {
                     Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
                         .toggleStyle(.checkbox)
@@ -133,6 +134,39 @@ private struct HideSettings: View {
         case .never: "Never"
         case .whenIdle: "When Idle"
         case .unlessNeeded: "Unless Needed"
+        }
+    }
+}
+
+/// "Name Plate" and, while it is on, which parts it shows. Unchecking the last part turns the plate off.
+private struct NamePlateSettings: View {
+    @Bindable var preferences: Preferences
+
+    var body: some View {
+        HStack {
+            Toggle("Name Plate:", isOn: $preferences.showsNamePlate)
+            if preferences.showsNamePlate {
+                ForEach(NamePlate.Field.allCases, id: \.self) { field in
+                    Toggle(Self.title(field), isOn: shows(field))
+                }
+            }
+        }
+        .toggleStyle(.checkbox)
+    }
+
+    private func shows(_ field: NamePlate.Field) -> Binding<Bool> {
+        Binding {
+            preferences.namePlateFields.contains(field)
+        } set: { shown in
+            preferences.setNamePlate(field, shown: shown)
+        }
+    }
+
+    private static func title(_ field: NamePlate.Field) -> String {
+        switch field {
+        case .machine: "Machine"
+        case .workspace: "Workspace"
+        case .title: "Title"
         }
     }
 }

@@ -472,7 +472,7 @@ enum SheepSprites {
 
     // MARK: Name plate
 
-    /// The plate under the sheep naming the agent it reports (`NamePlate`): light text in `PixelFont` on a dark plate
+    /// The plate under the sheep naming the agent it reports (`NamePlate.Label`): light text in `PixelFont` on a dark plate
     /// with cut corners. Drawn with its own, smaller pixels (`NamePlateLayout.plateScale(sheepScale:)`).
     enum Plate {
         /// A plate pixel is this many times smaller than a sheep pixel (rounded down, at least one point).
@@ -490,18 +490,17 @@ enum SheepSprites {
         static let maxTextWidth = 100
         static let height = paddingTop + PixelFont.height + paddingBottom
 
-        /// The text of `plate`, at most `maxWidth` pixels wide: the title is shortened with `…`, keeping the machine and
-        /// workspace before it and the `+N` after it. When even those don't fit, the whole text is cut at the end.
-        static func text(for plate: NamePlate, maxWidth: Int = maxTextWidth) -> String {
+        /// The text of `label`, at most `maxWidth` pixels wide: the title is shortened with `…`, keeping the machine
+        /// and workspace before it and the `+N` after it. When even those don't fit, the whole text is cut at the end.
+        static func text(for label: NamePlate.Label, maxWidth: Int = maxTextWidth) -> String {
             let shortenedTitle =
-                plate.title.isEmpty
+                label.title.isEmpty
                 ? nil
-                : PixelFont.shortened(
-                    plate.title, between: plate.prefix + NamePlate.separator, and: plate.suffix, maxWidth: maxWidth)
-            return shortenedTitle ?? PixelFont.shortened(plate.text, maxWidth: maxWidth) ?? ""
+                : PixelFont.shortened(label.title, between: label.lead, and: label.suffix, maxWidth: maxWidth)
+            return shortenedTitle ?? PixelFont.shortened(label.text, maxWidth: maxWidth) ?? ""
         }
 
-        static func sprite(for plate: NamePlate) -> PixelSprite {
+        static func sprite(for plate: NamePlate.Label) -> PixelSprite {
             let label = PixelFont.sprite(for: text(for: plate), color: Plate.text)
             let width = label.width + 2 * paddingX
             let pixels = (0..<height).flatMap { y in

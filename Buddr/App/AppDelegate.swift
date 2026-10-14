@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             herdrMonitor.setEnabled(preferences.watchesRemoteMachines, .machines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))
+            panelController.setNamePlateFields(preferences.shownNamePlateFields)
         }
         applyPreferences()
         preferences.onChange = applyPreferences

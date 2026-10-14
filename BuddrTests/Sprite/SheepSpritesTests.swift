@@ -29,7 +29,7 @@ struct SheepSpritesTests {
 
     @Test func plateFramesTheTextWithCutCorners() {
         typealias Plate = SheepSprites.Plate
-        let sprite = Plate.sprite(for: NamePlate(prefix: "buddr", title: "", more: 0))
+        let sprite = Plate.sprite(for: NamePlate.Label(lead: "buddr", title: "", more: 0))
         #expect(sprite.width == PixelFont.width(of: "buddr") + 2 * Plate.paddingX)
         #expect(sprite.height == Plate.paddingTop + PixelFont.height + Plate.paddingBottom)
         let last = (x: sprite.width - 1, y: sprite.height - 1)
@@ -44,26 +44,34 @@ struct SheepSpritesTests {
     }
 
     @Test func plateTextThatFitsIsKept() {
-        let plate = NamePlate(prefix: "buddr", title: "test123", more: 2)
+        let plate = NamePlate.Label(lead: "buddr · ", title: "test123", more: 2)
         #expect(SheepSprites.Plate.text(for: plate) == "buddr · test123  +2")
     }
 
     @Test func plateTextShortensOnlyTheTitle() {
-        let plate = NamePlate(prefix: "Devbox · api", title: "Refactor the escape route", more: 2)
+        let plate = NamePlate.Label(lead: "Devbox · api · ", title: "Refactor the escape route", more: 2)
         let text = SheepSprites.Plate.text(for: plate, maxWidth: 120)
         #expect(text.hasPrefix("Devbox · api · Ref"))
         #expect(text.hasSuffix("…  +2"))
         #expect(PixelFont.width(of: text) <= 120)
     }
 
+    @Test func plateTextShortensAWholeTitleWithoutAPrefix() {
+        let plate = NamePlate.Label(lead: "", title: "Refactor the escape route", more: 2)
+        let text = SheepSprites.Plate.text(for: plate, maxWidth: 60)
+        #expect(text.hasPrefix("Ref"))
+        #expect(text.hasSuffix("…  +2"))
+        #expect(PixelFont.width(of: text) <= 60)
+    }
+
     @Test func plateTextIsCutAtTheEndWhenThePrefixDoesNotFit() {
-        let plate = NamePlate(prefix: "A very long machine label · workspace", title: "title", more: 3)
+        let plate = NamePlate.Label(lead: "A very long machine label · workspace · ", title: "title", more: 3)
         let text = SheepSprites.Plate.text(for: plate, maxWidth: 60)
         #expect(text.hasPrefix("A very"))
         #expect(text.hasSuffix("…"))
         #expect(PixelFont.width(of: text) <= 60)
         // Without a title too, and nothing at all when not even "…" fits.
-        let untitled = NamePlate(prefix: "A very long workspace", title: "", more: 0)
+        let untitled = NamePlate.Label(lead: "A very long workspace", title: "", more: 0)
         #expect(SheepSprites.Plate.text(for: untitled, maxWidth: 40).hasSuffix("…"))
         #expect(SheepSprites.Plate.text(for: untitled, maxWidth: 2) == "")
     }
