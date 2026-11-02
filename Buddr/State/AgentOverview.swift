@@ -1,19 +1,22 @@
-/// The agents of a snapshot grouped for the menu bar list: one section per source (this Mac's sessions, then the
-/// machines, in the order of discovery), and within it one group per workspace.
+/// The agents of a snapshot grouped for the menu bar list: one section per source in the order of the snapshot (this
+/// Mac's herdr sessions and herdr-core, then the machines, each in the order of discovery), and within it one group per
+/// workspace.
 struct AgentOverview: Equatable, Sendable {
     struct Section: Identifiable, Equatable, Sendable {
-        let source: HerdrSource
+        let source: AgentSource
         let title: String
+        /// The backend (`herdr`, `hc`), when the snapshot has sources of both.
+        let tag: String?
         /// Why the source could not be queried; it has no workspaces then.
         let failure: String?
         let workspaces: [WorkspaceGroup]
 
-        var id: HerdrSource { source }
+        var id: AgentSource { source }
     }
 
     struct WorkspaceGroup: Identifiable, Equatable, Sendable {
         struct ID: Hashable, Sendable {
-            let source: HerdrSource
+            let source: AgentSource
             let workspaceID: String
         }
 
@@ -45,12 +48,14 @@ struct AgentOverview: Equatable, Sendable {
     let statusCounts: [StatusCount]
 
     init(_ snapshot: HerdrSnapshot) {
-        let localSessions = snapshot.sources.count { if case .localSession = $0 { true } else { false } }
+        let localSessions = snapshot.sources.count { if case .herdr(.localSession) = $0 { true } else { false } }
+        let tagsBackend = Set(snapshot.sources.map(\.backend)).count > 1
 
         sections = snapshot.sources.map { source in
             Section(
                 source: source,
                 title: Self.title(of: source, alone: localSessions == 1),
+                tag: tagsBackend ? source.backend.rawValue : nil,
                 failure: snapshot.failures.first { $0.source == source }?.message,
                 workspaces: Self.workspaces(of: snapshot.agents.filter { $0.source == source }))
         }
@@ -61,15 +66,20 @@ struct AgentOverview: Equatable, Sendable {
         }
     }
 
-    /// "This Mac" for the only local session, otherwise with the session name; machines by their label.
-    private static func title(of source: HerdrSource, alone: Bool) -> String {
-        switch source {
-        case .localSession(let name): alone ? "This Mac" : "This Mac · \(name)"
-        case .machine(_, let label): label
+    /// Machines by their label; "This Mac" for herdr-core and the only local herdr session, otherwise with the
+    /// session name.
+    private static func title(of source: AgentSource, alone: Bool) -> String {
+        if let machine = source.machineLabel {
+            return machine
         }
+        if case .herdr(.localSession(let name)) = source, !alone {
+            return "This Mac · \(name)"
+        }
+        return "This Mac"
     }
 
-    /// Workspaces in herdr's sidebar order; ones without a number after them, in the order of their first agent.
+    /// Workspaces in herdr's sidebar order; ones without a number (all of herdr-core's) after them, in the order of
+    /// their first agent.
     private static func workspaces(of agents: [AgentRecord]) -> [WorkspaceGroup] {
         var seen: Set<String> = []
         let firsts = agents.filter { seen.insert($0.workspaceID).inserted }

@@ -23,8 +23,8 @@ struct HerdrStatusFetcherTests {
         #expect(snapshot.failures.isEmpty)
         #expect(snapshot.agents.count == 6)
         // Session order of `session list` is kept.
-        #expect(snapshot.agents.first?.source == .localSession("default"))
-        #expect(snapshot.agents.dropFirst().allSatisfy { $0.source == .localSession("work") })
+        #expect(snapshot.agents.first?.source == .herdr(.localSession("default")))
+        #expect(snapshot.agents.dropFirst().allSatisfy { $0.source == .herdr(.localSession("work")) })
         #expect(snapshot.agents.first?.workspace == "buddr")
         #expect(snapshot.status == .blocked)
         #expect(!runner.recordedCalls.contains { $0.hasPrefix("--session side") })
@@ -40,12 +40,13 @@ struct HerdrStatusFetcherTests {
         ])
         let snapshot = await fetcher(runner).fetchSessions()
 
-        #expect(snapshot.agents.map(\.source) == [.localSession("work")])
+        #expect(snapshot.agents.map(\.source) == [.herdr(.localSession("work"))])
         // The failed session is still listed as queried.
-        #expect(snapshot.sources == [.localSession("default"), .localSession("work")])
+        #expect(snapshot.sources == [.herdr(.localSession("default")), .herdr(.localSession("work"))])
         #expect(
             snapshot.failures == [
-                SourceFailure(source: .localSession("default"), message: "--session default agent list: timed out")
+                SourceFailure(
+                    source: .herdr(.localSession("default")), message: "--session default agent list: timed out")
             ])
         #expect(snapshot.status == .working)
     }
@@ -125,9 +126,9 @@ struct HerdrStatusFetcherTests {
         let snapshot = await fetcher(runner).fetchMachines()
 
         #expect(snapshot.failures.isEmpty)
-        #expect(snapshot.agents.map(\.source) == [Self.devbox])
+        #expect(snapshot.agents.map(\.source) == [.herdr(Self.devbox)])
         // Pi has no agents, but it was queried; the disabled machine was not.
-        #expect(snapshot.sources == [Self.devbox, Self.pi])
+        #expect(snapshot.sources == [.herdr(Self.devbox), .herdr(Self.pi)])
         #expect(snapshot.agents.first?.workspace == "buddr")
         #expect(snapshot.status == .working)
         #expect(runner.recordedCalls.count == 5)
@@ -143,11 +144,12 @@ struct HerdrStatusFetcherTests {
         let snapshot = await fetcher(runner).fetchMachines()
 
         #expect(snapshot.agents.count == 5)
-        #expect(snapshot.agents.allSatisfy { $0.source == Self.pi })
+        #expect(snapshot.agents.allSatisfy { $0.source == .herdr(Self.pi) })
         #expect(
             snapshot.failures == [
                 SourceFailure(
-                    source: Self.devbox, message: "--machine 3f9c2a7e5b1d4c6a8e0f2b4d6a8c0e1f agent list: timed out")
+                    source: .herdr(Self.devbox),
+                    message: "--machine 3f9c2a7e5b1d4c6a8e0f2b4d6a8c0e1f agent list: timed out")
             ])
     }
 

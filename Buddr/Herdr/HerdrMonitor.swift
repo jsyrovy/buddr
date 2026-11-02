@@ -1,23 +1,44 @@
 import os
 
-/// Watches all kinds of herdr sources and reports their combined snapshot on the main actor when it changes.
+/// Watches all kinds of sources (herdr and herdr-core) and reports their combined snapshot on the main actor when it
+/// changes.
 ///
 /// Every kind of source has its own `HerdrPoller` and interval, so a slow or unreachable machine never delays the
-/// local sessions. A kind contributes nothing until its first poll has finished, and nothing while it is disabled.
+/// local sessions, and one backend never delays the other. A kind contributes nothing until its first poll has
+/// finished, and nothing while it is disabled. Remote sources can be left out of the combined snapshot
+/// (`configure(backends:watchesRemoteMachines:)`).
 @MainActor
 final class HerdrMonitor {
-    /// The kinds of sources, in the order their agents are combined.
+    /// The kinds of sources.
     enum SourceKind: CaseIterable, Sendable {
+        /// herdr's local sessions.
         case localSessions
+        /// herdr's saved machines.
         case machines
+        /// herdr-core with its machines.
+        case core
+
+        /// Whether the kind runs with these menu bar settings. herdr's machines are polled only while remote machines
+        /// are watched, because every poll runs `herdr --machine`; herdr-core answers for its machines in the same
+        /// call, so they are just left out of the snapshot.
+        func isEnabled(by backends: Set<Backend>, watchesRemoteMachines: Bool) -> Bool {
+            switch self {
+            case .localSessions: backends.contains(.herdr)
+            case .machines: backends.contains(.herdr) && watchesRemoteMachines
+            case .core: backends.contains(.hc)
+            }
+        }
     }
 
-    /// Local sessions every 2 s, saved machines every 15 s.
+    /// herdr's local sessions every 2 s, its saved machines every 15 s (every poll runs `herdr` per machine).
+    /// herdr-core every 2 s: one call needs no subprocess and doesn't wait for machines that are not connected.
     static var defaultFeeds: [SourceKind: HerdrPoller.Feed] {
-        let fetcher = HerdrStatusFetcher()
+        let herdr = HerdrStatusFetcher()
+        let core = CoreStatusFetcher()
         return [
-            .localSessions: .init(interval: .seconds(2), fetch: { await fetcher.fetchSessions() }),
-            .machines: .init(interval: .seconds(15), fetch: { await fetcher.fetchMachines() }),
+            .localSessions: .init(interval: .seconds(2), fetch: { await herdr.fetchSessions() }),
+            .machines: .init(interval: .seconds(15), fetch: { await herdr.fetchMachines() }),
+            .core: .init(interval: .seconds(2), fetch: { await core.fetch() }),
         ]
     }
 
@@ -29,6 +50,7 @@ final class HerdrMonitor {
     /// The latest snapshot of every enabled kind that has finished a poll.
     private var parts: [SourceKind: HerdrSnapshot] = [:]
     private var disabled: Set<SourceKind> = []
+    private var watchesRemoteMachines = true
     private var isRunning = false
     private var lastSnapshot: HerdrSnapshot?
 
@@ -71,6 +93,17 @@ final class HerdrMonitor {
         }
     }
 
+    /// Applies the menu bar settings: enables the kinds they ask for (`setEnabled(_:_:)`) and, without remote
+    /// machines, leaves every remote source out of the snapshot at once.
+    func configure(backends: Set<Backend>, watchesRemoteMachines: Bool) {
+        for kind in SourceKind.allCases {
+            setEnabled(kind.isEnabled(by: backends, watchesRemoteMachines: watchesRemoteMachines), kind)
+        }
+        guard watchesRemoteMachines != self.watchesRemoteMachines else { return }
+        self.watchesRemoteMachines = watchesRemoteMachines
+        publish()
+    }
+
     /// All kinds are enabled initially; disabling one before `start()` keeps it from being polled. Enabling a kind
     /// polls it right away (if the monitor runs). Disabling it stops its polling and removes its
     /// agents and failures from the snapshot at once.
@@ -92,12 +125,16 @@ final class HerdrMonitor {
     }
 
     private func update(_ kind: SourceKind, with snapshot: HerdrSnapshot) {
+        guard parts[kind] != snapshot else { return }
         parts[kind] = snapshot
         publish()
     }
 
     private func publish() {
-        let combined = HerdrSnapshot.combining(SourceKind.allCases.compactMap { parts[$0] })
+        var combined = HerdrSnapshot.combining(SourceKind.allCases.compactMap { parts[$0] })
+        if !watchesRemoteMachines {
+            combined = combined.withoutRemoteSources()
+        }
         guard combined != lastSnapshot else { return }
         log(combined)
         lastSnapshot = combined

@@ -40,6 +40,7 @@ struct AgentListView: View {
                 Divider()
             #endif
             VStack(alignment: .leading, spacing: 8) {
+                BackendSettings(preferences: preferences)
                 AnimationSettings(preferences: preferences)
                 HideSettings(preferences: preferences)
                 NamePlateSettings(preferences: preferences)
@@ -64,6 +65,28 @@ struct AgentListView: View {
     /// "1 blocked · 2 working", or "No agents".
     private static func summary(_ counts: [AgentOverview.StatusCount]) -> String {
         counts.isEmpty ? "No agents" : counts.map { "\($0.count) \($0.status.rawValue)" }.joined(separator: " · ")
+    }
+}
+
+/// "Agents from: herdr / hc / Both".
+private struct BackendSettings: View {
+    @Bindable var preferences: Preferences
+
+    var body: some View {
+        Picker("Agents from", selection: $preferences.backendChoice) {
+            ForEach(BackendChoice.allCases, id: \.self) { choice in
+                Text(Self.title(choice)).tag(choice)
+            }
+        }
+        .fixedSize()
+    }
+
+    private static func title(_ choice: BackendChoice) -> String {
+        switch choice {
+        case .herdr: "herdr"
+        case .hc: "hc"
+        case .both: "Both"
+        }
     }
 }
 
@@ -195,9 +218,16 @@ private struct OverviewList: View {
             }
             ForEach(overview.sections) { section in
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(section.title.uppercased())
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text(section.title.uppercased())
+                            .font(.caption.weight(.semibold))
+                        Spacer()
+                        if let tag = section.tag {
+                            Text(tag)
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundStyle(.secondary)
                     if let failure = section.failure {
                         FailureRow(message: failure)
                     } else if section.workspaces.isEmpty {

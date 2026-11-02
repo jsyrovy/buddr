@@ -1,6 +1,6 @@
 import Foundation
 
-/// Collects one `HerdrSnapshot` of a kind of source: discovers the sources and queries all of them concurrently.
+/// Collects one `HerdrSnapshot` of a kind of herdr source: discovers the sources and queries all of them concurrently.
 ///
 /// Never throws: every problem ends up in `HerdrSnapshot.failures`, and a failing source doesn't affect the others.
 struct HerdrStatusFetcher: Sendable {
@@ -48,7 +48,7 @@ struct HerdrStatusFetcher: Sendable {
         }
 
         // Keep the order of the discovery, so snapshots are stable between polls.
-        var snapshot = HerdrSnapshot(agents: [], failures: [], sources: sources)
+        var snapshot = HerdrSnapshot(agents: [], failures: [], sources: sources.map(AgentSource.herdr))
         for (_, result) in results.sorted(by: { $0.0 < $1.0 }) {
             switch result {
             case .success(let agents): snapshot.agents += agents
@@ -67,7 +67,7 @@ struct HerdrStatusFetcher: Sendable {
         do {
             return .success(AgentRecord.join(try await agents, workspaces: await workspaces ?? [], source: source))
         } catch {
-            return .failure(SourceFailure(source: source, error: error))
+            return .failure(SourceFailure(source: .herdr(source), error: error))
         }
     }
 }
@@ -79,7 +79,7 @@ extension AgentRecord {
         return agents.map { agent in
             let workspace = workspaces[agent.workspaceId]
             return AgentRecord(
-                source: source,
+                source: .herdr(source),
                 workspaceID: agent.workspaceId,
                 workspace: workspace?.label ?? agent.workspaceId,
                 workspaceNumber: workspace?.number,
@@ -88,13 +88,13 @@ extension AgentRecord {
                 status: agent.agentStatus,
                 title: agent.terminalTitleStripped ?? agent.terminalTitle ?? "",
                 cwd: agent.foregroundCwd ?? agent.cwd,
-                stateChangeSeq: agent.stateChangeSeq)
+                statusOrder: agent.stateChangeSeq)
         }
     }
 }
 
 extension SourceFailure {
-    init(source: HerdrSource?, error: any Error) {
+    init(source: AgentSource?, error: any Error) {
         self.init(source: source, message: String(describing: error))
     }
 }

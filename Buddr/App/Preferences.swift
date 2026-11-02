@@ -7,6 +7,7 @@ import Observation
 final class Preferences {
     // Keys, choices and defaults of the settings that change the cost (all but the name plate) are mirrored in
     // `Settings.read()` of scripts/measure.swift.
+    private static let backendChoiceKey = "agentBackends"
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
     private static let animationSecondsKey = "animationDurationSeconds"
@@ -22,7 +23,16 @@ final class Preferences {
     static let hideMinutesChoices = [1, 5, 15, 30]
     static let defaultHideMinutes = 5
 
-    /// Whether agents on saved herdr machines count, besides local sessions. On by default.
+    /// Which backends the agents are read from. Both by default.
+    var backendChoice: BackendChoice {
+        didSet {
+            defaults.set(backendChoice.rawValue, forKey: Self.backendChoiceKey)
+            onChange?()
+        }
+    }
+
+    /// Whether agents on remote machines (herdr's saved machines, herdr-core's added ones) count, besides this Mac's.
+    /// On by default.
     var watchesRemoteMachines: Bool {
         didSet {
             defaults.set(watchesRemoteMachines, forKey: Self.watchesRemoteMachinesKey)
@@ -105,6 +115,8 @@ final class Preferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        backendChoice =
+            defaults.string(forKey: Self.backendChoiceKey).flatMap { BackendChoice(rawValue: $0) } ?? .both
         watchesRemoteMachines = defaults.object(forKey: Self.watchesRemoteMachinesKey) as? Bool ?? true
         animationMode =
             defaults.string(forKey: Self.animationModeKey).flatMap { AnimationMode(rawValue: $0) } ?? .always

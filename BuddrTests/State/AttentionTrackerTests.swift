@@ -3,7 +3,7 @@ import Testing
 @testable import Buddr
 
 struct AttentionTrackerTests {
-    private static let devbox = HerdrSource.machine(id: "m1", label: "Devbox")
+    private static let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
 
     private static func snapshot(_ agents: AgentRecord...) -> HerdrSnapshot {
         HerdrSnapshot(agents: agents, failures: [])
@@ -93,7 +93,7 @@ struct AttentionTrackerTests {
 
     @Test func agentsNewlyBlockedOrDoneAreNewArrivals() {
         let before = Self.snapshot(.stub(.blocked, pane: "p1"), .stub(.working, pane: "p2"))
-        let machine = HerdrSource.machine(id: "m1", label: "Devbox")
+        let machine = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
         let changes = [
             // Another agent blocked, or a waiting one done.
             Self.snapshot(.stub(.blocked, pane: "p1"), .stub(.blocked, pane: "p2")),

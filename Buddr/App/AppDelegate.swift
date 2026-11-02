@@ -76,7 +76,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             applyStatus()
         }
         let applyPreferences: @MainActor @Sendable () -> Void = {
-            herdrMonitor.setEnabled(preferences.watchesRemoteMachines, .machines)
+            herdrMonitor.configure(
+                backends: preferences.backendChoice.backends,
+                watchesRemoteMachines: preferences.watchesRemoteMachines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))
             panelController.setNamePlateFields(preferences.shownNamePlateFields)

@@ -31,6 +31,26 @@ struct PreferencesTests {
         #expect(!Preferences(defaults: defaults).watchesRemoteMachines)
     }
 
+    @Test func readsBothBackendsByDefault() {
+        #expect(Preferences(defaults: defaults).backendChoice == .both)
+    }
+
+    @Test func backendChoiceIsSavedAndReported() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.backendChoice = .hc
+
+        #expect(changes == 1)
+        #expect(Preferences(defaults: defaults).backendChoice == .hc)
+    }
+
+    @Test func invalidSavedBackendChoiceFallsBackToBoth() {
+        defaults.set("everything", forKey: "agentBackends")
+        #expect(Preferences(defaults: defaults).backendChoice == .both)
+    }
+
     @Test func animatesAlwaysByDefault() {
         let preferences = Preferences(defaults: defaults)
         #expect(preferences.animationMode == .always)

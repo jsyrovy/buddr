@@ -101,6 +101,8 @@ struct Settings: Codable, Equatable {
     var hideMode: String
     var hideMinutes: Int
     var watchesRemoteMachines: Bool
+    /// Missing in runs saved before Buddr read herdr-core; they read herdr only.
+    var agentBackends: String?
 
     static func read() -> Settings {
         let defaults = UserDefaults(suiteName: "cz.jsyrovy.buddr")
@@ -112,12 +114,17 @@ struct Settings: Codable, Equatable {
             animationSeconds: choice("animationDurationSeconds", [5, 10, 30, 60], default: 10),
             hideMode: choice("hideMode", ["never", "whenIdle", "unlessNeeded"], default: "never"),
             hideMinutes: choice("hideAfterMinutes", [1, 5, 15, 30], default: 5),
-            watchesRemoteMachines: choice("watchesRemoteMachines", [false, true], default: true))
+            watchesRemoteMachines: choice("watchesRemoteMachines", [false, true], default: true),
+            agentBackends: choice("agentBackends", ["herdr", "hc", "both"], default: "both"))
     }
 
-    /// Names as in the JSON.
+    /// Names as in the JSON; a missing value is `–`.
     var fields: [(name: String, value: String)] {
-        Mirror(reflecting: self).children.map { (snakeCase($0.label!), "\($0.value)") }
+        Mirror(reflecting: self).children.map { child in
+            let mirror = Mirror(reflecting: child.value)
+            let value: Any? = mirror.displayStyle == .optional ? mirror.children.first?.value : child.value
+            return (snakeCase(child.label!), value.map { "\($0)" } ?? "–")
+        }
     }
 
     var text: String {
@@ -132,7 +139,8 @@ struct Settings: Codable, Equatable {
             case "unlessNeeded": "unless needed (after \(hideMinutes) min)"
             default: hideMode
             }
-        return "animation \(animation) · hide \(hide) · remote machines \(watchesRemoteMachines ? "on" : "off")"
+        return "agents from \(agentBackends ?? "herdr") · animation \(animation) · hide \(hide) · remote machines "
+            + (watchesRemoteMachines ? "on" : "off")
     }
 }
 

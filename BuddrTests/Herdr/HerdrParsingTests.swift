@@ -98,13 +98,13 @@ struct HerdrParsingTests {
         #expect(records.map(\.workspaceID) == ["wG", "wE", "wF", "w7", "wZ"])
         #expect(records.map(\.workspaceNumber) == [5, 3, 4, 1, nil])
         #expect(records.map(\.paneID) == ["wG:p1", "wE:p2", "wF:p3", "w7:p4", "wZ:p5"])
-        #expect(records.allSatisfy { $0.source == .localSession("default") })
+        #expect(records.allSatisfy { $0.source == .herdr(.localSession("default")) })
         // Stripped title preferred, raw title as fallback, empty when there is none.
         #expect(records.map(\.title) == ["buddr impl1", "Waiting for approval", "Refactor done", "", "Future status"])
         // Foreground cwd preferred, cwd as fallback.
         #expect(records[2].cwd == "/Users/me/code/website")
         #expect(records[3].cwd == nil)
         #expect(records[3].agent == nil)
-        #expect(records.map(\.stateChangeSeq) == [41, 47, 52, nil, 58])
+        #expect(records.map(\.statusOrder) == [41, 47, 52, nil, 58])
     }
 }

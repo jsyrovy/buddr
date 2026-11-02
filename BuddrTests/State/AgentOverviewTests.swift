@@ -3,14 +3,14 @@ import Testing
 @testable import Buddr
 
 struct AgentOverviewTests {
-    private static let devbox = HerdrSource.machine(id: "m1", label: "Devbox")
-    private static let pi = HerdrSource.machine(id: "m2", label: "Pi")
+    private static let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
+    private static let pi = AgentSource.herdr(.machine(id: "m2", label: "Pi"))
 
     @Test func sectionsFollowTheQueriedSourcesIncludingEmptyAndFailedOnes() {
         let snapshot = HerdrSnapshot(
             agents: [.stub(.working, source: Self.devbox)],
             failures: [SourceFailure(source: Self.pi, message: "timed out")],
-            sources: [.localSession("default"), Self.devbox, Self.pi])
+            sources: [.herdr(.localSession("default")), Self.devbox, Self.pi])
         let overview = AgentOverview(snapshot)
 
         #expect(overview.sections.map(\.title) == ["This Mac", "Devbox", "Pi"])
@@ -20,7 +20,8 @@ struct AgentOverviewTests {
 
     @Test func severalLocalSessionsAreNamed() {
         let snapshot = HerdrSnapshot(
-            agents: [], failures: [], sources: [.localSession("default"), .localSession("work"), Self.devbox])
+            agents: [], failures: [],
+            sources: [.herdr(.localSession("default")), .herdr(.localSession("work")), Self.devbox])
 
         #expect(AgentOverview(snapshot).sections.map(\.title) == ["This Mac · default", "This Mac · work", "Devbox"])
     }
@@ -49,7 +50,7 @@ struct AgentOverviewTests {
         // Numbered ones by number, the rest after them in the order of their first agent.
         #expect(workspaces.map(\.label) == ["temp", "dotfiles", "buddr", "loose", "stray"])
         #expect(workspaces[2].agents.map(\.paneID) == ["a", "d"])
-        #expect(workspaces[2].id == .init(source: .localSession("default"), workspaceID: "id-buddr"))
+        #expect(workspaces[2].id == .init(source: .herdr(.localSession("default")), workspaceID: "id-buddr"))
     }
 
     @Test func workspacesOfDifferentSourcesStaySeparate() {
@@ -63,7 +64,7 @@ struct AgentOverviewTests {
 
     @Test func idleAgentsAreFoldedOnlyWhenThereAreMany() {
         let few = AgentOverview.WorkspaceGroup(
-            id: .init(source: .localSession("default"), workspaceID: "w"), label: "w",
+            id: .init(source: .herdr(.localSession("default")), workspaceID: "w"), label: "w",
             agents: [.stub(.idle), .stub(.idle), .stub(.working), .stub(.idle)])
         #expect(few.idleCount == 3)
         #expect(!few.foldsIdleAgents)
@@ -96,5 +97,24 @@ struct AgentOverviewTests {
         #expect(AgentRecord.stub(.idle, title: "", cwd: "/Users/me/code/buddr/").displayTitle == "buddr")
         #expect(AgentRecord.stub(.idle, pane: "wG:p1", title: "", cwd: nil).displayTitle == "wG:p1")
         #expect(AgentRecord.stub(.idle, pane: "wG:p1", title: "", cwd: "/").displayTitle == "wG:p1")
+    }
+
+    @Test func herdrCoreIsThisMacAndItsMachinesGoByName() {
+        let snapshot = HerdrSnapshot(
+            agents: [], failures: [], sources: [.core(machine: nil), .core(machine: "rohan")])
+        let overview = AgentOverview(snapshot)
+
+        #expect(overview.sections.map(\.title) == ["This Mac", "rohan"])
+        #expect(overview.sections.map(\.tag) == [nil, nil])
+    }
+
+    @Test func sectionsNameTheirBackendWhenBothAreRead() {
+        let snapshot = HerdrSnapshot(
+            agents: [], failures: [],
+            sources: [.herdr(.localSession("default")), .core(machine: nil), Self.devbox, .core(machine: "rohan")])
+        let overview = AgentOverview(snapshot)
+
+        #expect(overview.sections.map(\.title) == ["This Mac", "This Mac", "Devbox", "rohan"])
+        #expect(overview.sections.map(\.tag) == ["herdr", "hc", "herdr", "hc"])
     }
 }

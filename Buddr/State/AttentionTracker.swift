@@ -2,11 +2,11 @@
 /// gets into such a status, and picks the agent for the name plate – of the agents in the shown status, the one that
 /// got into it last.
 ///
-/// herdr has no timestamps, and `state_change_seq` can't be compared between sources, so the tracker numbers the
-/// arrivals itself: every agent gets an increasing number when it first shows up as `blocked` or `done` (keyed by
-/// source, pane and status), and loses it once it is gone – an agent that leaves and comes back, also with a source
-/// that is back after a failure, is new. Agents arriving in the same snapshot are ordered by `state_change_seq`, then
-/// by their order in the snapshot.
+/// herdr has no timestamps, and neither its `state_change_seq` nor herdr-core's `status_ms` (by the clock of each
+/// machine) can be compared between sources, so the tracker numbers the arrivals itself: every agent gets an
+/// increasing number when it first shows up as `blocked` or `done` (keyed by source, pane and status), and loses it
+/// once it is gone – an agent that leaves and comes back, also with a source that is back after a failure, is new.
+/// Agents arriving in the same snapshot are ordered by `statusOrder`, then by their order in the snapshot.
 struct AttentionTracker {
     private var arrivals: [Key: Int] = [:]
     private var nextArrival = 0
@@ -14,7 +14,7 @@ struct AttentionTracker {
     private(set) var hasNewArrivals = false
 
     private struct Key: Hashable {
-        let source: HerdrSource
+        let source: AgentSource
         let paneID: String
         let status: AgentStatus
 
@@ -33,7 +33,7 @@ struct AttentionTracker {
         arrivals = arrivals.filter { present.contains($0.key) }
         let newcomers = waiting.enumerated()
             .filter { arrivals[Key($0.element)] == nil }
-            .sorted { ($0.element.stateChangeSeq ?? 0, $0.offset) < ($1.element.stateChangeSeq ?? 0, $1.offset) }
+            .sorted { ($0.element.statusOrder ?? 0, $0.offset) < ($1.element.statusOrder ?? 0, $1.offset) }
         for (_, agent) in newcomers {
             arrivals[Key(agent)] = nextArrival
             nextArrival += 1

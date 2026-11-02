@@ -3,7 +3,7 @@ import Testing
 @testable import Buddr
 
 struct NamePlateTests {
-    private static let devbox = HerdrSource.machine(id: "m1", label: "Devbox")
+    private static let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
 
     @Test func localAgentsShowTheWorkspaceAndTitle() {
         let plate = NamePlate(agent: .stub(.done, workspace: "buddr", title: "test123"), more: 0)

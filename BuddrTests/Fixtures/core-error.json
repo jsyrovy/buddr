@@ -1,0 +1,1 @@
+{"error":{"code":-32601,"data":{"hint":"see `hc schema`","kind":"unknown_method"},"message":"unknown method \"nonexistent.method\""},"id":1,"jsonrpc":"2.0"}

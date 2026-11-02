@@ -1,8 +1,9 @@
 # Buddr
 
 Buddr is a small native macOS desktop buddy: a pixel-art sheep sitting in a corner of the screen that reacts to the
-state of AI coding agents running in [herdr](https://herdr.dev). One character shows the aggregated state of all
-agents. It is information only – it never focuses, attaches to, or sends anything to agents.
+state of AI coding agents running in [herdr](https://herdr.dev) or in herdr-core (`hc`, the terminal runtime behind
+herdr-app). One character shows the aggregated state of all agents. It is information only – it never focuses,
+attaches to, or sends anything to agents.
 
 ## Commands
 
@@ -55,17 +56,22 @@ Buddr/
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
               (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
-              of local sessions or of saved machines, sources queried concurrently), HerdrPoller (periodic loop on
-              the main actor), HerdrMonitor (one poller per kind of source; combines, filters and logs changes)
-  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / HerdrSource / SourceFailure,
+              of local sessions or of saved machines, sources queried concurrently), CoreSocket (CoreTransport,
+              UnixSocketTransport: one JSON-RPC line over herdr-core's socket), CoreClient (CoreError, CoreLocator:
+              socket path, typed calls + parsing), CoreModels, CoreStatusFetcher (herdr-core's terminals on this Mac
+              and on its machines as agents, one call), HerdrPoller (periodic loop on the main actor), HerdrMonitor
+              (one poller per kind of source; combines, filters remote sources and logs changes)
+  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / AgentSource (herdr or herdr-core) /
+              HerdrSource / SourceFailure, Backend + BackendChoice (which backends are read),
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
   Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the sheep away, override the
               status, a long name plate), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
-  Fixtures/   herdr CLI JSON outputs
-  Support/    fixture loader, FakeCommandRunner, ManualSleeper, ScriptedFetch + SnapshotRecorder, AgentRecord.stub,
+  Fixtures/   herdr CLI JSON outputs, herdr-core API answers (`core-*`)
+  Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, ManualSleeper, ScriptedFetch + SnapshotRecorder,
+              AgentRecord.stub,
               HerdrSnapshot init that derives the queried sources
 scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage")
 ```
@@ -78,8 +84,10 @@ scripts/      measure.swift (resource usage of the running app, see "Measuring r
 - Swift 6 strict concurrency: UI types are `@MainActor`; data crossing actors is `Sendable`. Default actor isolation
   is left at `nonisolated` (no `SWIFT_DEFAULT_ACTOR_ISOLATION`), and functions that must run off the main actor are
   marked `@concurrent`. Locks: `OSAllocatedUnfairLock` (`Mutex` needs macOS 15).
-- The UI never waits on a subprocess: all `herdr` calls are async, off the main actor, with timeouts.
-- `herdr` is used read-only (state queries only). Never run commands that change sessions, panes or agents.
+- The UI never waits on a subprocess or a socket: all `herdr` and herdr-core calls are async, off the main actor,
+  with timeouts.
+- `herdr` and herdr-core are used read-only (state queries only). Never run commands that change sessions, panes,
+  terminals or agents, and never start herdr-core (every `hc` command does when it isn't running, see "herdr-core").
 
 ## Design decisions
 
@@ -97,17 +105,21 @@ scripts/      measure.swift (resource usage of the running app, see "Measuring r
   `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
-  agent list, the settings ("Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote Machines") and
-  "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt width. A
-  separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate itself
-  to show one).
-- Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section
-  per source – "This Mac" (with the session name when several local sessions run), then the machines by label – in
-  the order of discovery (`HerdrSnapshot.sources`, so sources without agents and failed ones show up too). A failed
-  source shows only its error, no stale agents. Within a source, workspaces in herdr's sidebar order (`number`);
-  agents in `agent list` order. Order never depends on status, so rows don't jump while the list is open. More than
-  `WorkspaceGroup.idleFoldLimit` idle agents in a workspace are folded into one "N idle" row that unfolds on click.
-  Status icons are SF Symbols differing in shape and color. Rows are information only (no focusing).
+  agent list, the settings ("Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
+  Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
+  width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
+  itself to show one).
+- Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section per
+  source – "This Mac" (herdr with the session name when several local sessions run, then herdr-core), then the machines
+  by label (herdr's) or name (herdr-core's) – in the order of discovery (`HerdrSnapshot.sources`, so sources without
+  agents and failed ones show up too). While sources of both backends are read, every section header shows its backend
+  (`herdr` / `hc`) on the right. The same machine in both backends stays two sections: herdr's label and SSH target and
+  herdr-core's name and host can't be matched reliably (aliases, `user@host`). A failed source shows only its error, no
+  stale agents. Within a source, workspaces in herdr's sidebar order (`number`; herdr-core has none, so its workspaces
+  are in the order of their first agent); agents in `agent list` / `terminal.list` order. Order never depends on status,
+  so rows don't jump while the list is open. More than `WorkspaceGroup.idleFoldLimit` idle agents in a workspace are
+  folded into one "N idle" row that unfolds on click. Status icons are SF Symbols differing in shape and color. Rows are
+  information only (no focusing).
 - The list reads `SnapshotStore`, which `AppDelegate` updates with every changed combined snapshot of
   `HerdrMonitor`, so an open list updates live, and disabled machines disappear from it like from the sheep's state.
   Opening the list (`onAppear`, which a `MenuBarExtra` window calls on every opening) calls `HerdrMonitor.refresh()`:
@@ -124,13 +136,22 @@ scripts/      measure.swift (resource usage of the running app, see "Measuring r
   back when it is gone. Details in "Fullscreen escape" below.
 - Hiding: the sheep can leave the screen on its own after a while of calm. Details in "Hiding" below.
 - Name plate: while the sheep is `blocked` or `done`, a plate under it names the agent. Details in "Name plate" below.
-- Data sources: running local herdr sessions and all *enabled* saved machines, both discovered on every poll
-  (nothing hardcoded). `HerdrMonitor` polls them in independent loops – local every 2 s, machines every 15 s – so a
-  slow machine never delays local updates, and shows the combined snapshot. Sources are queried concurrently.
+- Data sources: running local herdr sessions and all *enabled* saved herdr machines, both discovered on every poll
+  (nothing hardcoded), and herdr-core on this Mac with the machines added to it. `HerdrMonitor` polls every kind of
+  source (`HerdrMonitor.SourceKind`: `localSessions`, `machines`, `core`) in an independent loop – herdr locally every
+  2 s, its machines every 15 s, herdr-core with its machines every 2 s – so a slow machine or backend never delays the
+  others, and shows the combined snapshot (`HerdrSnapshot.combining`: the sources of this Mac first, then the
+  machines). Sources are queried concurrently. A part that didn't change since its last poll is not combined again.
+- The backends are chosen in the menu bar ("Agents from": herdr / hc / Both; `Preferences.backendChoice`, key
+  `agentBackends`: `herdr` / `hc` / `both`, default `both`). A chosen backend that is missing or not running is a
+  failed source (⚠), also with Both – the user asked for it.
 - Remote machines can be switched off in the menu bar (`Preferences.watchesRemoteMachines`, `UserDefaults` key
-  `watchesRemoteMachines`, on by default). Off stops the machine poller – no `--machine` calls at all, a running one
-  is cancelled – and removes the machines' agents and failures from the snapshot at once
-  (`HerdrMonitor.setEnabled(_:_:)`); on polls them right away.
+  `watchesRemoteMachines`, on by default) for both backends. `HerdrMonitor.configure(backends:watchesRemoteMachines:)`
+  applies both settings: it enables the kinds they ask for (`SourceKind.isEnabled(by:watchesRemoteMachines:)`,
+  `setEnabled(_:_:)`) and leaves every remote source, with its agents and failures, out of the combined snapshot at
+  once (`HerdrSnapshot.withoutRemoteSources()`). Off stops herdr's machine poller – no `--machine` calls at all, a
+  running one is cancelled; herdr-core's machines come in the same call as this Mac, so they are only filtered out.
+  On polls herdr's machines right away.
 - Animation can be set in the menu bar (`Preferences.animationMode`, key `animationMode`: `off` / `onChange` /
   `always`, default `always`; `Preferences.animationSeconds`, key `animationDurationSeconds`, one of 5 / 10 / 30 /
   60 s, default 10). See "Animation modes" below.
@@ -145,7 +166,8 @@ scripts/      measure.swift (resource usage of the running app, see "Measuring r
   the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). Release
   builds contain none of it;
   check with `CONFIG=Release make build` after touching it.
-- Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, non-herdr sources.
+- Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, sources other than
+  herdr and herdr-core.
 
 ## herdr CLI
 
@@ -205,6 +227,42 @@ herdr api schema --json              # full JSON schema of the socket API (reque
   Request `{"id":"req_1","method":"agent.list","params":{}}`; `events.subscribe` answers with an ack line, then pushes
   events (`pane.agent_status_changed` needs a `pane_id`, so subscribe per pane; `pane.created`, `pane.closed`,
   `pane.exited`, `pane.agent_detected`). Events don't replay history – bootstrap with `agent.list`.
+
+## herdr-core
+
+herdr-core (CLI `hc`, verified with 0.1.16; `hc --skill` is its manual, `hc schema` the full API as OpenRPC) runs
+programs in terminals that outlive their clients; herdr-app shows them. Agents report their status into the terminal
+(OSC 7501), and the core keeps it per terminal.
+
+- Buddr does not run `hc`: **every `hc` command, including `hc ls` and `hc server status`, starts the core when it is
+  not running** (checked with a scratch `HC_SESSION`). Buddr talks to the core's Unix socket instead
+  (`UnixSocketTransport`): JSON-RPC 2.0, one message per line, no `hello` needed for a plain call. Nothing listening
+  (no socket file – the core removes it when it stops – or a stale one: `ENOENT` / `ECONNREFUSED`) is
+  `CoreError.notRunning`, a failed source (This Mac, `hc`). No subprocess is started either.
+- Socket path (`CoreLocator`, mirrors `hc`): `HC_SOCKET`, else `$XDG_RUNTIME_DIR/herdr-core/<session>.sock`, else
+  `$XDG_STATE_HOME/herdr-core/<session>/<session>.sock` (state home `~/.local/state`), session `HC_SESSION` or
+  `default`. The app normally sees none of these variables: `~/.local/state/herdr-core/default/default.sock`. Only
+  the default session is read; a `socket` in `~/.config/herdr-core/config.toml` is not.
+- One call: `{"jsonrpc":"2.0","id":1,"method":"terminal.list","params":{}}` → `{"id":1,"jsonrpc":"2.0","result":
+  {"hidden_finished":…,"machines":[…],"terminals":[…]}}`, or `{"error":{"code":…,"message":"…","data":{"kind":"…",
+  "hint":"…"}},…}` (`CoreError.api`). It lists the live terminals of this Mac, then of every connected machine
+  (address `machine/t7`); `machines` (missing when none was added) lists every added machine with `name`, `state`
+  (`connecting`, `connected`, `needs_login`, `unreachable`) and `why`. The core doesn't wait for a machine that is not
+  connected; with two connected machines a call took ~30 ms. Timeout 5 s (`CoreClient.timeout`).
+- Terminal fields Buddr reads: `address`, `status` (`{"app":"claude-code","state":"working","msg":"…"}`, `null` for
+  programs that never reported – shells; only terminals with a status are agents), `status_ms` (when the status was
+  reported, by the machine's clock → `AgentRecord.statusOrder`), `title`, `cwd` / `foreground.cwd`, `labels`.
+  herdr-app labels its terminals `where` (`"buddr / 1"`: workspace / tab) and `herdr.space` (workspace ID); terminals
+  started with `hc run` have none and are grouped by the last component of their working directory.
+- `state` is `idle`, `working`, `done`, `blocked` or `error`; there is no `unknown`. `error` (the program stopped on an
+  error and needs a person) counts as `blocked` (`AgentStatus(coreState:)`), so the sheep, plate and hiding treat it
+  like a question; the list shows it as blocked too. Unknown future words decode as `unknown`.
+- `CoreStatusFetcher.fetch()` makes one `terminal.list` call per poll: the sources are this Mac and every added
+  machine. A machine that is not connected is a failed source (`state[: why]`) without agents; a core that can't be
+  asked is a failure of this Mac only.
+- Later: `events.subscribe` (a snapshot, then every change of any terminal, also on the machines, a heartbeat every
+  15 s, `missed` + a fresh snapshot for a subscriber that fell behind) could replace polling; it needs a feed that
+  pushes snapshots instead of `HerdrPoller.Feed`.
 
 ## Agent states → sheep behaviour
 
@@ -323,7 +381,8 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
 - Shown only while the aggregated (or debug-overridden) status is `blocked` or `done` – the statuses that are not calm
   in `HideMode.unlessNeeded`. It names one agent in that status, the one that got into it last, and adds `+N` for the
   others in it; agents in a lower status are not counted. Text: `[machine label · ]workspace · title` – the machine
-  label only for remote sources; the title is `AgentRecord.displayTitle`, dropped when it equals the workspace label.
+  label (herdr's label, herdr-core's name) only for remote sources; the title is `AgentRecord.displayTitle`, dropped
+  when it equals the workspace label.
 - Set in the menu bar: "Name Plate" turns it on and off (`Preferences.showsNamePlate`, key `showsNamePlate`, on by
   default), and while on, a checkbox per part – Machine, Workspace, Title (`Preferences.namePlateFields`,
   `NamePlate.Field`, key `namePlateFields`, an array of the names, all by default) – picks what it shows. `+N` is
@@ -338,7 +397,7 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
 - Order without clocks (`AttentionTracker`, which also tells `replay()` about new arrivals): every agent keyed by
   source, pane and status gets an increasing arrival number when it first shows up as `blocked` / `done` and loses it
   once it is gone, so an agent that leaves and comes back is new. Ties within one poll (e.g. at launch):
-  `state_change_seq`, then `agent list` order.
+  `AgentRecord.statusOrder` (herdr's `state_change_seq`, herdr-core's `status_ms`), then the order in the snapshot.
 - Font (`PixelFont`): 5×7 px, proportional, 2 rows for descenders, 1 px between glyphs, glyphs taken from the mockup
   (`1` redrawn so it doesn't read as `l`). Lowercase letters with a caron, acute or ring get the mark in the two rows
   above the x-height (`í` without its dot); after an ascender a caron becomes an apostrophe to the right (`ď`, `ť`,
@@ -379,10 +438,16 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   labels, session UUID, machine IDs, labels and SSH targets): `session-list`, `agent-list`, `workspace-list`, `error`,
   `machine-list`. Edited variants derived from the same shapes: `session-list-multiple`, `agent-list-mixed` (all
   statuses, missing optional fields including `state_change_seq`, a future status), `agent-list-empty`,
-  `machine-list-mixed` (a disabled machine). Never commit personal paths or names. Synchronized groups copy the JSON
-  files flat into the test bundle's `Resources/`; load them with `Fixture.data("name")`.
+  `machine-list-mixed` (a disabled machine). herdr-core: `core-terminal-list` (edited from a real herdr-core 0.1.16
+  answer: shells, agents in herdr-app workspaces, an `hc run` agent without labels in `error`, a connected and an
+  unreachable machine), `core-terminal-list-empty` and `core-error` (real). Never commit personal paths or names.
+  Synchronized groups copy the JSON files flat into the test bundle's `Resources/`; load them with
+  `Fixture.data("name")`.
 - herdr logic is tested through `FakeCommandRunner` (canned output keyed by the joined arguments); `ProcessRunner` is
   tested with real `/bin/sh` processes (timeouts, SIGTERM-ignoring children, grandchildren holding the pipe).
+  herdr-core logic is tested through `FakeCoreTransport` (one canned answer, records the request lines);
+  `UnixSocketTransport` with real Unix sockets (`LineServer`: answers in chunks, a missing and a stale socket, a
+  silent server, a closed connection, cancellation). Never point tests at the user's running core.
 - Logs: `os.Logger` subsystem `cz.jsyrovy.buddr`. Watch with
   `/usr/bin/log stream --level info --predicate 'subsystem == "cz.jsyrovy.buddr"'` – in zsh, plain `log` is a shell
   builtin.
@@ -407,7 +472,8 @@ tests are cheap and stable:
   ordering, `AttentionTracker` arrivals and order, `NamePlate` text.
 - `Herdr/` except `HerdrPoller` and `HerdrMonitor` – output parsing, the error envelope, binary lookup, concurrent
   fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
-  grandchildren.
+  grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
+  `UnixSocketTransport` (not running, timeouts, cancellation).
 - `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`, the
   `PixelFont` glyphs, marks and truncation, the `SheepSprites.Plate` sprite.
@@ -440,7 +506,7 @@ Fine to leave uncovered:
   `SheepPanelController`. Check them by running the app.
 - `Menu/` – `AgentListView` (layout only; the logic is in `AgentOverview`). Check it with `ImageRenderer` or the app.
 - Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
-  `ProcessRunner.signalProcessGroup`.
+  `ProcessRunner.signalProcessGroup`, or failing `socket` / `poll` / `read` in `UnixSocketTransport`.
 
 Do not add abstractions to production code just to cover lines. A seam is justified when it makes meaningful behaviour
 testable (a clock for the poller), not to reach one more branch.
@@ -464,8 +530,9 @@ testable (a clock for the poller), not to reach one more branch.
   shorter than a minute.
 - Measure the Release build (`make install`) for absolute numbers; Debug (`-Onone`) only against other Debug runs. The
   configuration is detected by `Buddr.debug.dylib` next to the executable and flagged in the output. A run also
-  records the menu bar settings as the app uses them (animation and remote machines change the cost a lot; the script
-  mirrors the keys, choices and defaults of `Preferences`) and warns when the app was built before the last commit,
+  records the menu bar settings as the app uses them (backends, animation and remote machines change the cost a lot;
+  the script mirrors the keys, choices and defaults of `Preferences`; runs saved before the backend choice show it as
+  `–` and read herdr only) and warns when the app was built before the last commit,
   started less than a minute ago, or the settings changed during the run.
 - `--profile` also records a Time Profiler trace (`xctrace`) next to the JSON; measuring starts once xctrace records
   (it takes a few seconds to attach).

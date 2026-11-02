@@ -60,12 +60,8 @@ struct NamePlate: Equatable, Sendable {
 
 extension NamePlate {
     init(agent: AgentRecord, more: Int) {
-        var machine: String?
-        if case .machine(_, let label) = agent.source {
-            machine = label
-        }
         self.init(
-            machine: machine, workspace: agent.workspace,
+            machine: agent.source.machineLabel, workspace: agent.workspace,
             title: agent.displayTitle.trimmingCharacters(in: .whitespacesAndNewlines), more: more)
     }
 }
