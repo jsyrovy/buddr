@@ -21,7 +21,7 @@ struct CoreStatusFetcherTests {
             snapshot.agents.map(\.source) == [
                 .core(machine: nil), .core(machine: nil), .core(machine: nil), Self.devbox,
             ])
-        // `error` (t12) counts as blocked.
+        // `error` (t12) counts as blocked; nobody has seen t8's last turn (3 > `herdr.seen` 2).
         #expect(snapshot.agents.map(\.status) == [.done, .working, .blocked, .blocked])
         #expect(snapshot.agents.last?.workspace == "shop")
     }
@@ -49,6 +49,20 @@ struct CoreStatusFetcherTests {
         #expect(review.workspaceID == "api")
         #expect(review.title == "")
         #expect(review.displayTitle == "api")
+    }
+
+    /// The status of the only agent in an answer with one terminal.
+    private func status(_ state: String, turn: Int, labels: String) async -> AgentStatus? {
+        let answer = #"""
+            {"id":1,"jsonrpc":"2.0","result":{"terminals":[
+            {"address":"t1","labels":\#(labels),"status":{"app":"claude-code","state":"\#(state)"},"turn":\#(turn)}]}}
+            """#
+        return await fetcher(FakeCoreTransport(.success(Data(answer.utf8)))).fetch().agents.first?.status
+    }
+
+    @Test func seenTurnComesFromTheHerdrSeenLabel() async {
+        #expect(await status("done", turn: 3, labels: #"{"herdr.seen":"3"}"#) == .idle)
+        #expect(await status("done", turn: 3, labels: #"{"herdr.seen":"soon"}"#) == .done)
     }
 
     @Test func coreThatIsNotRunningIsAFailureOfThisMac() async {
@@ -105,5 +119,18 @@ struct CoreStatusFetcherTests {
         #expect(AgentStatus(coreState: "blocked") == .blocked)
         #expect(AgentStatus(coreState: "error") == .blocked)
         #expect(AgentStatus(coreState: "dreaming") == .unknown)
+    }
+
+    @Test func seenTurnDecidesOnlyBetweenDoneAndIdle() {
+        // herdr clients share the last turn a person looked at.
+        #expect(AgentStatus(coreState: "done", turn: 3, seenTurn: 3) == .idle)
+        #expect(AgentStatus(coreState: "done", turn: 3, seenTurn: 2) == .done)
+        // A program that reports `idle` after its turn is done too until seen.
+        #expect(AgentStatus(coreState: "idle", turn: 3, seenTurn: 2) == .done)
+        #expect(AgentStatus(coreState: "done", turn: nil, seenTurn: 3) == .done)
+        // Work and questions don't depend on it.
+        #expect(AgentStatus(coreState: "working", turn: 3, seenTurn: 2) == .working)
+        #expect(AgentStatus(coreState: "error", turn: 3, seenTurn: 3) == .blocked)
+        #expect(AgentStatus(coreState: "dreaming", turn: 3, seenTurn: 2) == .unknown)
     }
 }

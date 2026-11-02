@@ -251,12 +251,19 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
   connected; with two connected machines a call took ~30 ms. Timeout 5 s (`CoreClient.timeout`).
 - Terminal fields Buddr reads: `address`, `status` (`{"app":"claude-code","state":"working","msg":"…"}`, `null` for
   programs that never reported – shells; only terminals with a status are agents), `status_ms` (when the status was
-  reported, by the machine's clock → `AgentRecord.statusOrder`), `title`, `cwd` / `foreground.cwd`, `labels`.
+  reported, by the machine's clock → `AgentRecord.statusOrder`), `title`, `cwd` / `foreground.cwd`, `turn`, `labels`.
   herdr-app labels its terminals `where` (`"buddr / 1"`: workspace / tab) and `herdr.space` (workspace ID); terminals
   started with `hc run` have none and are grouped by the last component of their working directory.
 - `state` is `idle`, `working`, `done`, `blocked` or `error`; there is no `unknown`. `error` (the program stopped on an
-  error and needs a person) counts as `blocked` (`AgentStatus(coreState:)`), so the sheep, plate and hiding treat it
-  like a question; the list shows it as blocked too. Unknown future words decode as `unknown`.
+  error and needs a person) counts as `blocked` (`AgentStatus(coreState:turn:seenTurn:)`), so the sheep, plate and
+  hiding treat it like a question; the list shows it as blocked too. Unknown future words decode as `unknown`.
+- `done` from the core only means the program finished its turn (Claude Code keeps it until the next prompt); it is
+  not "unseen" as in herdr. herdr clients share what a person has seen in the label `herdr.seen` (herdr-app ≥ 0.1.12,
+  `docs/labels.md` in `herdrdev/herdr-app`): the last `turn` (the core's counter, up each time the program stops
+  working) a person looked at, a decimal string, written within a fraction of a second, also on machines' terminals.
+  With it, an agent that reported `idle` or `done` is `done` while `turn > herdr.seen`, else `idle` – what herdr-app
+  shows. Without it (older clients, terminals no client has shown yet), the word decides. herdr-app's own per-screen
+  memory (`attention` in `~/.config/herdr-app/view.json`) is not read.
 - `CoreStatusFetcher.fetch()` makes one `terminal.list` call per poll: the sources are this Mac and every added
   machine. A machine that is not connected is a failed source (`state[: why]`) without agents; a core that can't be
   asked is a failure of this Mac only.
@@ -439,10 +446,10 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   `machine-list`. Edited variants derived from the same shapes: `session-list-multiple`, `agent-list-mixed` (all
   statuses, missing optional fields including `state_change_seq`, a future status), `agent-list-empty`,
   `machine-list-mixed` (a disabled machine). herdr-core: `core-terminal-list` (edited from a real herdr-core 0.1.16
-  answer: shells, agents in herdr-app workspaces, an `hc run` agent without labels in `error`, a connected and an
-  unreachable machine), `core-terminal-list-empty` and `core-error` (real). Never commit personal paths or names.
-  Synchronized groups copy the JSON files flat into the test bundle's `Resources/`; load them with
-  `Fixture.data("name")`.
+  answer: shells, agents in herdr-app workspaces with `herdr.seen` labels – `t8` done with an unseen turn – an `hc run`
+  agent without labels in `error`, a connected and an unreachable machine), `core-terminal-list-empty` and
+  `core-error` (real). Never commit personal paths or names. Synchronized groups copy the JSON files flat into the
+  test bundle's `Resources/`; load them with `Fixture.data("name")`.
 - herdr logic is tested through `FakeCommandRunner` (canned output keyed by the joined arguments); `ProcessRunner` is
   tested with real `/bin/sh` processes (timeouts, SIGTERM-ignoring children, grandchildren holding the pipe).
   herdr-core logic is tested through `FakeCoreTransport` (one canned answer, records the request lines);

@@ -60,7 +60,8 @@ extension AgentRecord {
             workspaceNumber: nil,
             paneID: terminal.address,
             agent: status.app,
-            status: AgentStatus(coreState: status.state),
+            status: AgentStatus(
+                coreState: status.state, turn: terminal.turn, seenTurn: labels["herdr.seen"].flatMap { UInt64($0) }),
             title: terminal.title ?? "",
             cwd: cwd,
             statusOrder: terminal.statusMs)
@@ -70,7 +71,14 @@ extension AgentRecord {
 extension AgentStatus {
     /// A herdr-core status word. `error` (the program stopped on an error and needs a person) counts as `blocked`;
     /// words added by future versions as `unknown`.
-    init(coreState: String) {
-        self = coreState == "error" ? .blocked : AgentStatus(rawValue: coreState) ?? .unknown
+    /// With the last turn a person looked at (`seenTurn`, the label `herdr.seen`), `idle` and `done` are `done` while
+    /// `turn` is above it, else `idle`.
+    init(coreState: String, turn: UInt64? = nil, seenTurn: UInt64? = nil) {
+        let word = coreState == "error" ? .blocked : AgentStatus(rawValue: coreState) ?? .unknown
+        if word == .idle || word == .done, let turn, let seenTurn {
+            self = turn > seenTurn ? .done : .idle
+        } else {
+            self = word
+        }
     }
 }

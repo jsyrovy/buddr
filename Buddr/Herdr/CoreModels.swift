@@ -41,12 +41,15 @@ struct CoreTerminal: Decodable, Sendable, Equatable {
     let cwd: String?
     /// What runs in it now.
     let foreground: Foreground?
-    /// Free-form; herdr-app sets `where` (`workspace / tab`) and `herdr.space` (the workspace ID).
+    /// Free-form; herdr-app sets `where` (`workspace / tab`), `herdr.space` (the workspace ID) and `herdr.seen` (the
+    /// last `turn` a person looked at on any herdr client).
     let labels: [String: String]?
     let status: Status?
     /// When the status was reported, in ms since the epoch by the clock of the terminal's machine.
     let statusMs: UInt64?
     let title: String?
+    /// Goes up each time the program stops working.
+    let turn: UInt64?
 }
 
 /// A machine added to herdr-core, as `terminal.list` lists it.
