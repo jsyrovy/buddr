@@ -374,17 +374,18 @@ Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
 ## Hiding
 
 Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle` / `unlessNeeded`, default `never`;
-`Preferences.hideMinutes`, key `hideAfterMinutes`, one of 1 / 5 / 15 / 30 min, default 5).
+`Preferences.hideSeconds`, key `hideAfterSeconds`, one of 5 s / 30 s / 1 / 5 / 15 / 30 min, default 5 min; without
+it the minutes in `hideAfterMinutes`, saved by versions that offered whole minutes only, are read).
 
 - Calm (`HideMode.isCalm`): `whenIdle` – the aggregated status is `idle` or `unknown`; `unlessNeeded` – it is not
   `blocked` or `done` (agents may work). `unknown` (no agents, herdr not running) counts as calm, so a hidden sheep
   doesn't show "?" when herdr goes away.
-- `SheepHiding` hides the sheep after `hideMinutes` of continuous calm and brings it back as soon as the status isn't
+- `SheepHiding` hides the sheep after `hideSeconds` of continuous calm and brings it back as soon as the status isn't
   calm. The countdown (real time) starts again on every status change, settings change, petting and `show()`; at
   launch the sheep is visible and the countdown runs from the start. While hidden, a change between two calm statuses
   (e.g. `idle` → `working` in `unlessNeeded`) keeps it hidden.
 - The sheep can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`SheepHiding.show()`), which
-  calls it back until another `hideMinutes` of calm.
+  calls it back until another `hideSeconds` of calm.
 - Moving uses `SheepEscape` with the same route as the fullscreen escape. When hiding is the only reason, the sheep
   leaves bored instead of startled: a yawn (`SheepSprites.Escape.yawn`; if the reason is gone by its end, it stays),
   then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.

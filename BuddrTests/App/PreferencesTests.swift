@@ -84,7 +84,7 @@ struct PreferencesTests {
     @Test func neverHidesByDefault() {
         let preferences = Preferences(defaults: defaults)
         #expect(preferences.hideMode == .never)
-        #expect(preferences.hideMinutes == Preferences.defaultHideMinutes)
+        #expect(preferences.hideSeconds == Preferences.defaultHideSeconds)
     }
 
     @Test func hidingIsSavedAndReported() {
@@ -93,22 +93,36 @@ struct PreferencesTests {
         preferences.onChange = { changes += 1 }
 
         preferences.hideMode = .unlessNeeded
-        preferences.hideMinutes = 15
+        preferences.hideSeconds = 5
 
         #expect(changes == 2)
         let reloaded = Preferences(defaults: defaults)
         #expect(reloaded.hideMode == .unlessNeeded)
-        #expect(reloaded.hideMinutes == 15)
+        #expect(reloaded.hideSeconds == 5)
     }
 
     @Test func invalidSavedHidingFallsBackToTheDefaults() {
         defaults.set("sometimes", forKey: "hideMode")
-        defaults.set(7, forKey: "hideAfterMinutes")
+        defaults.set(7, forKey: "hideAfterSeconds")
 
         let preferences = Preferences(defaults: defaults)
 
         #expect(preferences.hideMode == .never)
-        #expect(preferences.hideMinutes == Preferences.defaultHideMinutes)
+        #expect(preferences.hideSeconds == Preferences.defaultHideSeconds)
+    }
+
+    @Test func hidingDelaySavedInMinutesByOlderVersionsIsKept() {
+        defaults.set(15, forKey: "hideAfterMinutes")
+        #expect(Preferences(defaults: defaults).hideSeconds == 900)
+
+        // A delay saved in seconds wins.
+        defaults.set(30, forKey: "hideAfterSeconds")
+        #expect(Preferences(defaults: defaults).hideSeconds == 30)
+    }
+
+    @Test func invalidHidingDelaySavedInMinutesFallsBackToTheDefault() {
+        defaults.set(7, forKey: "hideAfterMinutes")
+        #expect(Preferences(defaults: defaults).hideSeconds == Preferences.defaultHideSeconds)
     }
 
     // MARK: Name plate

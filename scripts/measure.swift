@@ -99,10 +99,49 @@ struct Settings: Codable, Equatable {
     var animationMode: String
     var animationSeconds: Int
     var hideMode: String
-    var hideMinutes: Int
+    var hideSeconds: Int
     var watchesRemoteMachines: Bool
     /// Missing in runs saved before Buddr read herdr-core; they read herdr only.
     var agentBackends: String?
+
+    init(
+        animationMode: String, animationSeconds: Int, hideMode: String, hideSeconds: Int, watchesRemoteMachines: Bool,
+        agentBackends: String?
+    ) {
+        self.animationMode = animationMode
+        self.animationSeconds = animationSeconds
+        self.hideMode = hideMode
+        self.hideSeconds = hideSeconds
+        self.watchesRemoteMachines = watchesRemoteMachines
+        self.agentBackends = agentBackends
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case animationMode, animationSeconds, hideMode, hideSeconds, hideMinutes, watchesRemoteMachines, agentBackends
+    }
+
+    /// Runs saved before the hiding delay could be shorter than a minute have `hide_minutes` instead.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        animationMode = try container.decode(String.self, forKey: .animationMode)
+        animationSeconds = try container.decode(Int.self, forKey: .animationSeconds)
+        hideMode = try container.decode(String.self, forKey: .hideMode)
+        hideSeconds =
+            try container.decodeIfPresent(Int.self, forKey: .hideSeconds)
+            ?? container.decode(Int.self, forKey: .hideMinutes) * 60
+        watchesRemoteMachines = try container.decode(Bool.self, forKey: .watchesRemoteMachines)
+        agentBackends = try container.decodeIfPresent(String.self, forKey: .agentBackends)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(animationMode, forKey: .animationMode)
+        try container.encode(animationSeconds, forKey: .animationSeconds)
+        try container.encode(hideMode, forKey: .hideMode)
+        try container.encode(hideSeconds, forKey: .hideSeconds)
+        try container.encode(watchesRemoteMachines, forKey: .watchesRemoteMachines)
+        try container.encodeIfPresent(agentBackends, forKey: .agentBackends)
+    }
 
     static func read() -> Settings {
         let defaults = UserDefaults(suiteName: "cz.jsyrovy.buddr")
@@ -113,9 +152,18 @@ struct Settings: Codable, Equatable {
             animationMode: choice("animationMode", ["off", "onChange", "always"], default: "always"),
             animationSeconds: choice("animationDurationSeconds", [5, 10, 30, 60], default: 10),
             hideMode: choice("hideMode", ["never", "whenIdle", "unlessNeeded"], default: "never"),
-            hideMinutes: choice("hideAfterMinutes", [1, 5, 15, 30], default: 5),
+            hideSeconds: hideSeconds(),
             watchesRemoteMachines: choice("watchesRemoteMachines", [false, true], default: true),
             agentBackends: choice("agentBackends", ["herdr", "hc", "both"], default: "both"))
+    }
+
+    /// `hideAfterSeconds`, else the minutes saved by older versions.
+    private static func hideSeconds() -> Int {
+        let defaults = UserDefaults(suiteName: "cz.jsyrovy.buddr")
+        let seconds =
+            defaults?.object(forKey: "hideAfterSeconds") as? Int
+            ?? (defaults?.object(forKey: "hideAfterMinutes") as? Int).map { $0 * 60 }
+        return seconds.flatMap { [5, 30, 60, 300, 900, 1800].contains($0) ? $0 : nil } ?? 300
     }
 
     /// Names as in the JSON; a missing value is `–`.
@@ -133,10 +181,11 @@ struct Settings: Codable, Equatable {
             case "onChange": "on change (\(animationSeconds) s)"
             default: animationMode
             }
+        let hideDuration = hideSeconds.isMultiple(of: 60) ? "\(hideSeconds / 60) min" : "\(hideSeconds) s"
         let hide =
             switch hideMode {
-            case "whenIdle": "when idle (after \(hideMinutes) min)"
-            case "unlessNeeded": "unless needed (after \(hideMinutes) min)"
+            case "whenIdle": "when idle (after \(hideDuration))"
+            case "unlessNeeded": "unless needed (after \(hideDuration))"
             default: hideMode
             }
         return "agents from \(agentBackends ?? "herdr") · animation \(animation) · hide \(hide) · remote machines "

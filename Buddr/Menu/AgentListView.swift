@@ -105,7 +105,7 @@ private struct AnimationSettings: View {
             if preferences.animationMode == .onChange {
                 Picker("Animated for", selection: $preferences.animationSeconds) {
                     ForEach(Preferences.animationSecondsChoices, id: \.self) { seconds in
-                        Text(Self.title(seconds: seconds)).tag(seconds)
+                        Text("for \(durationText(seconds: seconds))").tag(seconds)
                     }
                 }
                 .labelsHidden()
@@ -121,11 +121,11 @@ private struct AnimationSettings: View {
         case .always: "Always"
         }
     }
+}
 
-    /// "for 5 s", "for 1 min".
-    private static func title(seconds: Int) -> String {
-        seconds.isMultiple(of: 60) ? "for \(seconds / 60) min" : "for \(seconds) s"
-    }
+/// "5 s", "1 min".
+private func durationText(seconds: Int) -> String {
+    seconds.isMultiple(of: 60) ? "\(seconds / 60) min" : "\(seconds) s"
 }
 
 /// "Hide: Never / When Idle / Unless Needed", and after how long.
@@ -141,9 +141,9 @@ private struct HideSettings: View {
             }
             .fixedSize()
             if preferences.hideMode != .never {
-                Picker("Hide after", selection: $preferences.hideMinutes) {
-                    ForEach(Preferences.hideMinutesChoices, id: \.self) { minutes in
-                        Text("after \(minutes) min").tag(minutes)
+                Picker("Hide after", selection: $preferences.hideSeconds) {
+                    ForEach(Preferences.hideSecondsChoices, id: \.self) { seconds in
+                        Text("after \(durationText(seconds: seconds))").tag(seconds)
                     }
                 }
                 .labelsHidden()
