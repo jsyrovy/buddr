@@ -13,6 +13,7 @@ make test     # Swift Testing unit tests (hosted by the app)
 make coverage # tests + line coverage report of the app target (result bundle build/Test.xcresult)
 make run      # build, kill a running instance, open the app
 make install  # Release build into ~/Applications (INSTALL_DIR=…), restart it; make uninstall removes it
+make release  # signed, notarized zip in build/release from a commit tagged v<version> (see "Releasing")
 make measure  # CPU, wakeups, power and memory of the running app (scripts/measure.swift; ARGS="…")
 make format   # xcrun swift-format, in place
 make lint     # xcrun swift-format lint --strict
@@ -34,7 +35,10 @@ Xcode 26).
   pbxproj only for build settings / targets; keep object IDs in the `B0DD…` scheme.
 - Shared scheme `Buddr` (`xcshareddata/xcschemes/Buddr.xcscheme`) so `xcodebuild -scheme Buddr` works.
 - Bundle ID `cz.jsyrovy.buddr`, `LSUIElement = YES` (no Dock icon), generated Info.plist, App Sandbox off (the app
-  runs `herdr`/`ssh`), no hardened runtime yet, ad-hoc signing ("Sign to Run Locally", no team).
+  runs `herdr`/`ssh`), ad-hoc signing ("Sign to Run Locally", no team) for everything but `make release`, which signs
+  with Developer ID. Hardened runtime is on in Release only (see "Releasing").
+- Version: `MARKETING_VERSION` (`major.minor`) of the app target, the same in Debug and Release; the test target has
+  none. `CURRENT_PROJECT_VERSION` stays 1; a release sets the build number.
 - Nothing may be installed on the dev machine (no XcodeGen, SwiftLint, xcbeautify, …). Formatting is `swift-format`
   from the toolchain, configured in `.swift-format` (4 spaces, 120 columns).
 
@@ -73,7 +77,9 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
   Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, ManualSleeper, ScriptedFetch + SnapshotRecorder,
               AgentRecord.stub,
               HerdrSnapshot init that derives the queried sources
-scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage")
+scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage"), release.sh
+              (`make release`, see "Releasing")
+CHANGELOG.md  one section per released version
 ```
 
 ## Conventions
@@ -544,3 +550,33 @@ testable (a clock for the poller), not to reach one more branch.
 - `--profile` also records a Time Profiler trace (`xctrace`) next to the JSON; measuring starts once xctrace records
   (it takes a few seconds to attach).
 - Several Buddr processes (a dev build next to the installed one, a test host) need `--pid`.
+
+## Releasing
+
+Releases are distributed outside the Mac App Store (the sandbox rules it out, see README): signed with Developer ID,
+hardened runtime, notarized by Apple and stapled, so Gatekeeper opens a downloaded copy without warnings. The format is
+a zip of `Buddr.app`. Where releases are published is not decided yet (a Homebrew cask is the plan).
+
+- A release is made only by hand, never by a push. Between releases the version stays the last released one.
+- Steps: set `MARKETING_VERSION` to the new `major.minor` (Xcode: target → General → Version, or both configurations in
+  the pbxproj), add a section `## <version> – <YYYY-MM-DD>` to `CHANGELOG.md` (a few lines for users, drafted from
+  `git log v<previous>..HEAD`), commit ("Release 0.2"), `git tag v0.2`, `make release`, then
+  `git push origin main v0.2`. The tag is pushed only after a successful release; if it fails, fix, commit and move
+  the unpushed tag (`git tag -f`).
+- `scripts/release.sh` changes nothing in git. It checks the preconditions first (clean tree, tag, dated changelog
+  section, identity, notary profile), then archives (signed with Developer ID right away, so there is no export step;
+  build number = `git rev-list --count HEAD`), checks the signature, notarizes, staples, zips and checks the zip as a
+  download with `syspolicy_check distribution`. A run takes a few minutes, most of it notarization.
+- Output: `build/release/Buddr-<version>.zip`, its `.sha256`, `Buddr-<version>-dSYMs.zip` (for symbolicating crash
+  reports; keep it with the release) and the archive.
+- Credentials live in the login keychain only, never in the repo: the identity "Developer ID Application: Jiri Syrovy
+  (DZ7S6R9RRN)" (expires 2027-12-05; renew it before, already shipped versions keep working thanks to the timestamp)
+  and the `notarytool` keychain profile `notary` (an App Store Connect API team key with the Developer role;
+  `NOTARY_PROFILE` overrides the name). Both belong to the team, not to Buddr; the owner keeps backups outside the repo.
+- Hardened runtime: ad-hoc Release builds (`make install`, CI) have it too, so everyday use runs like a release; the
+  Developer ID build was checked with it (subprocesses, sockets, `--machine` over SSH). It stays off in Debug: Xcode
+  left it out of the ad-hoc Debug signature even when enabled, and forced on (`--options=runtime`), library
+  validation rejects the ad-hoc `Buddr.debug.dylib` and test bundle (the test host crashes). No entitlements are
+  needed.
+- Pitfall: `syspolicy_check notary-submission` includes a Gatekeeper assessment and rejects every app that is not
+  notarized yet, so it can't serve as a check before notarization.
