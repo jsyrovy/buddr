@@ -322,16 +322,27 @@ Animation modes (`AnimationMode`, set with `SheepAnimator.setAnimation(_:for:)`)
 Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
 
 - No public API tells whether a display shows a fullscreen app. `CGWindowListCopyWindowInfo` (on-screen windows,
-  no desktop elements) is used instead: the display counts as fullscreen when a visible window of another app in
-  layer 0 covers it completely. Owner, layer, bounds and alpha need no Screen Recording permission (titles would).
-  This also catches borderless "fake fullscreen" windows (games, video); a zoomed window doesn't count, it leaves
-  the menu bar (and the Dock, if shown) uncovered. Private CGS Space APIs were rejected.
+  desktop elements included) is used instead. Owner, layer, bounds and alpha need no Screen Recording permission
+  (titles would). Private CGS Space APIs and the Accessibility API (`AXFullScreen`: a permission, only the active app)
+  were rejected.
+- Normal Space or fullscreen Space: Finder draws the desktop icons in a window of its own
+  (`kCGDesktopIconWindowLevel`) on every display of a normal Space; a fullscreen Space has none. Measured on macOS 27
+  (scaled built-in display with a notch, auto-hidden Dock): the menu bar window (`Menubar`, layer 24, even while
+  hidden) and the wallpaper window stay on screen in fullscreen too, so neither is a signal.
+- Rules (`FullscreenDetector.fullscreenWindow`), always only visible windows of other apps in layer 0:
+  - desktop icons on the display: a borderless window covering the whole display, menu bar included ("fake
+    fullscreen": games, video). A zoomed window leaves the menu bar uncovered.
+  - desktop icons only on other displays: the windows *together* cover the display (Chrome in fullscreen draws its
+    tab strip and toolbar in separate windows above the page; split view shows two apps). The top band of a notched
+    display may stay uncovered (below).
+  - no desktop icon window at all (Finder not running or its desktop switched off): one window covers the display, the
+    notch band may stay uncovered. Here a zoomed window next to an auto-hidden Dock on a notched display can't be told
+    apart and counts as fullscreen (before the desktop signal it did always, and the sheep stayed away for good).
 - Window bounds are in global display coordinates (top-left origin, y down, same as `CGDisplayBounds`); screen frames
   are AppKit coordinates. The display is chosen by the AppKit frame, the windows are compared with its CG bounds.
-- Notched displays: fullscreen windows start below the menu bar, which is 33 points tall while the top safe area
-  inset is 32 (14" MacBook Pro). The top `safeAreaInsets.top + notchMenuBarAllowance` band may stay uncovered. The
-  menu bar window stays on screen there even in fullscreen, so it can't serve as a signal. A zoomed window next to an
-  auto-hidden Dock on a notched display can't be told apart and counts as fullscreen.
+- Notched displays: fullscreen windows start below the menu bar, which is one point taller than the top safe area
+  inset (33 vs. 32 on a 14" MacBook Pro, 39 vs. 38 at a scaled resolution). The top
+  `safeAreaInsets.top + notchMenuBarAllowance` band may stay uncovered.
 - The Dock owns a full-display window in layer 20 (27 during transitions); only layer 0 counts.
 - Checks run on `NSWorkspace.activeSpaceDidChangeNotification` and screen parameter changes, again after 250 ms (the
   window list lags behind), and every second as a fallback (one query costs ~0.6 ms). Fullscreen ends only after it

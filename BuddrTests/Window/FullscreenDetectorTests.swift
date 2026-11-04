@@ -91,6 +91,76 @@ struct FullscreenDetectorTests {
         let overlay = Self.window(Self.external.bounds, layer: 20)
         #expect(Self.fullscreenWindow([own, transparent, overlay], on: Self.external) == nil)
     }
+
+    // MARK: Finder's desktop icon window
+
+    private static func desktop(on display: DisplayInfo) -> WindowInfo {
+        WindowInfo(
+            ownerPID: 300, ownerName: "Finder", layer: FullscreenDetector.desktopIconLayer, bounds: display.bounds,
+            alpha: 1)
+    }
+
+    @Test func zoomedWindowOnANormalSpaceOfANotchedDisplayDoesNotCount() {
+        // Measured at a scaled resolution with an auto-hidden Dock: the menu bar is 39 points tall, the inset 38.
+        let display = DisplayInfo(
+            frame: CGRect(x: 0, y: 0, width: 1800, height: 1169),
+            bounds: CGRect(x: 0, y: 0, width: 1800, height: 1169), topInset: 38)
+        let zoomed = Self.window(CGRect(x: 0, y: 39, width: 1800, height: 1130))
+        #expect(Self.fullscreenWindow([zoomed, Self.desktop(on: display)], on: display) == nil)
+        // Without the desktop icon window, the bounds can't tell it from a fullscreen app.
+        #expect(Self.fullscreenWindow([zoomed], on: display) == zoomed)
+    }
+
+    @Test func borderlessWindowCoveringANormalSpaceCounts() {
+        let borderless = Self.window(Self.builtIn.bounds)
+        #expect(Self.fullscreenWindow([borderless, Self.desktop(on: Self.builtIn)], on: Self.builtIn) == borderless)
+    }
+
+    @Test func desktopOfAnotherDisplayDoesNotMakeThisOneNormal() {
+        let zoomed = Self.window(CGRect(x: 0, y: 33, width: 1512, height: 949))
+        #expect(Self.fullscreenWindow([zoomed, Self.desktop(on: Self.builtIn)], on: Self.builtIn) == nil)
+        #expect(Self.fullscreenWindow([zoomed, Self.desktop(on: Self.external)], on: Self.builtIn) == zoomed)
+    }
+
+    @Test func fullscreenAppMadeOfSeveralWindowsCounts() {
+        // Chrome in fullscreen with its toolbar shown: tab strip and toolbar are windows of their own above the page.
+        let tabs = Self.window(CGRect(x: 0, y: 33, width: 1512, height: 41))
+        let toolbar = Self.window(CGRect(x: 0, y: 74, width: 1512, height: 46))
+        let page = Self.window(CGRect(x: 0, y: 120, width: 1512, height: 862))
+        let windows = [tabs, toolbar, page, Self.desktop(on: Self.external)]
+        #expect(Self.fullscreenWindow(windows, on: Self.builtIn) == page)
+        // Without the desktop signal, one window has to cover the display.
+        #expect(Self.fullscreenWindow([tabs, toolbar, page], on: Self.builtIn) == nil)
+    }
+
+    @Test func splitViewOfTwoAppsCounts() {
+        let left = Self.window(CGRect(x: 1512, y: -98, width: 960, height: 1080), pid: 201)
+        let right = Self.window(CGRect(x: 2472, y: -98, width: 960, height: 1080), pid: 202)
+        #expect(Self.fullscreenWindow([left, right, Self.desktop(on: Self.builtIn)], on: Self.external) != nil)
+    }
+
+    @Test func spaceWithoutDesktopIconsNeedsCoveringWindows() {
+        // During a Space transition the desktop icons are gone before the fullscreen window has grown.
+        let shrunk = Self.window(CGRect(x: 100, y: 100, width: 1312, height: 782))
+        let own = Self.window(Self.builtIn.bounds, pid: Self.ownPID)
+        let overlay = Self.window(Self.builtIn.bounds, layer: 20)
+        let windows = [shrunk, own, overlay, Self.desktop(on: Self.external)]
+        #expect(Self.fullscreenWindow(windows, on: Self.builtIn) == nil)
+        #expect(Self.fullscreenWindow([Self.desktop(on: Self.external)], on: Self.builtIn) == nil)
+    }
+
+    @Test func coverageOfTheUnionOfRectangles() {
+        let target = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let top = CGRect(x: -10, y: -10, width: 120, height: 60)
+        let bottom = CGRect(x: 0, y: 40, width: 100, height: 60)
+        let bottomLeft = CGRect(x: 0, y: 50, width: 60, height: 50)
+        let bottomRight = CGRect(x: 70, y: 50, width: 30, height: 50)
+        #expect(FullscreenDetector.covers(target, with: [top, bottom]))
+        #expect(!FullscreenDetector.covers(target, with: [top, bottomLeft, bottomRight]))
+        #expect(!FullscreenDetector.covers(target, with: [top]))
+        #expect(!FullscreenDetector.covers(target, with: [CGRect(x: 200, y: 200, width: 10, height: 10)]))
+        #expect(!FullscreenDetector.covers(target, with: []))
+    }
 }
 
 struct FullscreenDebounceTests {
