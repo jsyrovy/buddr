@@ -54,9 +54,9 @@ Buddr/
               plate window), PanelPositionStore (last position in UserDefaults), BuddyView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + BuddyEscape (runs off the screen and
-              back), HideMode (pure) + BuddyHiding (hides the buddy after a while of calm), BuddyChoice +
-              BuddyTurns (which buddy is on the screen, taking turns), NamePlatePanel (child panel) + NamePlateLayout
-              (pure: plate scale, reserved room, placement)
+              back), HideMode (pure) + BuddyHiding (hides the buddy after a while of calm), BuddyChoice + BuddyTurns
+              (which buddy is on the screen, taking turns), Countdown (the restartable timer of both),
+              NamePlatePanel (child panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), BlackSheepSprites (the sheep recolored),
@@ -307,9 +307,9 @@ and the black sheep.
   that isn't there falls back to the sheep; `Preferences.buddyTurnMinutes`, key `buddyTurnMinutes`, default 30). The
   pop-up shows only while there is more than one buddy. The menu bar icon stays the sheep.
 - Taking turns (`BuddyTurns`): after every turn (real time) the next buddy in the order of `BuddyID` comes, the first
-  after the last. A turn ends only while no agent waits for the user (calm in `HideMode.unlessNeeded`): a change of
-  buddies must never cover a `blocked` or `done` buddy, so an ended turn waits for calm. Choosing "Take Turns" or
-  another turn length starts a whole turn of the buddy on the screen. The buddy on the screen is saved
+  after the last. A turn ends only while no agent needs the user (`AgentStatus.needsAttention`, the statuses the plate
+  names): a change of buddies must never cover a `blocked` or `done` buddy, so an ended turn waits for calm.
+  Choosing "Take Turns" or another turn length starts a whole turn of the buddy on the screen. The buddy on the screen is saved
   (`Preferences.shownBuddy`, key `shownBuddy`), so after a restart the turns go on with it. Logs: category
   `buddies`.
 - Switching (`BuddyEscape.switchBuddy(to:)`): the current buddy leaves like when it hides (a yawn, a slow walk), is

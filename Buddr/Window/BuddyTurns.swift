@@ -37,8 +37,8 @@ extension BuddyID {
 /// Decides which buddy is on the screen: the chosen one, or – taking turns – the next one (`BuddyID.next`) after every
 /// `interval`.
 ///
-/// A turn ends only while no agent waits for the user (calm in `HideMode.unlessNeeded`): an agent that gets `blocked`
-/// or `done` is never covered by buddies changing places. A turn that is over by then waits until it is calm, and the
+/// A turn ends only while no agent needs the user (`AgentStatus.needsAttention`): an agent that gets `blocked` or
+/// `done` is never covered by buddies changing places. A turn that is over by then waits until it is calm, and the
 /// next one starts with the change. Moving the buddies is up to `onChange`.
 @MainActor
 final class BuddyTurns {
@@ -54,9 +54,7 @@ final class BuddyTurns {
     private var choice: BuddyChoice?
     private var interval = Duration.zero
     private var status = AgentStatus.unknown
-    private let sleep: @Sendable (Duration) async throws -> Void
-    /// The latest turn; once cancelled, it may still be ending.
-    private var turn: Task<Void, Never>?
+    private let countdown: Countdown
 
     /// Starts with `current` on the screen. `sleep` is replaced in tests to end a turn on demand.
     init(
@@ -64,7 +62,7 @@ final class BuddyTurns {
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) {
         self.current = current
-        self.sleep = sleep
+        countdown = Countdown(sleep: sleep)
     }
 
     /// Shows the chosen buddy at once, or starts taking turns with a new turn of the current one.
@@ -75,7 +73,7 @@ final class BuddyTurns {
         isTurnOver = false
         switch choice {
         case .one(let id):
-            turn?.cancel()
+            countdown.cancel()
             setCurrent(id)
         case .takingTurns:
             startTurn()
@@ -89,24 +87,14 @@ final class BuddyTurns {
         }
     }
 
-    /// Starts a turn; a running one is cancelled and ends before the new one sleeps.
     private func startTurn() {
-        let previous = turn
-        previous?.cancel()
-        turn = Task { [weak self, sleep, interval] in
-            await previous?.value
-            do {
-                try await sleep(interval)
-            } catch {
-                return
-            }
-            guard !Task.isCancelled else { return }
+        countdown.start(after: interval) { [weak self] in
             self?.endTurn()
         }
     }
 
     private func endTurn() {
-        guard HideMode.unlessNeeded.isCalm(status) else {
+        guard !status.needsAttention else {
             isTurnOver = true
             return
         }

@@ -19,13 +19,11 @@ final class BuddyHiding {
     @ObservationIgnored private var mode = HideMode.never
     @ObservationIgnored private var delay = Duration.zero
     @ObservationIgnored private var status = AgentStatus.unknown
-    @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
-    /// The latest countdown; once cancelled, it may still be ending.
-    @ObservationIgnored private var countdown: Task<Void, Never>?
+    @ObservationIgnored private let countdown: Countdown
 
     /// `sleep` is replaced in tests to end the countdown on demand.
     init(sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
-        self.sleep = sleep
+        countdown = Countdown(sleep: sleep)
     }
 
     func setMode(_ mode: HideMode, after delay: Duration) {
@@ -56,7 +54,7 @@ final class BuddyHiding {
 
     private func update() {
         guard mode.isCalm(status) else {
-            countdown?.cancel()
+            countdown.cancel()
             setHidden(false)
             return
         }
@@ -65,18 +63,8 @@ final class BuddyHiding {
         }
     }
 
-    /// Starts the countdown; a running one is cancelled and ends before the new one sleeps.
     private func startCountdown() {
-        let previous = countdown
-        previous?.cancel()
-        countdown = Task { [weak self, sleep, delay] in
-            await previous?.value
-            do {
-                try await sleep(delay)
-            } catch {
-                return
-            }
-            guard !Task.isCancelled else { return }
+        countdown.start(after: delay) { [weak self] in
             self?.setHidden(true)
         }
     }
