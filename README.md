@@ -56,15 +56,29 @@ A machine that can't be reached shows up with a ⚠ and its error in the list; t
 
 ## Install
 
-1. Download `Buddr-<version>.zip` from [Releases](https://github.com/jsyrovy/buddr/releases). It runs on Apple
-   Silicon and Intel Macs, and is signed and notarized by Apple.
+Buddr runs on Apple Silicon and Intel Macs with macOS 14 or later, and is signed and notarized by Apple.
+
+With [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask jsyrovy/tap/buddr
+open -a Buddr
+```
+
+The full name trusts only this cask of the [tap](https://github.com/jsyrovy/homebrew-tap). To use the short name
+(`brew upgrade --cask buddr`), trust it first: `brew trust --cask jsyrovy/tap/buddr`.
+
+Or by hand:
+
+1. Download `Buddr-<version>.zip` from [Releases](https://github.com/jsyrovy/buddr/releases).
 2. Unzip it, move `Buddr.app` to Applications and open it.
 
 The sheep appears in the bottom-right corner of the screen, and a pixel-art sheep in the menu bar. There is no Dock
 icon: quit Buddr with "Quit Buddr" at the bottom of the menu bar list. To start it at login, add it in System Settings
 → General → Login Items.
 
-To uninstall, quit Buddr and delete the app; `defaults delete cz.jsyrovy.buddr` removes its settings too.
+To uninstall, quit Buddr and delete the app; `defaults delete cz.jsyrovy.buddr` removes its settings too. With
+Homebrew, `brew uninstall --cask jsyrovy/tap/buddr` quits and removes it (`--zap` removes the settings as well).
 
 Changes are in [CHANGELOG.md](CHANGELOG.md).
 

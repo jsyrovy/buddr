@@ -27,7 +27,7 @@ Run `make lint test` after every change. `CONFIG=Release make build` builds Rele
 CI (`.github/workflows/ci.yml`, GitHub Actions on pushes to `main` and pull requests) runs `make lint`,
 `make coverage` and `CONFIG=Release make build` in one job; the steps run even after an earlier one fails, and the
 result bundle is uploaded when something fails. It uses the `xcode-27` runner image (a preview; `macos-26` only has
-Xcode 26).
+Xcode 26). `.github/workflows/homebrew.yml` updates the Homebrew cask when a release is published (see "Releasing").
 
 ## Toolchain and project
 
@@ -567,14 +567,16 @@ or when the sample plate reads differently from `plateText` (the alt text of `bl
 
 Releases are distributed outside the Mac App Store (the sandbox rules it out, see README): signed with Developer ID,
 hardened runtime, notarized by Apple and stapled, so Gatekeeper opens a downloaded copy without warnings. The format is
-a zip of `Buddr.app`, published as a GitHub release of the version's tag (a Homebrew cask is the plan).
+a zip of `Buddr.app`, published as a GitHub release of the version's tag, and the Homebrew cask `buddr` in the tap
+[`jsyrovy/homebrew-tap`](https://github.com/jsyrovy/homebrew-tap) (`brew install --cask jsyrovy/tap/buddr`). Not in
+`homebrew/cask`: a self-submitted cask needs 90 forks, 90 watchers or 225 stars on GitHub.
 
 - A release is made only by hand, never by a push. Between releases the version stays the last released one.
 - Steps: set `MARKETING_VERSION` to the new `major.minor` (Xcode: target → General → Version, or both configurations in
   the pbxproj), add a section `## <version> – <YYYY-MM-DD>` to `CHANGELOG.md` (a few lines for users, drafted from
   `git log v<previous>..HEAD`), commit ("Release 0.2"), `git tag v0.2`, `make release`, `git push origin main v0.2`,
   `make publish`, then check the draft on GitHub and publish it. The tag is pushed only after a successful release; if
-  it fails, fix, commit and move the unpushed tag (`git tag -f`).
+  it fails, fix, commit and move the unpushed tag (`git tag -f`). Publishing updates the cask on its own (below).
 - `scripts/release.sh` changes nothing in git. It checks the preconditions first (clean tree, tag, dated changelog
   section, identity, notary profile), then archives (signed with Developer ID right away, so there is no export step;
   build number = `git rev-list --count HEAD`), checks the signature, notarizes, staples, zips and checks the zip as a
@@ -585,6 +587,13 @@ a zip of `Buddr.app`, published as a GitHub release of the version's tag (a Home
   tag, with the tag's `CHANGELOG.md` section as the notes; publishing stays a step on GitHub. It refuses when the zip
   doesn't match its checksum or wasn't built from the tag (build number), the tag isn't on GitHub as it is locally, or
   the release exists already.
+- The cask (`Casks/buddr.rb` in the tap) is updated by `.github/workflows/homebrew.yml` when a release is published
+  (never for a draft or a prerelease): it checks the zip of the release against its `.sha256`, sets `version` and
+  `sha256` and pushes to the tap with a deploy key with write access (secret `HOMEBREW_TAP_DEPLOY_KEY` of this
+  repository). It refuses a version older than the cask's and changes nothing when the cask has it already; run it by
+  hand (`gh workflow run homebrew.yml -f tag=v0.2`) to retry. The cask has a `livecheck` (`brew livecheck --cask
+  jsyrovy/tap/buddr`). Check a cask change with `brew audit --cask --online --strict jsyrovy/tap/buddr` and `brew style`
+  (`--new` adds the notability check, which fails). Homebrew loads casks of a tap only after `brew trust`.
 - Credentials live in the login keychain only, never in the repo: the identity "Developer ID Application: Jiri Syrovy
   (DZ7S6R9RRN)" (expires 2027-12-05; renew it before, already shipped versions keep working thanks to the timestamp)
   and the `notarytool` keychain profile `notary` (an App Store Connect API team key with the Developer role;
