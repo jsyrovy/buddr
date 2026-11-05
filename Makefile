@@ -10,13 +10,18 @@ RELEASE_APP   := $(DERIVED_DATA)/Build/Products/Release/Buddr.app
 RESULT_BUNDLE := build/Test.xcresult
 MEASURE       := build/measure
 SCREENSHOTS   := build/screenshots
-# The app's sources without its @main entry point, compiled into the screenshots script.
+# With variants compiled in, a binary of its own, built every time (VARIANTS may name another file).
+PREVIEWS      := build/previews-renderer$(if $(VARIANTS),-variants)
+# The app's sources without its @main entry point, compiled into the screenshots and previews scripts (with the
+# image writing they share), on every core.
 APP_SOURCES   := $(shell find Buddr -name '*.swift' ! -name BuddrApp.swift)
+SCRIPT_SWIFTC := xcrun swiftc -swift-version 6 -parse-as-library -module-name Buddr -target $(ARCH)-apple-macos14.0 \
+	-j $(shell sysctl -n hw.ncpu)
 
 XCODEBUILD    := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIG) \
 	-destination 'platform=macOS,arch=$(ARCH)' -derivedDataPath $(DERIVED_DATA) -quiet
 
-.PHONY: build test coverage run install uninstall release publish measure screenshots format lint clean
+.PHONY: build test coverage run install uninstall release publish measure screenshots previews format lint clean
 
 build:
 	$(XCODEBUILD) build
@@ -69,9 +74,20 @@ $(MEASURE): scripts/measure.swift
 screenshots: $(SCREENSHOTS)
 	$(SCREENSHOTS)
 
-$(SCREENSHOTS): scripts/screenshots.swift $(APP_SOURCES)
+$(SCREENSHOTS): scripts/screenshots.swift scripts/ImageFiles.swift $(APP_SOURCES)
 	mkdir -p build
-	xcrun swiftc -swift-version 6 -parse-as-library -module-name Buddr -target $(ARCH)-apple-macos14.0 -o $@ $^
+	$(SCRIPT_SWIFTC) -o $@ $^
+
+# Every clip of a buddy as GIFs in build/previews/<buddy> (scripts/previews.swift): BUDDY=<BuddyID>, all without it;
+# VARIANTS=<file.swift> adds the clips of its PreviewVariants in build/previews/variants.
+previews: $(PREVIEWS)
+	$(PREVIEWS) $(BUDDY)
+
+$(PREVIEWS): scripts/previews.swift scripts/ImageFiles.swift $(APP_SOURCES) $(if $(VARIANTS),$(VARIANTS) FORCE)
+	mkdir -p build
+	$(SCRIPT_SWIFTC) $(if $(VARIANTS),-D VARIANTS) -o $@ $(filter %.swift,$^)
+
+FORCE:
 
 format:
 	xcrun swift-format format --in-place --recursive --parallel $(SOURCES)

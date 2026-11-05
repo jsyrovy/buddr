@@ -1,7 +1,5 @@
 import AppKit
-import ImageIO
 import SwiftUI
-import UniformTypeIdentifiers
 
 // Renders the README images from Buddr's own code: the sprites and clips (`SheepSprites`), the renderer
 // (`SpriteCanvas`), the state machine (`BuddyAnimator`), the name plate (`AttentionTracker`, `NamePlateSprite`,
@@ -263,65 +261,25 @@ struct Renderer {
             frame: frame, gridWidth: BuddyCanvas.width, gridHeight: BuddyCanvas.height, scale: scale)
     }
 
-    /// Redrawn into 8-bit sRGB.
-    func normalized(_ image: CGImage) -> CGImage {
-        let context = CGContext(
-            data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-        context.interpolationQuality = .none
-        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
-        return context.makeImage()!
-    }
-
     func writePNG(_ image: CGImage, _ name: String) throws {
-        try write([normalized(image)], name, .png, frameProperties: [nil])
+        try ImageFiles.writePNG(image, to: out.appending(path: name))
+        try checkReadme(name, width: image.width)
     }
 
     /// An animated GIF that loops forever: `image(i)` shown for `durations[i]`.
     func writeGIF<Content: View>(_ durations: [Duration], _ name: String, image: (Int) -> Content) throws {
-        let images = durations.indices.map { index in
-            let renderer = ImageRenderer(content: image(index))
-            renderer.scale = CGFloat(Self.pixelsPerPoint)
-            return normalized(renderer.cgImage!)
-        }
-        let delays = durations.map { duration in
-            let seconds = duration / .seconds(1)
-            return [
-                kCGImagePropertyGIFDictionary: [
-                    kCGImagePropertyGIFDelayTime: seconds, kCGImagePropertyGIFUnclampedDelayTime: seconds,
-                ]
-            ] as CFDictionary
-        }
-        try write(
-            images, name, .gif, frameProperties: delays,
-            properties: [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
+        let width = try ImageFiles.writeGIF(
+            durations, to: out.appending(path: name), scale: Self.pixelsPerPoint, image: image)
+        try checkReadme(name, width: width)
     }
 
-    /// Writes `images` and checks that README.md shows the file at half its pixel width.
-    func write(
-        _ images: [CGImage], _ name: String, _ type: UTType, frameProperties: [CFDictionary?],
-        properties: CFDictionary? = nil
-    ) throws {
-        let url = out.appending(path: name)
-        guard
-            let destination = CGImageDestinationCreateWithURL(
-                url as CFURL, type.identifier as CFString, images.count, nil)
-        else { throw Failure("can't create \(name)") }
-        if let properties { CGImageDestinationSetProperties(destination, properties) }
-        for (image, frame) in zip(images, frameProperties) {
-            CGImageDestinationAddImage(destination, image, frame)
-        }
-        guard CGImageDestinationFinalize(destination) else { throw Failure("can't write \(name)") }
-        let width = images[0].width / Self.pixelsPerPoint
+    /// Checks that README.md shows the image written as `name`, `width` pixels wide, at half its pixel width.
+    func checkReadme(_ name: String, width pixels: Int) throws {
+        let width = pixels / Self.pixelsPerPoint
         let source = "src=\"docs/images/\(name)\""
         if readme.contains(source), !readme.contains("\(source) width=\"\(width)\"") {
             throw Failure("README.md should show \(name) with width=\"\(width)\"")
         }
         print("docs/images/\(name)")
     }
-}
-
-struct Failure: Error, CustomStringConvertible {
-    let description: String
-    init(_ description: String) { self.description = description }
 }
