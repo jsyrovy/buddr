@@ -45,6 +45,7 @@ enum BuddyID: String, CaseIterable, Sendable {
     case rainbowCat
     case ufo
     case earth
+    case corgi
 
     /// Every buddy in the order of the menu: by name.
     static let menuOrder = allCases.sorted { $0.name < $1.name }
@@ -56,6 +57,7 @@ enum BuddyID: String, CaseIterable, Sendable {
         case .rainbowCat: "Rainbow Cat"
         case .ufo: "UFO"
         case .earth: "Earth"
+        case .corgi: "Corgi"
         }
     }
 
@@ -65,6 +67,7 @@ enum BuddyID: String, CaseIterable, Sendable {
         case .rainbowCat: RainbowCatSprites.buddy
         case .ufo: UFOSprites.buddy
         case .earth: EarthSprites.buddy
+        case .corgi: CorgiSprites.buddy
         }
     }
 }

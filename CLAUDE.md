@@ -62,7 +62,7 @@ Buddr/
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), RainbowCatSprites (a cat of its own, with the
               sheep's effects), UFOSprites (a flying saucer, likewise), EarthSprites (a planet, likewise),
-              NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
+              CorgiSprites (a dog, likewise), NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -313,6 +313,11 @@ The character on the screen is a buddy (`Buddy`): every clip it plays – the st
   continents eastwards like on a sphere; the lower right edge is in shade. While agents work it spins a whole turn
   and the Moon circles it once (in front on the lower half of the orbit, below the face); asleep it shows the night
   side with city lights; it rolls off spinning. Running right mirrors the continents too. Its signs are the sheep's.
+- The corgi (`CorgiSprites.swift`) is an orange and white corgi with its big head turned to the viewer (two eyes, the
+  nose in the middle) on a body facing left. While agents work it digs: clods fly from under it in an arc over its
+  back onto a heap behind its back paws, drawn behind the body so they never look like spots on the fur. When the
+  state is unknown it tilts its head (`Grid.headTilt`, a larger grid drawn one pixel up and left). Its signs are the
+  sheep's.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).

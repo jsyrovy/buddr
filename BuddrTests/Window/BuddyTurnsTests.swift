@@ -19,7 +19,7 @@ struct BuddyTurnsTests {
     }
 
     @Test func menuListsEveryBuddyByName() {
-        #expect(BuddyID.menuOrder == [.earth, .rainbowCat, .sheep, .ufo])
+        #expect(BuddyID.menuOrder == [.corgi, .earth, .rainbowCat, .sheep, .ufo])
     }
 
     @Test func nextBuddyFollowsTheMenuOrderAndWrapsAround() {
