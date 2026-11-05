@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-// Renders the README images from Buddr's own code: the sprites and clips (`SheepSprites`), the renderer
+// Renders the README images from Buddr's own code: the sprites and clips (`SheepSprites` and the others), the renderer
 // (`SpriteCanvas`), the state machine (`BuddyAnimator`), the name plate (`AttentionTracker`, `NamePlateSprite`,
-// `NamePlateLayout`) and the menu bar list (`AgentListView`). Nothing here draws a pixel of the sheep itself.
+// `NamePlateLayout`) and the menu bar list (`AgentListView`). Nothing here draws a pixel of a buddy itself.
 //
 // `make screenshots` compiles this file together with the app's sources (all but its `@main` entry point, without
 // DEBUG, so the list has no debug section) and runs it in the repository: the images go to docs/images. It fails
@@ -29,7 +29,7 @@ struct Renderer {
 
     /// Pixels per point of every image; the README shows them at half their size, so they stay sharp on Retina.
     static let pixelsPerPoint = 2
-    /// Behind the sheep of the hero image. Opaque: GIF has only 1-bit transparency, the `unknown` sheep is
+    /// Behind the buddies of the hero image. Opaque: GIF has only 1-bit transparency, the `unknown` buddy is
     /// translucent, and ImageIO writes only the changed part of a frame only when no pixel is transparent.
     static let card = Color(.sRGB, red: 0xEE / 255, green: 0xEC / 255, blue: 0xE8 / 255)
     /// A flat desktop: a gradient bands in the 256 colors of a GIF.
@@ -44,43 +44,56 @@ struct Renderer {
 
     // MARK: Hero
 
-    /// All states side by side with their names in the plate's pixel font, each looping what the state machine
-    /// plays for it: hero.gif.
+    /// A few of the buddies, a row each.
+    static let heroBuddies: [BuddyID] = [.sheep, .ufo, .corgi]
+    /// The columns: what the state machine plays for each state.
+    static let heroStates: [(name: String, frames: (Buddy) throws -> [AnimationFrame])] = [
+        ("blocked", { play(.blocked, buddy: $0, cycles: 1).frames }),
+        // `doneJump` when the state starts, then every 4th cycle, `doneHold` otherwise.
+        ("done", { play(.done, buddy: $0, cycles: BuddyAnimator.doneJumpEvery).frames }),
+        ("working", { play(.working, buddy: $0, cycles: 1).frames }),
+        ("idle", { try idle(buddy: $0) }),
+        ("sleeping", { play(.idle, buddy: $0, cycles: 1, sleepAfter: .zero).frames }),
+        ("unknown", { play(.unknown, buddy: $0, cycles: 1).frames }),
+    ]
+
+    /// Every state of a few buddies side by side, with the states' names in the plate's pixel font, each looping what
+    /// the state machine plays for it: hero.gif.
     func hero() throws {
-        let states: [(name: String, frames: [AnimationFrame])] = [
-            ("blocked", Self.play(.blocked, cycles: 1).frames),
-            // `doneJump` when the state starts, then every 4th cycle, `doneHold` otherwise.
-            ("done", Self.play(.done, cycles: BuddyAnimator.doneJumpEvery).frames),
-            ("working", Self.play(.working, cycles: 1).frames),
-            ("idle", try Self.idle()),
-            ("sleeping", Self.play(.idle, cycles: 1, sleepAfter: .zero).frames),
-            ("unknown", Self.play(.unknown, cycles: 1).frames),
-        ]
+        let rows = try Self.heroBuddies.map { id in
+            let buddy = id.buddy
+            return try Self.heroStates.map { try $0.frames(buddy) }
+        }
         let scale = 4
         let total = Duration.milliseconds(4200)
         let sample = Duration.milliseconds(20)
-        let tracks = states.map { Self.looped($0.frames, for: total) }
+        let tracks = rows.map { $0.map { Self.looped($0, for: total) } }
         // Sampled every 20 ms (browsers show shorter GIF delays as 100 ms), identical neighbours merged.
-        var steps: [(frames: [SpriteFrame], duration: Duration)] = []
+        var steps: [(frames: [[SpriteFrame]], duration: Duration)] = []
         for index in 0..<Int(total / sample) {
-            let frames = tracks.map { Self.frame(in: $0, at: sample * index) }
+            let frames = tracks.map { $0.map { Self.frame(in: $0, at: sample * index) } }
             if steps.last?.frames == frames {
                 steps[steps.count - 1].duration += sample
             } else {
                 steps.append((frames, sample))
             }
         }
-        let names = states.map(\.name)
-        try writeGIF(steps.map(\.duration), "hero.gif") { heroView(steps[$0].frames, names: names, scale: scale) }
+        try writeGIF(steps.map(\.duration), "hero.gif") { heroView(steps[$0].frames, scale: scale) }
     }
 
-    func heroView(_ frames: [SpriteFrame], names: [String], scale: Int) -> some View {
-        HStack(alignment: .top, spacing: CGFloat(2 * scale)) {
-            ForEach(frames.indices, id: \.self) { index in
-                VStack(spacing: CGFloat(scale)) {
-                    sheep(frames[index], scale: scale)
-                    SpriteCanvas(
-                        sprite: PixelFont.sprite(for: names[index], color: SheepSprites.outline), scale: scale / 2)
+    /// A row of frames per buddy, the states' names under the last one.
+    func heroView(_ rows: [[SpriteFrame]], scale: Int) -> some View {
+        Grid(horizontalSpacing: CGFloat(2 * scale), verticalSpacing: CGFloat(scale)) {
+            ForEach(rows.indices, id: \.self) { row in
+                GridRow {
+                    ForEach(rows[row].indices, id: \.self) { column in
+                        buddy(rows[row][column], scale: scale)
+                    }
+                }
+            }
+            GridRow {
+                ForEach(Self.heroStates.map(\.name), id: \.self) { name in
+                    SpriteCanvas(sprite: PixelFont.sprite(for: name, color: SheepSprites.outline), scale: scale / 2)
                 }
             }
         }
@@ -101,7 +114,7 @@ struct Renderer {
         guard text == Self.plateText else {
             throw Failure("the plate reads \"\(text)\": update `plateText` and the alt text in README.md")
         }
-        let frames = Self.play(.blocked, cycles: 1).frames
+        let frames = Self.play(.blocked, buddy: BuddyID.sheep.buddy, cycles: 1).frames
         try writeGIF(frames.map(\.duration), "blocked.gif") { screenCorner(frame: frames[$0].sprite, label: label) }
     }
 
@@ -122,7 +135,7 @@ struct Renderer {
         func top(_ rect: CGRect) -> CGFloat { screen.height - rect.maxY }
         return ZStack(alignment: .topLeading) {
             Self.wallpaper
-            sheep(frame, scale: scale).offset(x: buddyFrame.minX, y: top(buddyFrame))
+            buddy(frame, scale: scale).offset(x: buddyFrame.minX, y: top(buddyFrame))
             SpriteCanvas(sprite: plate, scale: plateScale).offset(x: plateFrame.minX, y: top(plateFrame))
         }
         .frame(width: screen.width, height: screen.height)
@@ -210,9 +223,10 @@ struct Renderer {
 
     /// The frames and clips the state machine plays for `status` in its first `cycles` clips.
     static func play(
-        _ status: AgentStatus, cycles: Int, seed: UInt64 = 1, sleepAfter: Duration = BuddyAnimator.defaultSleepAfter
+        _ status: AgentStatus, buddy: Buddy, cycles: Int, seed: UInt64 = 1,
+        sleepAfter: Duration = BuddyAnimator.defaultSleepAfter
     ) -> (frames: [AnimationFrame], clips: [ClipID]) {
-        var animator = BuddyAnimator(status: status, sleepAfter: sleepAfter, seed: seed)
+        var animator = BuddyAnimator(buddy: buddy, status: status, sleepAfter: sleepAfter, seed: seed)
         var frames: [AnimationFrame] = []
         var clips: [ClipID] = []
         for _ in 0..<cycles {
@@ -226,8 +240,8 @@ struct Renderer {
     }
 
     /// Four idle clips that start at rest and include a blink and a look around.
-    static func idle() throws -> [AnimationFrame] {
-        let run = (UInt64(1)...1000).lazy.map { play(.idle, cycles: 4, seed: $0) }.first {
+    static func idle(buddy: Buddy) throws -> [AnimationFrame] {
+        let run = (UInt64(1)...1000).lazy.map { play(.idle, buddy: buddy, cycles: 4, seed: $0) }.first {
             $0.clips.first == .idleRest && $0.clips.contains(.idleBlink) && $0.clips.contains(.idleLook)
         }
         guard let run else { throw Failure("no idle seed with a rest, a blink and a look") }
@@ -256,7 +270,7 @@ struct Renderer {
 
     // MARK: Drawing and files
 
-    func sheep(_ frame: SpriteFrame, scale: Int) -> SpriteCanvas {
+    func buddy(_ frame: SpriteFrame, scale: Int) -> SpriteCanvas {
         SpriteCanvas(
             frame: frame, gridWidth: BuddyCanvas.width, gridHeight: BuddyCanvas.height, scale: scale)
     }

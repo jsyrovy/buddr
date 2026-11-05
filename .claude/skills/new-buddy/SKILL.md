@@ -82,8 +82,8 @@ by what they change, describe each in one line with its cycle, recommend one, wa
 - `BuddrTests/Window/BuddyTurnsTests.swift`: `menuListsEveryBuddyByName` lists the menu order literally – add the
   buddy by its name.
 - Docs: `README.md` (the "Buddy" setting), `CLAUDE.md` (the `Sprite/` line in "Structure"; a bullet in "Buddies" only
-  for what is unusual about the buddy). `make screenshots` only if the README images change (they show the sheep and
-  the menu with the chosen buddy).
+  for what is unusual about the buddy). `make screenshots` only if the README images change (they show the buddies of
+  `heroBuddies` in `scripts/screenshots.swift`, and the menu with the chosen buddy).
 - `make lint test` and `CONFIG=Release make build`.
 - Render, check `frames.png` yourself, show the page, list what changed against the concept and what to look at
   (e.g. a jump between states). Iterate on the user's notes: edit, render, show.

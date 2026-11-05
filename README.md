@@ -1,15 +1,18 @@
 # Buddr
 
-Buddr is a desktop buddy for AI coding agents: a small pixel-art sheep that sits in a corner of your macOS screen and
-shows what your agents are up to – busy, waiting for you, or done. Think Clippy, but it only tells you, it never gets
-in your way.
+Buddr is a desktop buddy for AI coding agents: a small pixel-art character (a sheep by default) that sits in a
+corner of your macOS screen and shows what your agents are up to – busy, waiting for you, or done. Think Clippy, but it
+only tells you, it never gets in your way.
 
 <p align="center">
-  <img src="docs/images/hero.gif" width="592" alt="The sheep in every state: blocked, done, working, idle, sleeping and unknown">
+  <img src="docs/images/hero.gif" width="592" alt="The sheep, the UFO and the corgi in every state: blocked, done, working, idle, sleeping and unknown">
 </p>
 
+The sheep, the UFO and the corgi are a few of the buddies to choose from; the others are in the
+[menu bar](#the-menu-bar) settings.
+
 It watches the agents in [herdr](https://herdr.dev), a terminal workspace for running coding agents side by side, and
-in herdr-core (`hc`), the terminal runtime behind herdr-app – on this Mac and on the machines added to them. One sheep
+in herdr-core (`hc`), the terminal runtime behind herdr-app – on this Mac and on the machines added to them. One buddy
 shows all agents together.
 
 ## What the sheep shows
