@@ -43,8 +43,8 @@ struct PreferencesTests {
         var changes = 0
         preferences.onChange = { changes += 1 }
 
-        preferences.buddyChoice = .one(.blackSheep)
-        #expect(Preferences(defaults: defaults).buddyChoice == .one(.blackSheep))
+        preferences.buddyChoice = .one(.rainbowCat)
+        #expect(Preferences(defaults: defaults).buddyChoice == .one(.rainbowCat))
         preferences.buddyChoice = .takingTurns
         preferences.buddyTurnMinutes = 15
 
@@ -67,18 +67,18 @@ struct PreferencesTests {
         var changes = 0
         preferences.onChange = { changes += 1 }
 
-        preferences.shownBuddy = .blackSheep
+        preferences.shownBuddy = .rainbowCat
 
         #expect(changes == 0)
-        #expect(Preferences(defaults: defaults).shownBuddy == .blackSheep)
+        #expect(Preferences(defaults: defaults).shownBuddy == .rainbowCat)
     }
 
     @Test func buddyAtLaunchIsTheChosenOneOrTheOneShownLast() {
         let preferences = Preferences(defaults: defaults)
-        preferences.shownBuddy = .blackSheep
+        preferences.shownBuddy = .rainbowCat
         #expect(preferences.buddyAtLaunch == .sheep)
         preferences.buddyChoice = .takingTurns
-        #expect(preferences.buddyAtLaunch == .blackSheep)
+        #expect(preferences.buddyAtLaunch == .rainbowCat)
         defaults.set("unicorn", forKey: "shownBuddy")
         #expect(Preferences(defaults: defaults).buddyAtLaunch == .sheep)
     }

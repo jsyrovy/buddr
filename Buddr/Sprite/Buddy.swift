@@ -8,8 +8,6 @@
 /// - Keep every clip short (at most 1.6 s): a clip plays to its end before a state change shows.
 /// - Make every still pose one short frame of the pictures of its state's clip, so it shows the same sign.
 /// - Dim only the `unknown` clips, to `BuddyCanvas.unknownOpacity`.
-///
-/// A buddy can also be another one with some sprites replaced (`replacingSprites`), like the black sheep.
 struct Buddy: Sendable {
     let id: BuddyID
     /// The clips of the state machine (`BuddyAnimator`).
@@ -18,12 +16,6 @@ struct Buddy: Sendable {
     let escape: ClipSet<EscapeClipID>
     /// The reaction to a click, played as an interjection outside the state machine.
     let petted: AnimationClip
-
-    /// The same buddy under another ID, showing the value of `sprites` in every layer that shows one of its keys.
-    func replacingSprites(_ sprites: [PixelSprite: PixelSprite], id: BuddyID) -> Buddy {
-        let replace = { (clip: AnimationClip) in clip.replacingSprites(sprites) }
-        return Buddy(id: id, clips: clips.map(replace), escape: escape.map(replace), petted: replace(petted))
-    }
 
     /// Every clip with a name: the state machine's, the escape's and the petting reaction.
     var allClips: [(name: String, clip: AnimationClip)] {
@@ -44,23 +36,17 @@ struct ClipSet<ID: CaseIterable & Hashable & Sendable>: Sendable {
     subscript(id: ID) -> AnimationClip {
         clips[id]!
     }
-
-    func map(_ transform: (AnimationClip) -> AnimationClip) -> ClipSet {
-        ClipSet { transform(self[$0]) }
-    }
 }
 
 /// Every buddy there is, in the order of the menu.
 enum BuddyID: String, CaseIterable, Sendable {
     case sheep
-    case blackSheep
     case rainbowCat
 
     /// Shown in the menu bar. Known without building the buddy.
     var name: String {
         switch self {
         case .sheep: "Sheep"
-        case .blackSheep: "Black Sheep"
         case .rainbowCat: "Rainbow Cat"
         }
     }
@@ -68,7 +54,6 @@ enum BuddyID: String, CaseIterable, Sendable {
     var buddy: Buddy {
         switch self {
         case .sheep: SheepSprites.buddy
-        case .blackSheep: BlackSheepSprites.buddy
         case .rainbowCat: RainbowCatSprites.buddy
         }
     }

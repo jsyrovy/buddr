@@ -23,12 +23,6 @@ struct AnimationClip: Hashable, Sendable {
         frames.reduce(.zero) { $0 + $1.duration }
     }
 
-    /// The clip with every layer that shows one of the keys of `sprites` showing its value instead.
-    func replacingSprites(_ sprites: [PixelSprite: PixelSprite]) -> AnimationClip {
-        AnimationClip(
-            frames.map { AnimationFrame(sprite: $0.sprite.replacingSprites(sprites), duration: $0.duration) })
-    }
-
     /// The clip with every frame flipped horizontally within a canvas `canvasWidth` pixels wide.
     func mirrored(canvasWidth: Int) -> AnimationClip {
         AnimationClip(

@@ -23,7 +23,7 @@ struct BuddyTurnsTests {
         #expect(all.map(\.next) == Array(all.dropFirst()) + [all[0]])
     }
 
-    @Test(arguments: [BuddyChoice.one(.sheep), .one(.blackSheep), .takingTurns])
+    @Test(arguments: [BuddyChoice.one(.sheep), .one(.rainbowCat), .takingTurns])
     func choiceIsSavedAsItsRawValue(choice: BuddyChoice) {
         #expect(BuddyChoice(rawValue: choice.rawValue) == choice)
     }
@@ -36,11 +36,11 @@ struct BuddyTurnsTests {
         var changes = changes.makeAsyncIterator()
 
         turns.setChoice(.one(.sheep), every: Self.interval)
-        turns.setChoice(.one(.blackSheep), every: Self.interval)
+        turns.setChoice(.one(.rainbowCat), every: Self.interval)
 
         // The sheep was there already.
-        #expect(await changes.next() == .blackSheep)
-        #expect(turns.current == .blackSheep)
+        #expect(await changes.next() == .rainbowCat)
+        #expect(turns.current == .rainbowCat)
     }
 
     @Test func takingTurnsShowsTheNextBuddyAfterEveryTurn() async {
@@ -85,14 +85,14 @@ struct BuddyTurnsTests {
         turns.setChoice(.takingTurns, every: Self.interval)
         _ = await sleeps.next()
 
-        turns.setChoice(.one(.blackSheep), every: Self.interval)
-        #expect(await changes.next() == .blackSheep)
+        turns.setChoice(.one(.rainbowCat), every: Self.interval)
+        #expect(await changes.next() == .rainbowCat)
 
         // Taking turns again starts a whole turn of the buddy on the screen.
         turns.setChoice(.takingTurns, every: Self.interval)
         #expect(await sleeps.next() == Self.interval)
         sleeper.wake()
-        #expect(await changes.next() == BuddyID.blackSheep.next)
+        #expect(await changes.next() == BuddyID.rainbowCat.next)
     }
 
     @Test func newIntervalStartsTheTurnAgain() async {

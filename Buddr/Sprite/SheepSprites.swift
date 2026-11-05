@@ -232,7 +232,7 @@ enum SheepSprites {
 
     // MARK: Sprites
 
-    /// The sheep's bodies. Frames take only these (`sheep(body:head:)`), so `figure` knows every pose.
+    /// The sheep's bodies. Frames take only these (`sheep(body:head:)`).
     enum Body: CaseIterable {
         case stand, trotA, trotB, gallop, jump, lying
 
@@ -277,9 +277,6 @@ enum SheepSprites {
             }
         }
     }
-
-    /// The sheep itself without its effects: every body and head.
-    static let figure = Set(Body.allCases.map(\.sprite) + Head.allCases.map(\.sprite))
 
     enum Effect {
         static let checkBubble = sprite(Grid.checkBubble)

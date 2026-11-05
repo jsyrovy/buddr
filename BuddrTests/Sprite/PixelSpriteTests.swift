@@ -51,12 +51,6 @@ struct PixelSpriteTests {
         #expect(sprite.mirrored() == PixelSprite(rows: ["..R", ".RR"], palette: palette))
     }
 
-    @Test func recoloringReplacesOnlyTheGivenColors() {
-        let blue = PixelColor(red: 0, green: 0, blue: 255)
-        let sprite = PixelSprite(rows: ["R.B"], palette: ["R": red, "B": blue])
-        #expect(sprite.recolored([red: black]) == PixelSprite(rows: ["K.B"], palette: ["K": black, "B": blue]))
-    }
-
     @Test func mirroredFrameKeepsLayersInsideTheCanvas() {
         let sprite = PixelSprite(rows: ["R."], palette: palette)
         let frame = SpriteFrame(layers: [SpriteLayer(sprite: sprite, x: 1, y: 3)], opacity: 0.5)
