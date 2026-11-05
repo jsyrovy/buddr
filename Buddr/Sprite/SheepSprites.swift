@@ -1,8 +1,24 @@
-// All pixel data of the sheep lives in this file, so the character can be redesigned or swapped in one place: the
-// palette, the grids, how they are composed into frames, and the frame timing of every animation clip.
-// The current sheep is a placeholder.
+// All pixel data of the sheep lives in this file, so the buddy can be redesigned in one place: the palette, the grids,
+// how they are composed into frames, and the frame timing of every animation clip. Also the menu bar icon, Buddr's
+// own, which stays the sheep whichever buddy is on the screen. The current sheep is a placeholder.
 
 enum SheepSprites {
+    static let buddy = Buddy(
+        id: .sheep,
+        name: "Sheep",
+        clips: Buddy.Clips(
+            idleRest: Clip.idleRest, idleBlink: Clip.idleBlink, idleLook: Clip.idleLook, sleeping: Clip.sleeping,
+            working: Clip.working, blocked: Clip.blocked, doneJump: Clip.doneJump, doneHold: Clip.doneHold,
+            unknown: Clip.unknown, idleStill: Clip.idleStill, sleepingStill: Clip.sleepingStill,
+            workingStill: Clip.workingStill, blockedStill: Clip.blockedStill, doneStill: Clip.doneStill,
+            unknownStill: Clip.unknownStill),
+        escape: Buddy.Escape(
+            startle: Escape.startle, yawn: Escape.yawn, turn: Escape.turn, run: Escape.run, walk: Escape.walk,
+            arrive: Escape.arrive),
+        petted: petted,
+        grids: allGrids.map { Buddy.Grid(name: $0.name, rows: $0.rows) },
+        palette: palette)
+
     /// Top-left corner of the sheep body on the canvas when standing.
     static let sheepX = 3
     static let sheepY = 8
@@ -202,7 +218,7 @@ enum SheepSprites {
     }
 
     /// Every grid with a name, for validation in tests.
-    static let allGrids: [(name: String, rows: [String])] = [
+    private static let allGrids: [(name: String, rows: [String])] = [
         ("bodyStand", Grid.bodyStand),
         ("bodyTrotA", Grid.bodyTrotA),
         ("bodyTrotB", Grid.bodyTrotB),
@@ -309,26 +325,6 @@ enum SheepSprites {
 
     // Keep every clip short (well under 1.5 s): a clip always plays to its end before the state machine switches.
 
-    static func clip(_ id: ClipID) -> AnimationClip {
-        switch id {
-        case .idleRest: Clip.idleRest
-        case .idleBlink: Clip.idleBlink
-        case .idleLook: Clip.idleLook
-        case .sleeping: Clip.sleeping
-        case .working: Clip.working
-        case .blocked: Clip.blocked
-        case .doneJump: Clip.doneJump
-        case .doneHold: Clip.doneHold
-        case .unknown: Clip.unknown
-        case .idleStill: Clip.idleStill
-        case .sleepingStill: Clip.sleepingStill
-        case .workingStill: Clip.workingStill
-        case .blockedStill: Clip.blockedStill
-        case .doneStill: Clip.doneStill
-        case .unknownStill: Clip.unknownStill
-        }
-    }
-
     private enum Clip {
         static let idleRest = AnimationClip([
             frame(1_000, sheep())
@@ -392,10 +388,8 @@ enum SheepSprites {
 
     // MARK: Escape
 
-    /// Clips of leaving the screen – escaping from a fullscreen window or wandering off bored when it hides – and of
-    /// the return. They are played by `BuddyEscape` rather than the state machine; the sheep faces left, moving right
-    /// uses the mirrored frames.
-    enum Escape {
+    /// Clips of leaving the screen and of the return (`Buddy.Escape`).
+    private enum Escape {
         /// A startled hop with an open mouth before running away.
         static let startle = AnimationClip([
             frame(120, sheep(head: Head.bleat)),
@@ -441,8 +435,8 @@ enum SheepSprites {
     // MARK: Petting
 
     /// The reaction to a click: the sheep leans into the hand with its eye closed, a heart rises and it gives a small
-    /// happy hop. Played by the driver as an interjection, outside the state machine.
-    static let petted = AnimationClip([
+    /// happy hop.
+    private static let petted = AnimationClip([
         frame(120, sheep(head: Head.content, headDY: 1)),
         frame(160, sheep(head: Head.content) + [smallHeart(3)]),
         frame(160, sheep(head: Head.content, headDY: 1) + [smallHeart(2)]),
@@ -452,18 +446,6 @@ enum SheepSprites {
         frame(200, sheep(head: Head.content) + [largeHeart(0)]),
         frame(200, sheep()),
     ])
-
-    /// Every clip with a name: the state machine's, the escape's and the petting reaction.
-    static let allClips: [(name: String, clip: AnimationClip)] =
-        ClipID.allCases.map { ("\($0)", clip($0)) } + [
-            ("escapeStartle", Escape.startle),
-            ("escapeYawn", Escape.yawn),
-            ("escapeTurn", Escape.turn),
-            ("escapeRun", Escape.run),
-            ("escapeWalk", Escape.walk),
-            ("escapeArrive", Escape.arrive),
-            ("petted", petted),
-        ]
 
     private static func sprite(_ rows: [String]) -> PixelSprite {
         PixelSprite(rows: rows, palette: palette)

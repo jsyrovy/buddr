@@ -12,6 +12,7 @@ struct BuddyAnimator {
     /// While `done` persists, every n-th cycle is a jump; the others are a calm hold.
     static let doneJumpEvery = 4
 
+    private(set) var buddy: Buddy
     private(set) var status: AgentStatus
     private(set) var clipID: ClipID
     private(set) var frameIndex = 0
@@ -29,9 +30,11 @@ struct BuddyAnimator {
     private var timeSinceChange: Duration = .zero
 
     init(
-        status: AgentStatus = .unknown, mode: AnimationMode = .always, animatesFor: Duration = .zero,
-        sleepAfter: Duration = defaultSleepAfter, seed: UInt64 = .random(in: .min ... .max)
+        buddy: Buddy = BuddyID.sheep.buddy, status: AgentStatus = .unknown, mode: AnimationMode = .always,
+        animatesFor: Duration = .zero, sleepAfter: Duration = defaultSleepAfter,
+        seed: UInt64 = .random(in: .min ... .max)
     ) {
+        self.buddy = buddy
         self.status = status
         self.mode = mode
         self.animatesFor = animatesFor
@@ -42,11 +45,18 @@ struct BuddyAnimator {
     }
 
     var clip: AnimationClip {
-        SheepSprites.clip(clipID)
+        buddy.clips[clipID]
     }
 
     var frame: AnimationFrame {
         clip.frames[frameIndex]
+    }
+
+    /// Shows `buddy` right away, playing the current clip again from its start. Meant for a moment when the buddy is not
+    /// on the screen (`BuddyEscape` swaps it while away): unlike a state change it cuts the running clip.
+    mutating func setBuddy(_ buddy: Buddy) {
+        self.buddy = buddy
+        frameIndex = 0
     }
 
     /// Sets the target state; it takes effect when the current clip ends.

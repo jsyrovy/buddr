@@ -49,9 +49,38 @@ struct BuddyAnimationDriverTests {
         #expect(driver.sprite == animator.frame.sprite)
     }
 
+    @Test func newBuddyShowsRightAway() async {
+        let driver = driver(BuddyAnimator(status: .working, seed: 7))
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        driver.start()
+        _ = await sleeps.next()
+
+        let stub = Buddy.stub()
+        driver.setBuddy(stub)
+        #expect(driver.buddy.name == stub.name)
+        #expect(driver.sprite == stub.clips.working.frames[0].sprite)
+        await driver.stop()
+    }
+
+    @Test func newBuddyKeepsAPlayingScript() async {
+        let driver = driver(BuddyAnimator(status: .working, seed: 7))
+        var sleeps = sleeper.sleeps.makeAsyncIterator()
+        driver.start()
+        _ = await sleeps.next()
+
+        driver.loop(Self.script)
+        let stub = Buddy.stub()
+        driver.setBuddy(stub)
+        #expect(driver.sprite == Self.script.frames[0].sprite)
+        // The new buddy shows once the script ends.
+        driver.endScript()
+        #expect(driver.sprite == stub.clips.working.frames[0].sprite)
+        await driver.stop()
+    }
+
     // MARK: Scripted clips
 
-    private static let script = SheepSprites.Escape.startle
+    private static let script = BuddyID.sheep.buddy.escape.startle
 
     private static func mirrored(_ frame: AnimationFrame) -> SpriteFrame {
         frame.sprite.mirrored(canvasWidth: BuddyCanvas.width)
@@ -129,7 +158,7 @@ struct BuddyAnimationDriverTests {
 
     // MARK: Interjections
 
-    private static let interjection = SheepSprites.petted
+    private static let interjection = BuddyID.sheep.buddy.petted
 
     @Test func interjectShowsTheClipOnceAndHandsBackToTheStateMachine() async {
         let animator = BuddyAnimator(status: .working, seed: 7)

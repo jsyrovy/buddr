@@ -23,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let panelController = BuddyPanelController(animation: animation)
         let hiding = hiding
         panelController.onClick = {
-            animation.interject(SheepSprites.petted)
+            animation.interject(animation.buddy.petted)
             hiding.restartCountdown()
         }
         panelController.show()

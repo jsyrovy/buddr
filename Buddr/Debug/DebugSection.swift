@@ -26,7 +26,7 @@
                     .fixedSize()
                 }
                 LazyVGrid(columns: Self.columns, spacing: 4) {
-                    ForEach(SheepSprites.allClips, id: \.name) { item in
+                    ForEach(controls.animation?.buddy.allClips ?? [], id: \.name) { item in
                         Button {
                             controls.play(item.clip)
                         } label: {

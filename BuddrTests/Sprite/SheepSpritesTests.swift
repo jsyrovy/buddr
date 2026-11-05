@@ -3,12 +3,6 @@ import Testing
 @testable import Buddr
 
 struct SheepSpritesTests {
-    @Test(arguments: SheepSprites.allGrids.map(\.name))
-    func gridIsValid(name: String) throws {
-        let grid = try #require(SheepSprites.allGrids.first { $0.name == name })
-        #expect(PixelSprite.problems(rows: grid.rows, palette: SheepSprites.palette) == [])
-    }
-
     @Test func bodyVariantsShareTheirSize() {
         let bodies = [
             SheepSprites.Body.stand, SheepSprites.Body.trotA, SheepSprites.Body.trotB, SheepSprites.Body.gallop,

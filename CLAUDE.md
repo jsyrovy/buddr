@@ -56,8 +56,10 @@ Buddr/
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + BuddyEscape (runs off the screen and
               back), HideMode (pure) + BuddyHiding (hides the buddy after a while of calm), NamePlatePanel (child
               panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
-  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
-              grids, frame composition, clip timing, the plate's look), PixelFont (glyphs, marks, truncation)
+  Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
+              buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
+              frame composition, clip timing, the menu bar icon), NamePlateSprite (the plate's look), PixelFont
+              (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -90,7 +92,8 @@ CHANGELOG.md  one section per released version
 
 - Everything in the repo (code, comments, docs, commit messages) is in English.
 - No third-party dependencies. No image assets: all graphics are drawn in code from pixel grids.
-- All sprite pixel data lives in one file (`SheepSprites.swift`) so the character can be swapped easily.
+- All sprite pixel data of a buddy lives in one file (`SheepSprites.swift`), so a buddy can be added or redesigned
+  in one place (see "Buddies").
 - Swift 6 strict concurrency: UI types are `@MainActor`; data crossing actors is `Sendable`. Default actor isolation
   is left at `nonisolated` (no `SWIFT_DEFAULT_ACTOR_ISOLATION`), and functions that must run off the main actor are
   marked `@concurrent`. Locks: `OSAllocatedUnfairLock` (`Mutex` needs macOS 15).
@@ -170,7 +173,7 @@ CHANGELOG.md  one section per released version
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
 - Debug builds (`#if DEBUG`, set in the Debug configuration) show an orange "DEBUG" box in the menu bar list
-  (`DebugSection`, `DebugControls`): a button for every clip (`SheepSprites.allClips`), played once over whatever
+  (`DebugSection`, `DebugControls`): a button for every clip of the buddy (`Buddy.allClips`), played once over whatever
   plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" /
   "Come Back" (`BuddyEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
   animation, hiding and the name plate (not for the list) – overridden to `blocked` / `done` without an agent in it,
@@ -282,6 +285,24 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
   15 s, `missed` + a fresh snapshot for a subscriber that fell behind) could replace polling; it needs a feed that
   pushes snapshots instead of `HerdrPoller.Feed`.
 
+## Buddies
+
+The character on the screen is a buddy (`Buddy`): its name and every clip – the state machine's (`Buddy.Clips`, one
+per `ClipID`), the escape's (`Buddy.Escape`) and the petting reaction. The sheep is the only one so far.
+
+- Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`. Shared by every
+  buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved position, the room
+  for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon (Buddr's own, the
+  sheep).
+- `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`.
+- What every buddy has to do (`Buddy`, checked for every `BuddyID` in `BuddyClipsTests`): face left (running right
+  is mirrored), stand at rest on the bottom row of the canvas and centered (the plate is placed under it), keep every
+  clip ≤ 1.6 s, make still poses one short frame of their clip's pictures, dim only `unknown`, use valid grids.
+- `BuddyAnimationDriver.setBuddy(_:)` switches right away: the running clip starts again with the new buddy's
+  frames, a running script keeps its own. It cuts the animation, so it is meant for a buddy that is off the screen.
+- Adding a buddy: a new `<Name>Sprites.swift` in `Sprite/` with its pixel data and `static let buddy`, a case in
+  `BuddyID` and its `buddy`; `make lint test`; then play every clip from the debug section of the running app.
+
 ## Agent states → buddy behaviour
 
 Aggregated state priority: **blocked > done > working > idle > unknown**. No agents (or herdr unavailable) counts as
@@ -306,7 +327,7 @@ Implementation (`BuddyAnimator`):
 - `done` plays `doneJump` when it starts and then every 4th cycle, `doneHold` otherwise.
 - `unknown` is drawn at `BuddyCanvas.unknownOpacity`.
 - Petting: a click on the buddy interrupts the current clip right away (unlike a state change) with
-  `SheepSprites.petted` – eye closed, blushing, a rising heart, a small hop. `BuddyAnimationDriver.interject` plays it
+  `Buddy.petted` – for the sheep eye closed, blushing, a rising heart, a small hop. `BuddyAnimationDriver.interject` plays it
   once and hands back to the state machine; it is ignored while a script (escape) or another interjection plays, and a
   script replaces it.
 - The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
@@ -354,7 +375,7 @@ Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
 - The display is the one of the buddy's home (`BuddyEscape.homeFrame`), not of the panel, which moves off the screen.
 - Logs: category `fullscreen` (on with the window's owner and layer, off).
 
-Escape (`BuddyEscape`, `EscapeRoute`, `SheepSprites.Escape`):
+Escape (`BuddyEscape`, `EscapeRoute`, `Buddy.Escape`):
 
 - Away: the current clip plays to its end (`BuddyAnimationDriver.waitForCycleEnd`), a startled hop, the buddy turns
   to the nearer of the left and right screen edges (tie: right) and gallops until the panel is completely past it;
@@ -386,7 +407,7 @@ Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle
 - The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`BuddyHiding.show()`), which
   calls it back until another `hideMinutes` of calm.
 - Moving uses `BuddyEscape` with the same route as the fullscreen escape. When hiding is the only reason, the buddy
-  leaves bored instead of startled: a yawn (`SheepSprites.Escape.yawn`; if the reason is gone by its end, it stays),
+  leaves bored instead of startled: a yawn (`Buddy.Escape.yawn`; if the reason is gone by its end, it stays),
   then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.
   `off` animation just hides the panel.
 - `BuddyEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the buddy is away while there is any.
@@ -494,8 +515,9 @@ tests are cheap and stable:
   grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
   `UnixSocketTransport` (not running, timeouts, cancellation).
 - `Animation/` except `BuddyAnimationDriver` – the `BuddyAnimator` state machine, clip timing, `SplitMix64`.
-- `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`, the
-  `PixelFont` glyphs, marks and truncation, the `NamePlateSprite` sprite.
+- `Sprite/` data and models – every buddy's grids, clips and what every buddy has to do (`Buddy`, checked for every
+  `BuddyID`), `SheepSprites` frame composition, `PixelSprite`, `SpriteFrame`, the `PixelFont` glyphs, marks and
+  truncation, the `NamePlateSprite` sprite.
 - Placement math in `BuddyPanelController` (including the room reserved for the plate), `ScreenGeometry`,
   `EscapeRoute`, `NamePlateLayout`.
 - `HideMode` – which statuses are calm in each mode.

@@ -194,7 +194,7 @@ struct BuddyAnimatorTests {
         // The clip that was playing at 3 s finished first.
         #expect(animator.clipID == .workingStill)
         #expect(animator.frameIndex == 0)
-        #expect(elapsed < .seconds(3) + SheepSprites.clip(.working).cycleDuration)
+        #expect(elapsed < .seconds(3) + BuddyID.sheep.buddy.clips[.working].cycleDuration)
 
         animator.setStatus(.blocked)
         finishCycle(&animator)
@@ -266,5 +266,22 @@ struct BuddyAnimatorTests {
             #expect(!Self.stillPoses.contains(animator.clipID))
             finishCycle(&animator)
         }
+    }
+
+    @Test func newBuddyPlaysTheCurrentClipFromItsStart() {
+        var animator = BuddyAnimator(status: .working, seed: 1)
+        animator.advance()
+        let stub = Buddy.stub()
+        animator.setBuddy(stub)
+        #expect(animator.buddy.name == stub.name)
+        #expect(animator.clipID == .working)
+        #expect(animator.frameIndex == 0)
+        #expect(animator.frame == stub.clips.working.frames[0])
+
+        // The state machine goes on with the new buddy's clips.
+        animator.setStatus(.blocked)
+        finishCycle(&animator)
+        #expect(animator.clipID == .blocked)
+        #expect(animator.clip == stub.clips.blocked)
     }
 }
