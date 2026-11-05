@@ -316,13 +316,14 @@ The character on the screen is a buddy (`Buddy`): every clip it plays – the st
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
-- `BuddyID` lists every buddy in the order of the menu with its name (`BuddyID.name`, so the menu doesn't build a
-  buddy it doesn't show); `BuddyID.buddy` gives its `Buddy`.
+- `BuddyID` lists every buddy with its name (`BuddyID.name`, so the menu doesn't build a buddy it doesn't show);
+  `BuddyID.buddy` gives its `Buddy`. The order of its cases doesn't matter: `BuddyID.menuOrder` sorts them by name, so
+  a new buddy needs no place in it.
 - Chosen in the menu bar ("Buddy": every buddy by name, then "Take Turns" with "every 15 / 30 / 60 min";
   `Preferences.buddyChoice`, `BuddyChoice`, key `buddy`: a `BuddyID` or `takeTurns`, default `sheep`; a saved buddy
   that isn't there falls back to the sheep; `Preferences.buddyTurnMinutes`, key `buddyTurnMinutes`, default 30). The
   pop-up shows only while there is more than one buddy. The menu bar icon stays the sheep.
-- Taking turns (`BuddyTurns`): after every turn (real time) the next buddy in the order of `BuddyID` comes, the first
+- Taking turns (`BuddyTurns`): after every turn (real time) the next buddy in the order of the menu comes, the first
   after the last. A turn ends only while no agent needs the user (`AgentStatus.needsAttention`, the statuses the plate
   names): a change of buddies must never cover a `blocked` or `done` buddy, so an ended turn waits for calm.
   Choosing "Take Turns" or another turn length starts a whole turn of the buddy on the screen.

@@ -18,8 +18,12 @@ struct BuddyTurnsTests {
         turns.onChange = { continuation.yield($0) }
     }
 
+    @Test func menuListsEveryBuddyByName() {
+        #expect(BuddyID.menuOrder == [.earth, .rainbowCat, .sheep, .ufo])
+    }
+
     @Test func nextBuddyFollowsTheMenuOrderAndWrapsAround() {
-        let all = BuddyID.allCases
+        let all = BuddyID.menuOrder
         #expect(all.map(\.next) == Array(all.dropFirst()) + [all[0]])
     }
 

@@ -29,7 +29,7 @@ enum BuddyChoice: Hashable, Sendable {
 extension BuddyID {
     /// The buddy after this one in the order of the menu; the first one after the last.
     var next: BuddyID {
-        let all = Self.allCases
+        let all = Self.menuOrder
         return all[(all.firstIndex(of: self)! + 1) % all.count]
     }
 }

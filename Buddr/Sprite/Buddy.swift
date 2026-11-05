@@ -39,12 +39,15 @@ struct ClipSet<ID: CaseIterable & Hashable & Sendable>: Sendable {
     }
 }
 
-/// Every buddy there is, in the order of the menu.
+/// Every buddy there is. The order of the cases doesn't matter: the menu has its own (`menuOrder`).
 enum BuddyID: String, CaseIterable, Sendable {
     case sheep
     case rainbowCat
     case ufo
     case earth
+
+    /// Every buddy in the order of the menu: by name.
+    static let menuOrder = allCases.sorted { $0.name < $1.name }
 
     /// Shown in the menu bar. Known without building the buddy.
     var name: String {

@@ -71,14 +71,14 @@ struct AgentListView: View {
     }
 }
 
-/// "Buddy: Sheep / … / Take Turns", and how often they take turns. Shown only when there is more than one buddy.
+/// "Buddy: Earth / … / Take Turns", and how often they take turns. Shown only when there is more than one buddy.
 private struct BuddySettings: View {
     @Bindable var preferences: Preferences
 
     var body: some View {
         HStack {
             Picker("Buddy", selection: $preferences.buddyChoice) {
-                ForEach(BuddyID.allCases, id: \.self) { id in
+                ForEach(BuddyID.menuOrder, id: \.self) { id in
                     Text(id.name).tag(BuddyChoice.one(id))
                 }
                 Divider()
