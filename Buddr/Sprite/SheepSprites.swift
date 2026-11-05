@@ -233,29 +233,54 @@ enum SheepSprites {
 
     // MARK: Sprites
 
-    enum Body {
-        static let stand = sprite(Grid.bodyStand)
-        static let trotA = sprite(Grid.bodyTrotA)
-        static let trotB = sprite(Grid.bodyTrotB)
-        static let gallop = sprite(Grid.bodyGallop)
-        static let jump = sprite(Grid.bodyJump)
-        static let lying = sprite(Grid.bodyLying)
+    /// The sheep's bodies. Frames take only these (`sheep(body:head:)`), so `figure` knows every pose.
+    enum Body: CaseIterable {
+        case stand, trotA, trotB, gallop, jump, lying
+
+        var sprite: PixelSprite {
+            Self.sprites[self]!
+        }
+
+        private static let sprites = Dictionary(
+            uniqueKeysWithValues: allCases.map { ($0, SheepSprites.sprite($0.grid)) })
+
+        private var grid: [String] {
+            switch self {
+            case .stand: Grid.bodyStand
+            case .trotA: Grid.bodyTrotA
+            case .trotB: Grid.bodyTrotB
+            case .gallop: Grid.bodyGallop
+            case .jump: Grid.bodyJump
+            case .lying: Grid.bodyLying
+            }
+        }
     }
 
-    enum Head {
-        static let normal = sprite(Grid.headNormal)
-        static let blink = sprite(Grid.headBlink)
-        static let look = sprite(Grid.headLook)
-        static let bleat = sprite(Grid.headBleat)
-        static let content = sprite(Grid.headContent)
-        static let yawn = sprite(Grid.headYawn)
+    /// The sheep's heads, like `Body`.
+    enum Head: CaseIterable {
+        case normal, blink, look, bleat, content, yawn
+
+        var sprite: PixelSprite {
+            Self.sprites[self]!
+        }
+
+        private static let sprites = Dictionary(
+            uniqueKeysWithValues: allCases.map { ($0, SheepSprites.sprite($0.grid)) })
+
+        private var grid: [String] {
+            switch self {
+            case .normal: Grid.headNormal
+            case .blink: Grid.headBlink
+            case .look: Grid.headLook
+            case .bleat: Grid.headBleat
+            case .content: Grid.headContent
+            case .yawn: Grid.headYawn
+            }
+        }
     }
 
     /// The sheep itself without its effects: every body and head.
-    static let figure: Set<PixelSprite> = [
-        Body.stand, Body.trotA, Body.trotB, Body.gallop, Body.jump, Body.lying, Head.normal, Head.blink, Head.look,
-        Head.bleat, Head.content, Head.yawn,
-    ]
+    static let figure = Set(Body.allCases.map(\.sprite) + Head.allCases.map(\.sprite))
 
     enum Effect {
         static let checkBubble = sprite(Grid.checkBubble)
@@ -275,12 +300,10 @@ enum SheepSprites {
     // MARK: Frames
 
     /// Body and head layers; `dy` moves the whole sheep (negative is up), `headDY` only the head.
-    static func sheep(
-        body: PixelSprite = Body.stand, head: PixelSprite = Head.normal, dy: Int = 0, headDY: Int = 0
-    ) -> [SpriteLayer] {
+    static func sheep(body: Body = .stand, head: Head = .normal, dy: Int = 0, headDY: Int = 0) -> [SpriteLayer] {
         [
-            SpriteLayer(sprite: body, x: sheepX, y: sheepY + dy),
-            SpriteLayer(sprite: head, x: sheepX + headX, y: sheepY + headY + dy + headDY),
+            SpriteLayer(sprite: body.sprite, x: sheepX, y: sheepY + dy),
+            SpriteLayer(sprite: head.sprite, x: sheepX + headX, y: sheepY + headY + dy + headDY),
         ]
     }
 

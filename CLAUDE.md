@@ -295,8 +295,9 @@ and the black sheep.
 - Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`: a `ClipSet` of each
   kind is made from a function with an exhaustive `switch` over the keys, so no clip can be missing. A buddy can also
   be another one with some sprites replaced (`Buddy.replacingSprites`): the black sheep (`BlackSheepSprites.swift`)
-  is the sheep's figure (`SheepSprites.figure`, every body and head) recolored with dark wool and a light face and
-  legs, its effects unchanged, so redrawing the sheep redraws it too.
+  is the sheep's figure (`SheepSprites.figure`: every `Body` and `Head` case, the only sprites the sheep's frames are
+  made of) recolored with dark wool and a light face and legs, its effects unchanged, so redrawing the sheep redraws
+  it too.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
