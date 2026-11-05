@@ -60,7 +60,8 @@ Buddr/
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), RainbowCatSprites (a cat of its own, with the
-              sheep's effects), NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
+              sheep's effects), UFOSprites (a flying saucer, likewise), NamePlateSprite (the plate's look), PixelFont
+              (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -289,8 +290,8 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 ## Buddies
 
 The character on the screen is a buddy (`Buddy`): every clip it plays – the state machine's (`Buddy.clips`, one per
-`ClipID`), the escape's (`Buddy.escape`, one per `EscapeClipID`) and the petting reaction. There are two so far: the
-sheep (the default) and the rainbow cat.
+`ClipID`), the escape's (`Buddy.escape`, one per `EscapeClipID`) and the petting reaction. There are three so far: the
+sheep (the default), the rainbow cat and the UFO.
 
 - Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`: a `ClipSet` of each
   kind is made from a function with an exhaustive `switch` over the keys, so no clip can be missing.
@@ -298,6 +299,12 @@ sheep (the default) and the rainbow cat.
   on a rainbow with twinkling stars while agents work and when it runs off. Its chin rests on the bottom row with its
   legs, so its head can't move down. The state's signs ("!", ✔ bubble, "?", "zzz", hearts) are the sheep's
   (`SheepSprites.Effect`), so they look the same on every buddy.
+- The UFO (`UFOSprites.swift`) is a grey flying saucer with a green alien in its glass dome (its face is the dome's
+  two lowest rows) and four lights on the hull; it stands on landing legs. While agents work it hovers high and its
+  beam (stripes moving up, transparent between them – the palette has no alpha) lifts a little sheep of the sheep's
+  colors into the hull, one per cycle. The sheep rises out of the bottom edge a pixel at a time (cut-off sprites,
+  since no layer may reach past the canvas), so the next one never pops up. There is no take-off clip: it jumps 5 px
+  up when the state turns `working` and back down after. It uses the sheep's signs too.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).

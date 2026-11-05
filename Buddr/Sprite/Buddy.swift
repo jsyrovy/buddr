@@ -42,12 +42,14 @@ struct ClipSet<ID: CaseIterable & Hashable & Sendable>: Sendable {
 enum BuddyID: String, CaseIterable, Sendable {
     case sheep
     case rainbowCat
+    case ufo
 
     /// Shown in the menu bar. Known without building the buddy.
     var name: String {
         switch self {
         case .sheep: "Sheep"
         case .rainbowCat: "Rainbow Cat"
+        case .ufo: "UFO"
         }
     }
 
@@ -55,6 +57,7 @@ enum BuddyID: String, CaseIterable, Sendable {
         switch self {
         case .sheep: SheepSprites.buddy
         case .rainbowCat: RainbowCatSprites.buddy
+        case .ufo: UFOSprites.buddy
         }
     }
 }
