@@ -43,6 +43,8 @@ covers its display, the sheep runs off the screen and comes back when the app is
 
 The sheep in the menu bar opens a list of all agents, grouped by machine and workspace, followed by the settings:
 
+- **Buddy** – the sheep (the default) or the black sheep, or both taking turns every 15 to 60 minutes; a turn ends
+  only while no agent needs you. The old buddy walks off the screen and the new one runs in.
 - **Agents from** – herdr, hc or both (the default). A chosen one that isn't installed or running shows up with a ⚠.
 - **Animation** – always, only for a while after a change (5 s to 1 min), or off: a still picture of the state.
 - **Hide** – never (the default), when all agents are idle, or unless one needs you, after 1 to 30 minutes of it. The

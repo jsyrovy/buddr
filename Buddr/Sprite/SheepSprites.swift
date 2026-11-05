@@ -264,6 +264,12 @@ enum SheepSprites {
         static let yawn = sprite(Grid.headYawn)
     }
 
+    /// The sheep itself without its effects: every body and head.
+    static let figure: Set<PixelSprite> = [
+        Body.stand, Body.trotA, Body.trotB, Body.gallop, Body.jump, Body.lying, Head.normal, Head.blink, Head.look,
+        Head.bleat, Head.content, Head.yawn,
+    ]
+
     enum Effect {
         static let checkBubble = sprite(Grid.checkBubble)
         static let exclamation = sprite(Grid.exclamation).outlined(with: outline)

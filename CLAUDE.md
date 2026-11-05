@@ -59,8 +59,8 @@ Buddr/
               (pure: plate scale, reserved room, placement)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
-              frame composition, clip timing, the menu bar icon), NamePlateSprite (the plate's look), PixelFont
-              (glyphs, marks, truncation)
+              frame composition, clip timing, the menu bar icon), BlackSheepSprites (the sheep recolored),
+              NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -76,8 +76,7 @@ Buddr/
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
   Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the buddy away, override the
-              status, a long name plate), DebugSection (its orange box in the menu bar list), BlackSheep (a second
-              buddy for trying out the choice)
+              status, a long name plate), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs, herdr-core API answers (`core-*`)
   Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, ManualSleeper, ScriptedFetch + SnapshotRecorder,
@@ -122,8 +121,8 @@ CHANGELOG.md  one section per released version
   `BuddyPanel.clickTolerance` points (`onClick`); it pets the buddy (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
-  agent list, the settings ("Buddy" while there is more than one, "Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
-  Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
+  agent list, the settings ("Buddy" while there is more than one, "Agents from", "Animation" and "Hide" pop-ups,
+  "Name Plate" checkboxes, "Watch Remote Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
   width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
   itself to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section per
@@ -180,8 +179,7 @@ CHANGELOG.md  one section per released version
   plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" /
   "Come Back" (`BuddyEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
   animation, hiding and the name plate (not for the list) – overridden to `blocked` / `done` without an agent in it,
-  the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). A second
-  buddy, the black sheep (`BuddyID.blackSheep`, the sheep recolored), makes the "Buddy" setting show up. Release
+  the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). Release
   builds contain none of it; check with `CONFIG=Release make build` after touching it.
 - Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, sources other than
   herdr and herdr-core.
@@ -291,20 +289,21 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 ## Buddies
 
 The character on the screen is a buddy (`Buddy`): its name and every clip – the state machine's (`Buddy.Clips`, one
-per `ClipID`), the escape's (`Buddy.Escape`) and the petting reaction. The sheep is the only one so far.
+per `ClipID`), the escape's (`Buddy.Escape`) and the petting reaction. There are two so far: the sheep (the default)
+and the black sheep.
 
-- Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`. Shared by every
+- Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`. A buddy can also be
+  another one recolored (`Buddy.recolored`): the black sheep (`BlackSheepSprites.swift`) is the sheep's figure
+  (`SheepSprites.figure`, every body and head) with dark wool and a light face and legs, its effects unchanged, so
+  redrawing the sheep redraws it too. Shared by every
   buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved position, the room
   for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon (Buddr's own, the
   sheep).
-- `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`. Debug builds add the black
-  sheep (`BuddyID.blackSheep`, `Debug/BlackSheep.swift`: the sheep's body and head recolored), so the choice can be
-  tried before there is a second real buddy.
+- `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`.
 - Chosen in the menu bar ("Buddy": every buddy by name, then "Take Turns" with "every 15 / 30 / 60 min";
   `Preferences.buddyChoice`, `BuddyChoice`, key `buddy`: a `BuddyID` or `takeTurns`, default `sheep`; a saved buddy
   that isn't there falls back to the sheep; `Preferences.buddyTurnMinutes`, key `buddyTurnMinutes`, default 30). The
-  pop-up shows only while there is more than one buddy, so Release builds don't show it yet. The menu bar icon stays
-  the sheep.
+  pop-up shows only while there is more than one buddy. The menu bar icon stays the sheep.
 - Taking turns (`BuddyTurns`): after every turn (real time) the next buddy in the order of `BuddyID` comes, the first
   after the last. A turn ends only while no agent waits for the user (calm in `HideMode.unlessNeeded`): a change of
   buddies must never cover a `blocked` or `done` buddy, so an ended turn waits for calm. Choosing "Take Turns" or

@@ -59,6 +59,11 @@ struct PixelSprite: Hashable, Sendable {
         return PixelSprite(width: width, height: height, pixels: flipped)
     }
 
+    /// Returns the sprite with every color that is a key of `colors` replaced by its value.
+    func recolored(_ colors: [PixelColor: PixelColor]) -> PixelSprite {
+        PixelSprite(width: width, height: height, pixels: pixels.map { $0.map { colors[$0] ?? $0 } })
+    }
+
     /// Returns a sprite one pixel larger on every side, with an outline around all opaque pixels
     /// (including diagonal neighbours).
     func outlined(with outline: PixelColor) -> PixelSprite {

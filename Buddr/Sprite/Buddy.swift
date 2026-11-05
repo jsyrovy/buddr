@@ -81,6 +81,40 @@ struct Buddy: Sendable {
         let rows: [String]
     }
 
+    /// The same buddy under another name, with `colors` replaced in the layers showing one of `sprites` (the others,
+    /// such as effects, keep their colors) and in the palette.
+    func recolored(id: BuddyID, name: String, colors: [PixelColor: PixelColor], in sprites: Set<PixelSprite>) -> Buddy {
+        let recolor = { (clip: AnimationClip) in Self.recolored(clip, colors: colors, in: sprites) }
+        return Buddy(
+            id: id, name: name,
+            clips: Clips(
+                idleRest: recolor(clips.idleRest), idleBlink: recolor(clips.idleBlink),
+                idleLook: recolor(clips.idleLook), sleeping: recolor(clips.sleeping), working: recolor(clips.working),
+                blocked: recolor(clips.blocked), doneJump: recolor(clips.doneJump), doneHold: recolor(clips.doneHold),
+                unknown: recolor(clips.unknown), idleStill: recolor(clips.idleStill),
+                sleepingStill: recolor(clips.sleepingStill), workingStill: recolor(clips.workingStill),
+                blockedStill: recolor(clips.blockedStill), doneStill: recolor(clips.doneStill),
+                unknownStill: recolor(clips.unknownStill)),
+            escape: Escape(
+                startle: recolor(escape.startle), yawn: recolor(escape.yawn), turn: recolor(escape.turn),
+                run: recolor(escape.run), walk: recolor(escape.walk), arrive: recolor(escape.arrive)),
+            petted: recolor(petted), grids: grids, palette: palette.mapValues { colors[$0] ?? $0 })
+    }
+
+    private static func recolored(
+        _ clip: AnimationClip, colors: [PixelColor: PixelColor], in sprites: Set<PixelSprite>
+    ) -> AnimationClip {
+        AnimationClip(
+            clip.frames.map { frame in
+                let layers = frame.sprite.layers.map { layer in
+                    sprites.contains(layer.sprite)
+                        ? SpriteLayer(sprite: layer.sprite.recolored(colors), x: layer.x, y: layer.y) : layer
+                }
+                return AnimationFrame(
+                    sprite: SpriteFrame(layers: layers, opacity: frame.sprite.opacity), duration: frame.duration)
+            })
+    }
+
     /// Every clip with a name: the state machine's, the escape's and the petting reaction.
     var allClips: [(name: String, clip: AnimationClip)] {
         ClipID.allCases.map { ("\($0)", clips[$0]) } + [
@@ -98,17 +132,12 @@ struct Buddy: Sendable {
 /// Every buddy there is, in the order of the menu.
 enum BuddyID: String, CaseIterable, Sendable {
     case sheep
-    #if DEBUG
-        /// The sheep with dark wool, to try out choosing buddies before there is a second one.
-        case blackSheep
-    #endif
+    case blackSheep
 
     var buddy: Buddy {
         switch self {
         case .sheep: SheepSprites.buddy
-        #if DEBUG
-            case .blackSheep: SheepSprites.blackSheep
-        #endif
+        case .blackSheep: BlackSheepSprites.buddy
         }
     }
 }
