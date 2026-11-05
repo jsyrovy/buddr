@@ -1,7 +1,7 @@
 # Buddr
 
-Buddr is a small native macOS desktop buddy: a pixel-art sheep sitting in a corner of the screen that reacts to the
-state of AI coding agents running in [herdr](https://herdr.dev) or in herdr-core (`hc`, the terminal runtime behind
+Buddr is a small native macOS desktop buddy: a pixel-art character – the buddy, so far a sheep – sitting in a corner
+of the screen that reacts to the state of AI coding agents running in [herdr](https://herdr.dev) or in herdr-core (`hc`, the terminal runtime behind
 herdr-app). One character shows the aggregated state of all agents. It is information only – it never focuses,
 attaches to, or sends anything to agents.
 
@@ -108,7 +108,8 @@ CHANGELOG.md  one section per released version
 
 - The character is an own sheep (one of the "herd"), not any agent's mascot – Buddr is tied to herdr, not to a
   specific agent, and it avoids trademark issues. The current sheep is a placeholder; before settling on the final
-  design, propose a few pixel-art variants to the user.
+  design, propose a few pixel-art variants to the user. More buddies can join it, any character (a robot, a car, …),
+  so code and docs say "buddy" for the character in general and "sheep" only for the sheep (see "Buddies").
 - Sprites are drawn with SwiftUI `Canvas` at an integer scale without smoothing. Default scale 6; S/M/L (4/6/8) later.
   Sprites are character grids (`.` = transparent, other characters = palette colors); a frame is a stack of sprites
   placed on a fixed canvas (`BuddyCanvas.width` × `height`, the same for every buddy) with room for effects above
