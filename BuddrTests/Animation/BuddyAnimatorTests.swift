@@ -273,7 +273,6 @@ struct BuddyAnimatorTests {
         animator.advance()
         let stub = Buddy.stub()
         animator.setBuddy(stub)
-        #expect(animator.buddy.name == stub.name)
         #expect(animator.clipID == .working)
         #expect(animator.frameIndex == 0)
         #expect(animator.frame == stub.clips[.working].frames[0])

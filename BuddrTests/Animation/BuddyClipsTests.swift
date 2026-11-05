@@ -19,7 +19,7 @@ struct BuddyClipsTests {
     @Test(arguments: BuddyID.allCases)
     func buddyKnowsItsID(id: BuddyID) {
         #expect(id.buddy.id == id)
-        #expect(!id.buddy.name.isEmpty)
+        #expect(!id.name.isEmpty)
     }
 
     @Test(arguments: BuddyID.allCases, clipNames)

@@ -20,8 +20,7 @@ struct BuddrApp: App {
     var body: some Scene {
         MenuBarExtra {
             AgentListView(
-                store: appDelegate.snapshots, preferences: appDelegate.preferences, hiding: appDelegate.hiding,
-                animation: appDelegate.animation
+                store: appDelegate.snapshots, preferences: appDelegate.preferences, hiding: appDelegate.hiding
             ) {
                 appDelegate.agentListOpened()
             }

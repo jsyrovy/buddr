@@ -2,33 +2,26 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let preferences: Preferences
-    /// Created before the menu bar list, which names the buddy.
-    let animation: BuddyAnimationDriver
+    let preferences = Preferences()
     let snapshots = SnapshotStore()
     let hiding = BuddyHiding()
-    let turns: BuddyTurns
     #if DEBUG
         let debug = DebugControls()
     #endif
 
+    private var animation: BuddyAnimationDriver?
+    private var turns: BuddyTurns?
     private var panelController: BuddyPanelController?
     private var herdrMonitor: HerdrMonitor?
     private var fullscreenMonitor: FullscreenMonitor?
     private var escape: BuddyEscape?
 
-    override init() {
-        let preferences = Preferences()
-        self.preferences = preferences
-        let buddy = preferences.buddyAtLaunch
-        animation = BuddyAnimationDriver(animator: BuddyAnimator(buddy: buddy.buddy))
-        turns = BuddyTurns(current: buddy)
-        super.init()
-    }
-
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let animation = animation
+        let buddy = preferences.buddyAtLaunch
+        preferences.shownBuddy = buddy
+        let animation = BuddyAnimationDriver(animator: BuddyAnimator(buddy: buddy.buddy))
         animation.start()
+        self.animation = animation
 
         let panelController = BuddyPanelController(animation: animation)
         let hiding = hiding
@@ -53,7 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let preferences = preferences
-        let turns = turns
+        let turns = BuddyTurns(current: buddy)
+        self.turns = turns
         turns.onChange = { buddy in
             preferences.shownBuddy = buddy
             escape.switchBuddy(to: buddy.buddy)

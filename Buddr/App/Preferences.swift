@@ -45,8 +45,8 @@ final class Preferences {
         }
     }
 
-    /// The buddy on the screen last, so taking turns goes on with it after a restart. Not a setting: saved without
-    /// `onChange`.
+    /// The buddy on the screen (or on its way there), named in the menu bar list; taking turns goes on with it after a
+    /// restart. Not a setting: saved without `onChange`.
     var shownBuddy: BuddyID {
         didSet {
             defaults.set(shownBuddy.rawValue, forKey: Self.shownBuddyKey)

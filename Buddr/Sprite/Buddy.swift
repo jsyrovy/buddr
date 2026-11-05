@@ -1,4 +1,4 @@
-/// A character that sits on the screen and shows the state of the agents: its name and every clip it plays. Its
+/// A character that sits on the screen and shows the state of the agents: every clip it plays. Its
 /// pixels live in a file of its own (`SheepSprites`); the canvas (`BuddyCanvas`) and the name plate
 /// (`NamePlateSprite`) are the same for every buddy.
 ///
@@ -12,8 +12,6 @@
 /// A buddy can also be another one with some sprites replaced (`replacingSprites`), like the black sheep.
 struct Buddy: Sendable {
     let id: BuddyID
-    /// Shown in the menu bar.
-    let name: String
     /// The clips of the state machine (`BuddyAnimator`).
     let clips: ClipSet<ClipID>
     /// The clips of leaving the screen and coming back, played by `BuddyEscape`.
@@ -21,12 +19,10 @@ struct Buddy: Sendable {
     /// The reaction to a click, played as an interjection outside the state machine.
     let petted: AnimationClip
 
-    /// The same buddy under another ID and name, showing the value of `sprites` in every layer that shows one of its
-    /// keys.
-    func replacingSprites(_ sprites: [PixelSprite: PixelSprite], id: BuddyID, name: String) -> Buddy {
+    /// The same buddy under another ID, showing the value of `sprites` in every layer that shows one of its keys.
+    func replacingSprites(_ sprites: [PixelSprite: PixelSprite], id: BuddyID) -> Buddy {
         let replace = { (clip: AnimationClip) in clip.replacingSprites(sprites) }
-        return Buddy(
-            id: id, name: name, clips: clips.map(replace), escape: escape.map(replace), petted: replace(petted))
+        return Buddy(id: id, clips: clips.map(replace), escape: escape.map(replace), petted: replace(petted))
     }
 
     /// Every clip with a name: the state machine's, the escape's and the petting reaction.
@@ -58,6 +54,14 @@ struct ClipSet<ID: CaseIterable & Hashable & Sendable>: Sendable {
 enum BuddyID: String, CaseIterable, Sendable {
     case sheep
     case blackSheep
+
+    /// Shown in the menu bar. Known without building the buddy.
+    var name: String {
+        switch self {
+        case .sheep: "Sheep"
+        case .blackSheep: "Black Sheep"
+        }
+    }
 
     var buddy: Buddy {
         switch self {

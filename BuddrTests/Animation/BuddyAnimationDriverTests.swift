@@ -57,7 +57,7 @@ struct BuddyAnimationDriverTests {
 
         let stub = Buddy.stub()
         driver.setBuddy(stub)
-        #expect(driver.buddy.name == stub.name)
+        #expect(driver.buddy.clips[.working] == stub.clips[.working])
         #expect(driver.sprite == stub.clips[.working].frames[0].sprite)
         await driver.stop()
     }

@@ -26,11 +26,11 @@
                     .fixedSize()
                 }
                 LazyVGrid(columns: Self.columns, spacing: 4) {
-                    ForEach(controls.animation?.buddy.allClips ?? [], id: \.name) { item in
+                    ForEach(controls.clipNames, id: \.self) { name in
                         Button {
-                            controls.play(item.clip)
+                            controls.play(name)
                         } label: {
-                            Text(item.name)
+                            Text(name)
                                 .frame(maxWidth: .infinity)
                         }
                     }

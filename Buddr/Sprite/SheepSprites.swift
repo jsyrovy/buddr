@@ -3,8 +3,7 @@
 // own, which stays the sheep whichever buddy is on the screen. The current sheep is a placeholder.
 
 enum SheepSprites {
-    static let buddy = Buddy(
-        id: .sheep, name: "Sheep", clips: ClipSet(clip), escape: ClipSet(escapeClip), petted: petted)
+    static let buddy = Buddy(id: .sheep, clips: ClipSet(clip), escape: ClipSet(escapeClip), petted: petted)
 
     /// Top-left corner of the sheep body on the canvas when standing.
     static let sheepX = 3

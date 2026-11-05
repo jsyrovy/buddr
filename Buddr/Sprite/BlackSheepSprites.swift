@@ -11,5 +11,5 @@ enum BlackSheepSprites {
 
     static let buddy = SheepSprites.buddy.replacingSprites(
         Dictionary(uniqueKeysWithValues: SheepSprites.figure.map { ($0, $0.recolored(colors)) }),
-        id: .blackSheep, name: "Black Sheep")
+        id: .blackSheep)
 }

@@ -288,7 +288,7 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 
 ## Buddies
 
-The character on the screen is a buddy (`Buddy`): its name and every clip – the state machine's (`Buddy.clips`, one
+The character on the screen is a buddy (`Buddy`): every clip it plays – the state machine's (`Buddy.clips`, one
 per `ClipID`), the escape's (`Buddy.escape`, one per `EscapeClipID`) and the petting reaction. There are two so far: the sheep (the default)
 and the black sheep.
 
@@ -301,7 +301,8 @@ and the black sheep.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
-- `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`.
+- `BuddyID` lists every buddy in the order of the menu with its name (`BuddyID.name`, so the menu doesn't build a
+  buddy it doesn't show); `BuddyID.buddy` gives its `Buddy`.
 - Chosen in the menu bar ("Buddy": every buddy by name, then "Take Turns" with "every 15 / 30 / 60 min";
   `Preferences.buddyChoice`, `BuddyChoice`, key `buddy`: a `BuddyID` or `takeTurns`, default `sheep`; a saved buddy
   that isn't there falls back to the sheep; `Preferences.buddyTurnMinutes`, key `buddyTurnMinutes`, default 30). The
@@ -309,9 +310,10 @@ and the black sheep.
 - Taking turns (`BuddyTurns`): after every turn (real time) the next buddy in the order of `BuddyID` comes, the first
   after the last. A turn ends only while no agent needs the user (`AgentStatus.needsAttention`, the statuses the plate
   names): a change of buddies must never cover a `blocked` or `done` buddy, so an ended turn waits for calm.
-  Choosing "Take Turns" or another turn length starts a whole turn of the buddy on the screen. The buddy on the screen is saved
-  (`Preferences.shownBuddy`, key `shownBuddy`), so after a restart the turns go on with it. Logs: category
-  `buddies`.
+  Choosing "Take Turns" or another turn length starts a whole turn of the buddy on the screen.
+- The buddy on the screen (or on its way there) is `Preferences.shownBuddy` (key `shownBuddy`, written at launch and
+  on every change, not a setting): the menu bar list names it, and after a restart the turns go on with it. Logs:
+  category `buddies`.
 - Switching (`BuddyEscape.switchBuddy(to:)`): the current buddy leaves like when it hides (a yawn, a slow walk), is
   replaced once the panel is hidden, and the new one comes back running. While the buddy is away for another reason
   (fullscreen, hiding), it is replaced at once and the new one comes back with that reason gone. With the animation
@@ -426,8 +428,8 @@ Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle
   calm. The countdown (real time) starts again on every status change, settings change, petting and `show()`; at
   launch the buddy is visible and the countdown runs from the start. While hidden, a change between two calm statuses
   (e.g. `idle` → `working` in `unlessNeeded`) keeps it hidden.
-- The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (the buddy's name, `BuddyHiding.show()`), which
-  calls it back until another `hideMinutes` of calm.
+- The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (the buddy's name,
+  `BuddyHiding.show()`), which calls it back until another `hideMinutes` of calm.
 - Moving uses `BuddyEscape` with the same route as the fullscreen escape. When hiding is the only reason, the buddy
   leaves bored instead of startled: a yawn (`EscapeClipID.yawn`; if the reason is gone by its end, it stays),
   then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.

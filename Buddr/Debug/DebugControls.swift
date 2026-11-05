@@ -36,8 +36,14 @@
             return plate ?? NamePlate(machine: nil, workspace: "debug", title: status.rawValue, more: 0)
         }
 
-        /// Plays `clip` right away in place of whatever plays.
-        func play(_ clip: AnimationClip) {
+        /// The names of every clip (`Buddy.allClips`), the same for every buddy.
+        var clipNames: [String] {
+            animation?.buddy.allClips.map(\.name) ?? []
+        }
+
+        /// Plays the clip named `name` of the buddy on the screen right away, in place of whatever plays.
+        func play(_ name: String) {
+            guard let clip = animation?.buddy.allClips.first(where: { $0.name == name })?.clip else { return }
             if loops {
                 animation?.loop(clip, mirrored: mirrored)
             } else {

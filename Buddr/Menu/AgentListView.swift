@@ -7,8 +7,6 @@ struct AgentListView: View {
     let store: SnapshotStore
     @Bindable var preferences: Preferences
     let hiding: BuddyHiding
-    /// Names the buddy.
-    let animation: BuddyAnimationDriver
     /// Called when the list is shown, to poll right away.
     let onOpen: @MainActor () -> Void
 
@@ -21,7 +19,7 @@ struct AgentListView: View {
                         .font(.headline)
                     Spacer()
                     if hiding.isHidden {
-                        Button("Show \(animation.buddy.name)") {
+                        Button("Show \(preferences.shownBuddy.name)") {
                             hiding.show()
                         }
                     }
@@ -81,7 +79,7 @@ private struct BuddySettings: View {
         HStack {
             Picker("Buddy", selection: $preferences.buddyChoice) {
                 ForEach(BuddyID.allCases, id: \.self) { id in
-                    Text(id.buddy.name).tag(BuddyChoice.one(id))
+                    Text(id.name).tag(BuddyChoice.one(id))
                 }
                 Divider()
                 Text("Take Turns").tag(BuddyChoice.takingTurns)

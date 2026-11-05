@@ -9,8 +9,6 @@ import Observation
 @Observable
 final class BuddyAnimationDriver {
     private(set) var sprite: SpriteFrame
-    /// Whose clips play: the state machine's and those of `BuddyEscape` and petting.
-    private(set) var buddy: Buddy
 
     @ObservationIgnored private var animator: BuddyAnimator
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
@@ -37,12 +35,15 @@ final class BuddyAnimationDriver {
         self.animator = animator
         self.sleep = sleep
         self.sprite = animator.frame.sprite
-        self.buddy = animator.buddy
+    }
+
+    /// Whose clips play: the state machine's and those of `BuddyEscape` and petting.
+    var buddy: Buddy {
+        animator.buddy
     }
 
     /// See `BuddyAnimator.setBuddy(_:)`. A script that plays keeps its frames.
     func setBuddy(_ buddy: Buddy) {
-        self.buddy = buddy
         animator.setBuddy(buddy)
         publish()
     }
