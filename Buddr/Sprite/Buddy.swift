@@ -4,6 +4,7 @@
 ///
 /// What every buddy has to do, checked by the tests for every `BuddyID`:
 /// - Face left: running to the right plays the mirrored frames.
+/// - Keep every layer of every frame on the canvas: something coming in from an edge is a cut-off sprite.
 /// - Stand on the bottom row of the canvas, centered horizontally: the name plate is placed under its feet.
 /// - Keep every clip short (at most 1.6 s): a clip plays to its end before a state change shows.
 /// - Make every still pose one short frame of the pictures of its state's clip, so it shows the same sign.
