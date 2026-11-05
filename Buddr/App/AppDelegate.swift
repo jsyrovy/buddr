@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let animation: BuddyAnimationDriver
     let snapshots = SnapshotStore()
     let hiding = BuddyHiding()
+    let turns: BuddyTurns
     #if DEBUG
         let debug = DebugControls()
     #endif
@@ -19,7 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     override init() {
         let preferences = Preferences()
         self.preferences = preferences
-        animation = BuddyAnimationDriver(animator: BuddyAnimator(buddy: preferences.buddyID.buddy))
+        let buddy = preferences.buddyAtLaunch
+        animation = BuddyAnimationDriver(animator: BuddyAnimator(buddy: buddy.buddy))
+        turns = BuddyTurns(current: buddy)
         super.init()
     }
 
@@ -50,6 +53,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let preferences = preferences
+        let turns = turns
+        turns.onChange = { buddy in
+            preferences.shownBuddy = buddy
+            escape.switchBuddy(to: buddy.buddy)
+        }
         let snapshots = snapshots
         #if DEBUG
             let debug = debug
@@ -63,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             #endif
             animation.setStatus(status)
             hiding.setStatus(status)
+            turns.setStatus(status)
             var plate = attention.update(with: snapshot, status: status)
             #if DEBUG
                 plate = debug.namePlate(plate, for: status)
@@ -88,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 watchesRemoteMachines: preferences.watchesRemoteMachines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))
-            escape.switchBuddy(to: preferences.buddyID.buddy)
+            turns.setChoice(preferences.buddyChoice, every: .seconds(preferences.buddyTurnMinutes * 60))
             panelController.setNamePlateFields(preferences.shownNamePlateFields)
         }
         applyPreferences()

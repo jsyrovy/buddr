@@ -54,8 +54,9 @@ Buddr/
               plate window), PanelPositionStore (last position in UserDefaults), BuddyView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
               FullscreenMonitor (notifications, polling), EscapeRoute (pure) + BuddyEscape (runs off the screen and
-              back), HideMode (pure) + BuddyHiding (hides the buddy after a while of calm), NamePlatePanel (child
-              panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
+              back), HideMode (pure) + BuddyHiding (hides the buddy after a while of calm), BuddyChoice +
+              BuddyTurns (which buddy is on the screen, taking turns), NamePlatePanel (child panel) + NamePlateLayout
+              (pure: plate scale, reserved room, placement)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), NamePlateSprite (the plate's look), PixelFont
@@ -298,9 +299,17 @@ per `ClipID`), the escape's (`Buddy.Escape`) and the petting reaction. The sheep
 - `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`. Debug builds add the black
   sheep (`BuddyID.blackSheep`, `Debug/BlackSheep.swift`: the sheep's body and head recolored), so the choice can be
   tried before there is a second real buddy.
-- Chosen in the menu bar ("Buddy", `Preferences.buddyID`, key `buddy`, default `sheep`; a saved buddy that isn't there
-  falls back to the sheep). The pop-up shows only while there is more than one buddy, so Release builds don't show it
-  yet. The menu bar icon stays the sheep.
+- Chosen in the menu bar ("Buddy": every buddy by name, then "Take Turns" with "every 15 / 30 / 60 min";
+  `Preferences.buddyChoice`, `BuddyChoice`, key `buddy`: a `BuddyID` or `takeTurns`, default `sheep`; a saved buddy
+  that isn't there falls back to the sheep; `Preferences.buddyTurnMinutes`, key `buddyTurnMinutes`, default 30). The
+  pop-up shows only while there is more than one buddy, so Release builds don't show it yet. The menu bar icon stays
+  the sheep.
+- Taking turns (`BuddyTurns`): after every turn (real time) the next buddy in the order of `BuddyID` comes, the first
+  after the last. A turn ends only while no agent waits for the user (calm in `HideMode.unlessNeeded`): a change of
+  buddies must never cover a `blocked` or `done` buddy, so an ended turn waits for calm. Choosing "Take Turns" or
+  another turn length starts a whole turn of the buddy on the screen. The buddy on the screen is saved
+  (`Preferences.shownBuddy`, key `shownBuddy`), so after a restart the turns go on with it. Logs: category
+  `buddies`.
 - Switching (`BuddyEscape.switchBuddy(to:)`): the current buddy leaves like when it hides (a yawn, a slow walk), is
   replaced once the panel is hidden, and the new one comes back running. While the buddy is away for another reason
   (fullscreen, hiding), it is replaced at once and the new one comes back with that reason gone. With the animation

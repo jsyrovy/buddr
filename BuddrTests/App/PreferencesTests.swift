@@ -32,23 +32,55 @@ struct PreferencesTests {
     }
 
     @Test func showsTheSheepByDefault() {
-        #expect(Preferences(defaults: defaults).buddyID == .sheep)
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.buddyChoice == .one(.sheep))
+        #expect(preferences.buddyTurnMinutes == Preferences.defaultBuddyTurnMinutes)
+        #expect(preferences.buddyAtLaunch == .sheep)
     }
 
-    @Test func buddyIsSavedAndReported() {
+    @Test func buddyChoiceIsSavedAndReported() {
         let preferences = Preferences(defaults: defaults)
         var changes = 0
         preferences.onChange = { changes += 1 }
 
-        preferences.buddyID = .blackSheep
+        preferences.buddyChoice = .one(.blackSheep)
+        #expect(Preferences(defaults: defaults).buddyChoice == .one(.blackSheep))
+        preferences.buddyChoice = .takingTurns
+        preferences.buddyTurnMinutes = 15
 
-        #expect(changes == 1)
-        #expect(Preferences(defaults: defaults).buddyID == .blackSheep)
+        #expect(changes == 3)
+        let saved = Preferences(defaults: defaults)
+        #expect(saved.buddyChoice == .takingTurns)
+        #expect(saved.buddyTurnMinutes == 15)
     }
 
-    @Test func buddyThatIsNotThereFallsBackToTheSheep() {
+    @Test func invalidSavedBuddyChoiceFallsBackToTheDefaults() {
         defaults.set("unicorn", forKey: "buddy")
-        #expect(Preferences(defaults: defaults).buddyID == .sheep)
+        defaults.set(7, forKey: "buddyTurnMinutes")
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.buddyChoice == .one(.sheep))
+        #expect(preferences.buddyTurnMinutes == Preferences.defaultBuddyTurnMinutes)
+    }
+
+    @Test func shownBuddyIsSavedWithoutReportingAChange() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.shownBuddy = .blackSheep
+
+        #expect(changes == 0)
+        #expect(Preferences(defaults: defaults).shownBuddy == .blackSheep)
+    }
+
+    @Test func buddyAtLaunchIsTheChosenOneOrTheOneShownLast() {
+        let preferences = Preferences(defaults: defaults)
+        preferences.shownBuddy = .blackSheep
+        #expect(preferences.buddyAtLaunch == .sheep)
+        preferences.buddyChoice = .takingTurns
+        #expect(preferences.buddyAtLaunch == .blackSheep)
+        defaults.set("unicorn", forKey: "shownBuddy")
+        #expect(Preferences(defaults: defaults).buddyAtLaunch == .sheep)
     }
 
     @Test func readsBothBackendsByDefault() {

@@ -7,7 +7,9 @@ import Observation
 final class Preferences {
     // Keys, choices and defaults of the settings that change the cost (all but the name plate) are mirrored in
     // `Settings.read()` of scripts/measure.swift.
-    private static let buddyKey = "buddy"
+    private static let buddyChoiceKey = "buddy"
+    private static let buddyTurnMinutesKey = "buddyTurnMinutes"
+    private static let shownBuddyKey = "shownBuddy"
     private static let backendChoiceKey = "agentBackends"
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
@@ -17,6 +19,9 @@ final class Preferences {
     private static let showsNamePlateKey = "showsNamePlate"
     private static let namePlateFieldsKey = "namePlateFields"
 
+    /// The choices for `buddyTurnMinutes`.
+    static let buddyTurnMinutesChoices = [15, 30, 60]
+    static let defaultBuddyTurnMinutes = 30
     /// The choices for `animationSeconds`.
     static let animationSecondsChoices = [5, 10, 30, 60]
     static let defaultAnimationSeconds = 10
@@ -24,11 +29,35 @@ final class Preferences {
     static let hideMinutesChoices = [1, 5, 15, 30]
     static let defaultHideMinutes = 5
 
-    /// Which buddy sits on the screen. The sheep by default.
-    var buddyID: BuddyID {
+    /// Which buddy sits on the screen, or whether they take turns. The sheep by default.
+    var buddyChoice: BuddyChoice {
         didSet {
-            defaults.set(buddyID.rawValue, forKey: Self.buddyKey)
+            defaults.set(buddyChoice.rawValue, forKey: Self.buddyChoiceKey)
             onChange?()
+        }
+    }
+
+    /// How long a buddy's turn lasts while they take turns, one of `buddyTurnMinutesChoices`.
+    var buddyTurnMinutes: Int {
+        didSet {
+            defaults.set(buddyTurnMinutes, forKey: Self.buddyTurnMinutesKey)
+            onChange?()
+        }
+    }
+
+    /// The buddy on the screen last, so taking turns goes on with it after a restart. Not a setting: saved without
+    /// `onChange`.
+    var shownBuddy: BuddyID {
+        didSet {
+            defaults.set(shownBuddy.rawValue, forKey: Self.shownBuddyKey)
+        }
+    }
+
+    /// The buddy to show at launch: the chosen one, or the one shown last while they take turns.
+    var buddyAtLaunch: BuddyID {
+        switch buddyChoice {
+        case .one(let id): id
+        case .takingTurns: shownBuddy
         }
     }
 
@@ -125,7 +154,12 @@ final class Preferences {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         // A buddy that isn't there (anymore) falls back to the sheep.
-        buddyID = defaults.string(forKey: Self.buddyKey).flatMap { BuddyID(rawValue: $0) } ?? .sheep
+        buddyChoice =
+            defaults.string(forKey: Self.buddyChoiceKey).flatMap { BuddyChoice(rawValue: $0) } ?? .one(.sheep)
+        let turnMinutes = defaults.integer(forKey: Self.buddyTurnMinutesKey)
+        buddyTurnMinutes =
+            Self.buddyTurnMinutesChoices.contains(turnMinutes) ? turnMinutes : Self.defaultBuddyTurnMinutes
+        shownBuddy = defaults.string(forKey: Self.shownBuddyKey).flatMap { BuddyID(rawValue: $0) } ?? .sheep
         backendChoice =
             defaults.string(forKey: Self.backendChoiceKey).flatMap { BackendChoice(rawValue: $0) } ?? .both
         watchesRemoteMachines = defaults.object(forKey: Self.watchesRemoteMachinesKey) as? Bool ?? true

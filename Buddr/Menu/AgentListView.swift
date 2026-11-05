@@ -73,17 +73,30 @@ struct AgentListView: View {
     }
 }
 
-/// "Buddy: Sheep / …", shown only when there is more than one.
+/// "Buddy: Sheep / … / Take Turns", and how often they take turns. Shown only when there is more than one buddy.
 private struct BuddySettings: View {
     @Bindable var preferences: Preferences
 
     var body: some View {
-        Picker("Buddy", selection: $preferences.buddyID) {
-            ForEach(BuddyID.allCases, id: \.self) { id in
-                Text(id.buddy.name).tag(id)
+        HStack {
+            Picker("Buddy", selection: $preferences.buddyChoice) {
+                ForEach(BuddyID.allCases, id: \.self) { id in
+                    Text(id.buddy.name).tag(BuddyChoice.one(id))
+                }
+                Divider()
+                Text("Take Turns").tag(BuddyChoice.takingTurns)
+            }
+            .fixedSize()
+            if preferences.buddyChoice == .takingTurns {
+                Picker("Turn", selection: $preferences.buddyTurnMinutes) {
+                    ForEach(Preferences.buddyTurnMinutesChoices, id: \.self) { minutes in
+                        Text("every \(minutes) min").tag(minutes)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
         }
-        .fixedSize()
     }
 }
 
