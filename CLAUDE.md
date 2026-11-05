@@ -75,7 +75,8 @@ Buddr/
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
   Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the buddy away, override the
-              status, a long name plate), DebugSection (its orange box in the menu bar list)
+              status, a long name plate), DebugSection (its orange box in the menu bar list), BlackSheep (a second
+              buddy for trying out the choice)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs, herdr-core API answers (`core-*`)
   Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, ManualSleeper, ScriptedFetch + SnapshotRecorder,
@@ -119,7 +120,7 @@ CHANGELOG.md  one section per released version
   `BuddyPanel.clickTolerance` points (`onClick`); it pets the buddy (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
-  agent list, the settings ("Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
+  agent list, the settings ("Buddy" while there is more than one, "Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
   Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
   width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
   itself to show one).
@@ -177,9 +178,9 @@ CHANGELOG.md  one section per released version
   plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" /
   "Come Back" (`BuddyEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
   animation, hiding and the name plate (not for the list) – overridden to `blocked` / `done` without an agent in it,
-  the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). Release
-  builds contain none of it;
-  check with `CONFIG=Release make build` after touching it.
+  the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). A second
+  buddy, the black sheep (`BuddyID.blackSheep`, the sheep recolored), makes the "Buddy" setting show up. Release
+  builds contain none of it; check with `CONFIG=Release make build` after touching it.
 - Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, sources other than
   herdr and herdr-core.
 
@@ -294,7 +295,16 @@ per `ClipID`), the escape's (`Buddy.Escape`) and the petting reaction. The sheep
   buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved position, the room
   for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon (Buddr's own, the
   sheep).
-- `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`.
+- `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`. Debug builds add the black
+  sheep (`BuddyID.blackSheep`, `Debug/BlackSheep.swift`: the sheep's body and head recolored), so the choice can be
+  tried before there is a second real buddy.
+- Chosen in the menu bar ("Buddy", `Preferences.buddyID`, key `buddy`, default `sheep`; a saved buddy that isn't there
+  falls back to the sheep). The pop-up shows only while there is more than one buddy, so Release builds don't show it
+  yet. The menu bar icon stays the sheep.
+- Switching (`BuddyEscape.switchBuddy(to:)`): the current buddy leaves like when it hides (a yawn, a slow walk), is
+  replaced once the panel is hidden, and the new one comes back running. While the buddy is away for another reason
+  (fullscreen, hiding), it is replaced at once and the new one comes back with that reason gone. With the animation
+  `off` the panel is just hidden and shown again.
 - What every buddy has to do (`Buddy`, checked for every `BuddyID` in `BuddyClipsTests`): face left (running right
   is mirrored), stand at rest on the bottom row of the canvas and centered (the plate is placed under it), keep every
   clip ≤ 1.6 s, make still poses one short frame of their clip's pictures, dim only `unknown`, use valid grids.
@@ -404,7 +414,7 @@ Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle
   calm. The countdown (real time) starts again on every status change, settings change, petting and `show()`; at
   launch the buddy is visible and the countdown runs from the start. While hidden, a change between two calm statuses
   (e.g. `idle` → `working` in `unlessNeeded`) keeps it hidden.
-- The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`BuddyHiding.show()`), which
+- The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (the buddy's name, `BuddyHiding.show()`), which
   calls it back until another `hideMinutes` of calm.
 - Moving uses `BuddyEscape` with the same route as the fullscreen escape. When hiding is the only reason, the buddy
   leaves bored instead of startled: a yawn (`Buddy.Escape.yawn`; if the reason is gone by its end, it stays),

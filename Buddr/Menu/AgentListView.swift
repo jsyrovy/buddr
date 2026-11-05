@@ -7,6 +7,8 @@ struct AgentListView: View {
     let store: SnapshotStore
     @Bindable var preferences: Preferences
     let hiding: BuddyHiding
+    /// Names the buddy.
+    let animation: BuddyAnimationDriver
     /// Called when the list is shown, to poll right away.
     let onOpen: @MainActor () -> Void
 
@@ -19,7 +21,7 @@ struct AgentListView: View {
                         .font(.headline)
                     Spacer()
                     if hiding.isHidden {
-                        Button("Show Sheep") {
+                        Button("Show \(animation.buddy.name)") {
                             hiding.show()
                         }
                     }
@@ -40,6 +42,9 @@ struct AgentListView: View {
                 Divider()
             #endif
             VStack(alignment: .leading, spacing: 8) {
+                if BuddyID.allCases.count > 1 {
+                    BuddySettings(preferences: preferences)
+                }
                 BackendSettings(preferences: preferences)
                 AnimationSettings(preferences: preferences)
                 HideSettings(preferences: preferences)
@@ -65,6 +70,20 @@ struct AgentListView: View {
     /// "1 blocked · 2 working", or "No agents".
     private static func summary(_ counts: [AgentOverview.StatusCount]) -> String {
         counts.isEmpty ? "No agents" : counts.map { "\($0.count) \($0.status.rawValue)" }.joined(separator: " · ")
+    }
+}
+
+/// "Buddy: Sheep / …", shown only when there is more than one.
+private struct BuddySettings: View {
+    @Bindable var preferences: Preferences
+
+    var body: some View {
+        Picker("Buddy", selection: $preferences.buddyID) {
+            ForEach(BuddyID.allCases, id: \.self) { id in
+                Text(id.buddy.name).tag(id)
+            }
+        }
+        .fixedSize()
     }
 }
 

@@ -98,10 +98,17 @@ struct Buddy: Sendable {
 /// Every buddy there is, in the order of the menu.
 enum BuddyID: String, CaseIterable, Sendable {
     case sheep
+    #if DEBUG
+        /// The sheep with dark wool, to try out choosing buddies before there is a second one.
+        case blackSheep
+    #endif
 
     var buddy: Buddy {
         switch self {
         case .sheep: SheepSprites.buddy
+        #if DEBUG
+            case .blackSheep: SheepSprites.blackSheep
+        #endif
         }
     }
 }

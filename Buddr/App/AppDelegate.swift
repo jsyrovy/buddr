@@ -2,23 +2,30 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let preferences = Preferences()
+    let preferences: Preferences
+    /// Created before the menu bar list, which names the buddy.
+    let animation: BuddyAnimationDriver
     let snapshots = SnapshotStore()
     let hiding = BuddyHiding()
     #if DEBUG
         let debug = DebugControls()
     #endif
 
-    private var animation: BuddyAnimationDriver?
     private var panelController: BuddyPanelController?
     private var herdrMonitor: HerdrMonitor?
     private var fullscreenMonitor: FullscreenMonitor?
     private var escape: BuddyEscape?
 
+    override init() {
+        let preferences = Preferences()
+        self.preferences = preferences
+        animation = BuddyAnimationDriver(animator: BuddyAnimator(buddy: preferences.buddyID.buddy))
+        super.init()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let animation = BuddyAnimationDriver()
+        let animation = animation
         animation.start()
-        self.animation = animation
 
         let panelController = BuddyPanelController(animation: animation)
         let hiding = hiding
@@ -81,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 watchesRemoteMachines: preferences.watchesRemoteMachines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))
+            escape.switchBuddy(to: preferences.buddyID.buddy)
             panelController.setNamePlateFields(preferences.shownNamePlateFields)
         }
         applyPreferences()

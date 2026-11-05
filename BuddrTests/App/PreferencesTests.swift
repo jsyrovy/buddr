@@ -31,6 +31,26 @@ struct PreferencesTests {
         #expect(!Preferences(defaults: defaults).watchesRemoteMachines)
     }
 
+    @Test func showsTheSheepByDefault() {
+        #expect(Preferences(defaults: defaults).buddyID == .sheep)
+    }
+
+    @Test func buddyIsSavedAndReported() {
+        let preferences = Preferences(defaults: defaults)
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.buddyID = .blackSheep
+
+        #expect(changes == 1)
+        #expect(Preferences(defaults: defaults).buddyID == .blackSheep)
+    }
+
+    @Test func buddyThatIsNotThereFallsBackToTheSheep() {
+        defaults.set("unicorn", forKey: "buddy")
+        #expect(Preferences(defaults: defaults).buddyID == .sheep)
+    }
+
     @Test func readsBothBackendsByDefault() {
         #expect(Preferences(defaults: defaults).backendChoice == .both)
     }

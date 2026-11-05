@@ -1,7 +1,8 @@
 import AppKit
 
 /// Makes the buddy run off the screen while it should be away – a fullscreen window covers its display, or it hides
-/// (`BuddyHiding`) – and come back once there is no reason left.
+/// (`BuddyHiding`) – and come back once there is no reason left. Also switches buddies (`switchBuddy(to:)`): the
+/// current one leaves like when it hides, and the new one comes back.
 ///
 /// Running away: the current clip plays to its end, a startled hop (or a yawn when the buddy only hides), turning to the
 /// nearer edge, running (walking) until the panel is off the screen, then the panel is hidden. Coming back: the panel
@@ -16,6 +17,8 @@ final class BuddyEscape {
     private let animation: BuddyAnimationDriver
     /// Why the buddy should be away; it is away while there is any.
     private var reasons: Set<Reason> = []
+    /// The buddy to switch to once the current one is away.
+    private var nextBuddy: Buddy?
     private var isAway = false
     private var task: Task<Void, Never>?
     /// Panel origin to come back to, kept from the start of an escape until the buddy is back.
@@ -58,9 +61,25 @@ final class BuddyEscape {
         } else {
             reasons.remove(reason)
         }
+        update()
+    }
+
+    /// Shows `buddy` instead of the current one: the current one wanders off, the new one comes back. While the buddy
+    /// is away for another reason, it is switched at once and the new one comes back with that reason gone.
+    func switchBuddy(to buddy: Buddy) {
+        nextBuddy = buddy.id == animation.buddy.id ? nil : buddy
+        update()
+    }
+
+    private func update() {
         guard task == nil else { return }
         task = Task {
-            while wantsAway != isAway {
+            while true {
+                if isAway, let nextBuddy {
+                    animation.setBuddy(nextBuddy)
+                    self.nextBuddy = nil
+                }
+                guard wantsAway != isAway else { break }
                 if wantsAway {
                     await runAway()
                 } else {
@@ -72,7 +91,7 @@ final class BuddyEscape {
     }
 
     private var wantsAway: Bool {
-        !reasons.isEmpty
+        !reasons.isEmpty || nextBuddy != nil
     }
 
     private func runAway() async {
@@ -92,7 +111,8 @@ final class BuddyEscape {
             hide()
             return
         }
-        // Hiding alone is no hurry: the buddy yawns and wanders off. A fullscreen window startles it.
+        // Hiding or making room for another buddy is no hurry: the buddy yawns and wanders off. A fullscreen window
+        // startles it.
         let wandersOff = !reasons.contains(where: \.startles)
         if wandersOff {
             await animation.play(animation.buddy.escape.yawn)
