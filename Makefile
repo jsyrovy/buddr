@@ -9,11 +9,14 @@ INSTALL_DIR   ?= $(HOME)/Applications
 RELEASE_APP   := $(DERIVED_DATA)/Build/Products/Release/Buddr.app
 RESULT_BUNDLE := build/Test.xcresult
 MEASURE       := build/measure
+SCREENSHOTS   := build/screenshots
+# The app's sources without its @main entry point, compiled into the screenshots script.
+APP_SOURCES   := $(shell find Buddr -name '*.swift' ! -name BuddrApp.swift)
 
 XCODEBUILD    := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIG) \
 	-destination 'platform=macOS,arch=$(ARCH)' -derivedDataPath $(DERIVED_DATA) -quiet
 
-.PHONY: build test coverage run install uninstall release publish measure format lint clean
+.PHONY: build test coverage run install uninstall release publish measure screenshots format lint clean
 
 build:
 	$(XCODEBUILD) build
@@ -61,6 +64,14 @@ measure: $(MEASURE)
 $(MEASURE): scripts/measure.swift
 	mkdir -p build
 	xcrun swiftc -O -o $@ $<
+
+# The README images in docs/images, rendered from the app's code (scripts/screenshots.swift).
+screenshots: $(SCREENSHOTS)
+	$(SCREENSHOTS)
+
+$(SCREENSHOTS): scripts/screenshots.swift $(APP_SOURCES)
+	mkdir -p build
+	xcrun swiftc -swift-version 6 -parse-as-library -module-name Buddr -target $(ARCH)-apple-macos14.0 -o $@ $^
 
 format:
 	xcrun swift-format format --in-place --recursive --parallel $(SOURCES)

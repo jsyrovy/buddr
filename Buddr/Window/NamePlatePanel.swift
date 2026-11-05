@@ -10,7 +10,8 @@ final class NamePlatePanel: FloatingPanel {
 
     init(scale: Int) {
         self.scale = scale
-        hostingView = NSHostingView(rootView: Self.canvas(PixelSprite(width: 0, height: 0, pixels: []), scale: scale))
+        hostingView = NSHostingView(
+            rootView: SpriteCanvas(sprite: PixelSprite(width: 0, height: 0, pixels: []), scale: scale))
         // The size follows the text and is set explicitly; SwiftUI updates shouldn't resize the window.
         hostingView.sizingOptions = []
         super.init(contentRect: .zero)
@@ -21,14 +22,8 @@ final class NamePlatePanel: FloatingPanel {
     /// Shows `label` and resizes the panel to fit it, keeping its origin.
     func show(_ label: NamePlate.Label) {
         let sprite = SheepSprites.Plate.sprite(for: label)
-        hostingView.rootView = Self.canvas(sprite, scale: scale)
+        hostingView.rootView = SpriteCanvas(sprite: sprite, scale: scale)
         let size = SpriteCanvas.size(gridWidth: sprite.width, gridHeight: sprite.height, scale: scale)
         setFrame(NSRect(origin: frame.origin, size: size), display: true)
-    }
-
-    private static func canvas(_ sprite: PixelSprite, scale: Int) -> SpriteCanvas {
-        SpriteCanvas(
-            frame: SpriteFrame(layers: [SpriteLayer(sprite: sprite, x: 0, y: 0)]), gridWidth: sprite.width,
-            gridHeight: sprite.height, scale: scale)
     }
 }

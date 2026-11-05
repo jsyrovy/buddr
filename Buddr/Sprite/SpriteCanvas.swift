@@ -44,6 +44,15 @@ struct SpriteCanvas: View {
     }
 }
 
+extension SpriteCanvas {
+    /// A canvas exactly as large as `sprite`, drawing just it.
+    init(sprite: PixelSprite, scale: Int) {
+        self.init(
+            frame: SpriteFrame(layers: [SpriteLayer(sprite: sprite, x: 0, y: 0)]), gridWidth: sprite.width,
+            gridHeight: sprite.height, scale: scale)
+    }
+}
+
 extension Color {
     init(_ pixel: PixelColor) {
         self.init(
