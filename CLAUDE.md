@@ -288,17 +288,18 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 
 ## Buddies
 
-The character on the screen is a buddy (`Buddy`): its name and every clip – the state machine's (`Buddy.Clips`, one
-per `ClipID`), the escape's (`Buddy.Escape`) and the petting reaction. There are two so far: the sheep (the default)
+The character on the screen is a buddy (`Buddy`): its name and every clip – the state machine's (`Buddy.clips`, one
+per `ClipID`), the escape's (`Buddy.escape`, one per `EscapeClipID`) and the petting reaction. There are two so far: the sheep (the default)
 and the black sheep.
 
-- Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`. A buddy can also be
-  another one recolored (`Buddy.recolored`): the black sheep (`BlackSheepSprites.swift`) is the sheep's figure
-  (`SheepSprites.figure`, every body and head) with dark wool and a light face and legs, its effects unchanged, so
-  redrawing the sheep redraws it too. Shared by every
-  buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved position, the room
-  for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon (Buddr's own, the
-  sheep).
+- Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`: a `ClipSet` of each
+  kind is made from a function with an exhaustive `switch` over the keys, so no clip can be missing. A buddy can also
+  be another one with some sprites replaced (`Buddy.replacingSprites`): the black sheep (`BlackSheepSprites.swift`)
+  is the sheep's figure (`SheepSprites.figure`, every body and head) recolored with dark wool and a light face and
+  legs, its effects unchanged, so redrawing the sheep redraws it too.
+- Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
+  position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
+  (Buddr's own, the sheep).
 - `BuddyID` lists every buddy in the order of the menu; `BuddyID.buddy` gives its `Buddy`.
 - Chosen in the menu bar ("Buddy": every buddy by name, then "Take Turns" with "every 15 / 30 / 60 min";
   `Preferences.buddyChoice`, `BuddyChoice`, key `buddy`: a `BuddyID` or `takeTurns`, default `sheep`; a saved buddy
@@ -316,7 +317,8 @@ and the black sheep.
   `off` the panel is just hidden and shown again.
 - What every buddy has to do (`Buddy`, checked for every `BuddyID` in `BuddyClipsTests`): face left (running right
   is mirrored), stand at rest on the bottom row of the canvas and centered (the plate is placed under it), keep every
-  clip ≤ 1.6 s, make still poses one short frame of their clip's pictures, dim only `unknown`, use valid grids.
+  clip ≤ 1.6 s, make still poses one short frame of their clip's pictures, dim only `unknown`. The sheep's grids are checked
+  against its palette (`SheepSpritesTests`).
 - `BuddyAnimationDriver.setBuddy(_:)` switches right away: the running clip starts again with the new buddy's
   frames, a running script keeps its own. It cuts the animation, so it is meant for a buddy that is off the screen.
 - Adding a buddy: a new `<Name>Sprites.swift` in `Sprite/` with its pixel data and `static let buddy`, a case in
@@ -394,7 +396,7 @@ Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
 - The display is the one of the buddy's home (`BuddyEscape.homeFrame`), not of the panel, which moves off the screen.
 - Logs: category `fullscreen` (on with the window's owner and layer, off).
 
-Escape (`BuddyEscape`, `EscapeRoute`, `Buddy.Escape`):
+Escape (`BuddyEscape`, `EscapeRoute`, `Buddy.escape`):
 
 - Away: the current clip plays to its end (`BuddyAnimationDriver.waitForCycleEnd`), a startled hop, the buddy turns
   to the nearer of the left and right screen edges (tie: right) and gallops until the panel is completely past it;
@@ -426,7 +428,7 @@ Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle
 - The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (the buddy's name, `BuddyHiding.show()`), which
   calls it back until another `hideMinutes` of calm.
 - Moving uses `BuddyEscape` with the same route as the fullscreen escape. When hiding is the only reason, the buddy
-  leaves bored instead of startled: a yawn (`Buddy.Escape.yawn`; if the reason is gone by its end, it stays),
+  leaves bored instead of startled: a yawn (`EscapeClipID.yawn`; if the reason is gone by its end, it stays),
   then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.
   `off` animation just hides the panel.
 - `BuddyEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the buddy is away while there is any.
@@ -534,7 +536,7 @@ tests are cheap and stable:
   grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
   `UnixSocketTransport` (not running, timeouts, cancellation).
 - `Animation/` except `BuddyAnimationDriver` – the `BuddyAnimator` state machine, clip timing, `SplitMix64`.
-- `Sprite/` data and models – every buddy's grids, clips and what every buddy has to do (`Buddy`, checked for every
+- `Sprite/` data and models – the sheep's grids, every buddy's clips and what every buddy has to do (`Buddy`, checked for every
   `BuddyID`), `SheepSprites` frame composition, `PixelSprite`, `SpriteFrame`, the `PixelFont` glyphs, marks and
   truncation, the `NamePlateSprite` sprite.
 - Placement math in `BuddyPanelController` (including the room reserved for the plate), `ScreenGeometry`,

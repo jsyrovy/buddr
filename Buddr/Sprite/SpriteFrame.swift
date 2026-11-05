@@ -10,6 +10,14 @@ struct SpriteFrame: Hashable, Sendable {
     var layers: [SpriteLayer]
     var opacity: Double = 1
 
+    /// The frame with every layer that shows one of the keys of `sprites` showing its value instead.
+    func replacingSprites(_ sprites: [PixelSprite: PixelSprite]) -> SpriteFrame {
+        let replaced = layers.map { layer in
+            sprites[layer.sprite].map { SpriteLayer(sprite: $0, x: layer.x, y: layer.y) } ?? layer
+        }
+        return SpriteFrame(layers: replaced, opacity: opacity)
+    }
+
     /// The frame flipped horizontally within a canvas `canvasWidth` pixels wide.
     func mirrored(canvasWidth: Int) -> SpriteFrame {
         let flipped = layers.map { layer in

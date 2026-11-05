@@ -4,20 +4,7 @@
 
 enum SheepSprites {
     static let buddy = Buddy(
-        id: .sheep,
-        name: "Sheep",
-        clips: Buddy.Clips(
-            idleRest: Clip.idleRest, idleBlink: Clip.idleBlink, idleLook: Clip.idleLook, sleeping: Clip.sleeping,
-            working: Clip.working, blocked: Clip.blocked, doneJump: Clip.doneJump, doneHold: Clip.doneHold,
-            unknown: Clip.unknown, idleStill: Clip.idleStill, sleepingStill: Clip.sleepingStill,
-            workingStill: Clip.workingStill, blockedStill: Clip.blockedStill, doneStill: Clip.doneStill,
-            unknownStill: Clip.unknownStill),
-        escape: Buddy.Escape(
-            startle: Escape.startle, yawn: Escape.yawn, turn: Escape.turn, run: Escape.run, walk: Escape.walk,
-            arrive: Escape.arrive),
-        petted: petted,
-        grids: allGrids.map { Buddy.Grid(name: $0.name, rows: $0.rows) },
-        palette: palette)
+        id: .sheep, name: "Sheep", clips: ClipSet(clip), escape: ClipSet(escapeClip), petted: petted)
 
     /// Top-left corner of the sheep body on the canvas when standing.
     static let sheepX = 3
@@ -218,7 +205,7 @@ enum SheepSprites {
     }
 
     /// Every grid with a name, for validation in tests.
-    private static let allGrids: [(name: String, rows: [String])] = [
+    static let allGrids: [(name: String, rows: [String])] = [
         ("bodyStand", Grid.bodyStand),
         ("bodyTrotA", Grid.bodyTrotA),
         ("bodyTrotB", Grid.bodyTrotB),
@@ -331,6 +318,26 @@ enum SheepSprites {
 
     // Keep every clip short (well under 1.5 s): a clip always plays to its end before the state machine switches.
 
+    private static func clip(_ id: ClipID) -> AnimationClip {
+        switch id {
+        case .idleRest: Clip.idleRest
+        case .idleBlink: Clip.idleBlink
+        case .idleLook: Clip.idleLook
+        case .sleeping: Clip.sleeping
+        case .working: Clip.working
+        case .blocked: Clip.blocked
+        case .doneJump: Clip.doneJump
+        case .doneHold: Clip.doneHold
+        case .unknown: Clip.unknown
+        case .idleStill: Clip.idleStill
+        case .sleepingStill: Clip.sleepingStill
+        case .workingStill: Clip.workingStill
+        case .blockedStill: Clip.blockedStill
+        case .doneStill: Clip.doneStill
+        case .unknownStill: Clip.unknownStill
+        }
+    }
+
     private enum Clip {
         static let idleRest = AnimationClip([
             frame(1_000, sheep())
@@ -394,7 +401,18 @@ enum SheepSprites {
 
     // MARK: Escape
 
-    /// Clips of leaving the screen and of the return (`Buddy.Escape`).
+    private static func escapeClip(_ id: EscapeClipID) -> AnimationClip {
+        switch id {
+        case .startle: Escape.startle
+        case .yawn: Escape.yawn
+        case .turn: Escape.turn
+        case .run: Escape.run
+        case .walk: Escape.walk
+        case .arrive: Escape.arrive
+        }
+    }
+
+    /// Clips of leaving the screen and of the return (`EscapeClipID`).
     private enum Escape {
         /// A startled hop with an open mouth before running away.
         static let startle = AnimationClip([

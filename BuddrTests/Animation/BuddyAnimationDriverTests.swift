@@ -58,7 +58,7 @@ struct BuddyAnimationDriverTests {
         let stub = Buddy.stub()
         driver.setBuddy(stub)
         #expect(driver.buddy.name == stub.name)
-        #expect(driver.sprite == stub.clips.working.frames[0].sprite)
+        #expect(driver.sprite == stub.clips[.working].frames[0].sprite)
         await driver.stop()
     }
 
@@ -74,13 +74,13 @@ struct BuddyAnimationDriverTests {
         #expect(driver.sprite == Self.script.frames[0].sprite)
         // The new buddy shows once the script ends.
         driver.endScript()
-        #expect(driver.sprite == stub.clips.working.frames[0].sprite)
+        #expect(driver.sprite == stub.clips[.working].frames[0].sprite)
         await driver.stop()
     }
 
     // MARK: Scripted clips
 
-    private static let script = BuddyID.sheep.buddy.escape.startle
+    private static let script = BuddyID.sheep.buddy.escape[.startle]
 
     private static func mirrored(_ frame: AnimationFrame) -> SpriteFrame {
         frame.sprite.mirrored(canvasWidth: BuddyCanvas.width)

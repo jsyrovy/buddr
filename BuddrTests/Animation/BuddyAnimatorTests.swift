@@ -276,12 +276,12 @@ struct BuddyAnimatorTests {
         #expect(animator.buddy.name == stub.name)
         #expect(animator.clipID == .working)
         #expect(animator.frameIndex == 0)
-        #expect(animator.frame == stub.clips.working.frames[0])
+        #expect(animator.frame == stub.clips[.working].frames[0])
 
         // The state machine goes on with the new buddy's clips.
         animator.setStatus(.blocked)
         finishCycle(&animator)
         #expect(animator.clipID == .blocked)
-        #expect(animator.clip == stub.clips.blocked)
+        #expect(animator.clip == stub.clips[.blocked])
     }
 }

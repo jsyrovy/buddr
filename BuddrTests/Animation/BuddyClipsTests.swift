@@ -71,7 +71,7 @@ struct BuddyClipsTests {
     /// middle.
     @Test(arguments: BuddyID.allCases)
     func buddyAtRestStandsCenteredOnTheBottomRow(id: BuddyID) throws {
-        let frame = try #require(id.buddy.clips.idleStill.frames.first).sprite
+        let frame = try #require(id.buddy.clips[.idleStill].frames.first).sprite
         let opaque = frame.layers.flatMap { layer in
             (0..<layer.sprite.height).flatMap { y in
                 (0..<layer.sprite.width).compactMap { x in
@@ -83,14 +83,5 @@ struct BuddyClipsTests {
         let right = try #require(opaque.map(\.x).max())
         #expect(opaque.map(\.y).max() == BuddyCanvas.height - 1)
         #expect(abs(left - (BuddyCanvas.width - 1 - right)) <= 1)
-    }
-
-    @Test(arguments: BuddyID.allCases)
-    func everyGridIsValid(id: BuddyID) {
-        let buddy = id.buddy
-        #expect(!buddy.grids.isEmpty)
-        for grid in buddy.grids {
-            #expect(PixelSprite.problems(rows: grid.rows, palette: buddy.palette) == [], "\(grid.name)")
-        }
     }
 }

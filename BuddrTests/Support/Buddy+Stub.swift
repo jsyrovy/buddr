@@ -8,12 +8,6 @@ extension Buddy {
                 repeating: AnimationFrame(sprite: SpriteFrame(layers: []), duration: .milliseconds(100)), count: frames)
         )
         return Buddy(
-            id: .sheep, name: name,
-            clips: Clips(
-                idleRest: clip, idleBlink: clip, idleLook: clip, sleeping: clip, working: clip, blocked: clip,
-                doneJump: clip, doneHold: clip, unknown: clip, idleStill: clip, sleepingStill: clip,
-                workingStill: clip, blockedStill: clip, doneStill: clip, unknownStill: clip),
-            escape: Escape(startle: clip, yawn: clip, turn: clip, run: clip, walk: clip, arrive: clip),
-            petted: clip, grids: [], palette: [:])
+            id: .sheep, name: name, clips: ClipSet { _ in clip }, escape: ClipSet { _ in clip }, petted: clip)
     }
 }

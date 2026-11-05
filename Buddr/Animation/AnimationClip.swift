@@ -17,6 +17,12 @@ struct AnimationClip: Hashable, Sendable {
         frames.reduce(.zero) { $0 + $1.duration }
     }
 
+    /// The clip with every layer that shows one of the keys of `sprites` showing its value instead.
+    func replacingSprites(_ sprites: [PixelSprite: PixelSprite]) -> AnimationClip {
+        AnimationClip(
+            frames.map { AnimationFrame(sprite: $0.sprite.replacingSprites(sprites), duration: $0.duration) })
+    }
+
     /// The clip with every frame flipped horizontally within a canvas `canvasWidth` pixels wide.
     func mirrored(canvasWidth: Int) -> AnimationClip {
         AnimationClip(
@@ -43,4 +49,20 @@ enum ClipID: CaseIterable, Hashable, Sendable {
     case blockedStill
     case doneStill
     case unknownStill
+}
+
+/// Every clip of leaving the screen – escaping from a fullscreen window or wandering off bored – and of coming back.
+enum EscapeClipID: CaseIterable, Hashable, Sendable {
+    /// A startled hop before running away.
+    case startle
+    /// A slow yawn before wandering off.
+    case yawn
+    /// Standing still for a moment, shown mirrored when the buddy turns around.
+    case turn
+    /// Running, looped while the panel moves.
+    case run
+    /// A slow walk, looped while the panel moves.
+    case walk
+    /// Catching breath after coming back.
+    case arrive
 }
