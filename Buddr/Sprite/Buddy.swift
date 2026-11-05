@@ -44,6 +44,7 @@ enum BuddyID: String, CaseIterable, Sendable {
     case sheep
     case rainbowCat
     case ufo
+    case earth
 
     /// Shown in the menu bar. Known without building the buddy.
     var name: String {
@@ -51,6 +52,7 @@ enum BuddyID: String, CaseIterable, Sendable {
         case .sheep: "Sheep"
         case .rainbowCat: "Rainbow Cat"
         case .ufo: "UFO"
+        case .earth: "Earth"
         }
     }
 
@@ -59,6 +61,7 @@ enum BuddyID: String, CaseIterable, Sendable {
         case .sheep: SheepSprites.buddy
         case .rainbowCat: RainbowCatSprites.buddy
         case .ufo: UFOSprites.buddy
+        case .earth: EarthSprites.buddy
         }
     }
 }

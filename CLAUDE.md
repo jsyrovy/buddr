@@ -61,8 +61,8 @@ Buddr/
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), RainbowCatSprites (a cat of its own, with the
-              sheep's effects), UFOSprites (a flying saucer, likewise), NamePlateSprite (the plate's look), PixelFont
-              (glyphs, marks, truncation)
+              sheep's effects), UFOSprites (a flying saucer, likewise), EarthSprites (a planet, likewise),
+              NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -308,6 +308,11 @@ The character on the screen is a buddy (`Buddy`): every clip it plays – the st
   colors into the hull, one per cycle. The sheep rises out of the bottom edge a pixel at a time (cut-off sprites,
   since no layer may reach past the canvas), so the next one never pops up. There is no take-off clip: it jumps 5 px
   up when the state turns `working` and back down after. It uses the sheep's signs too.
+- The Earth (`EarthSprites.swift`) is a globe with a face. Its surface is not drawn frame by frame: `Grid.globe(turn:)`
+  projects a map of the world (32 × 14, a column per 11.25°) onto the disc, so turning by whole columns spins the
+  continents eastwards like on a sphere; the lower right edge is in shade. While agents work it spins a whole turn
+  and the Moon circles it once (in front on the lower half of the orbit, below the face); asleep it shows the night
+  side with city lights; it rolls off spinning. Running right mirrors the continents too. Its signs are the sheep's.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
