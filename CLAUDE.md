@@ -60,6 +60,7 @@ Buddr/
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, Buddy (a character's clips) + BuddyID (every
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), BlackSheepSprites (the sheep recolored),
+              RainbowCatSprites (a cat of its own, with the sheep's effects),
               NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
@@ -288,9 +289,9 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 
 ## Buddies
 
-The character on the screen is a buddy (`Buddy`): every clip it plays – the state machine's (`Buddy.clips`, one
-per `ClipID`), the escape's (`Buddy.escape`, one per `EscapeClipID`) and the petting reaction. There are two so far: the sheep (the default)
-and the black sheep.
+The character on the screen is a buddy (`Buddy`): every clip it plays – the state machine's (`Buddy.clips`, one per
+`ClipID`), the escape's (`Buddy.escape`, one per `EscapeClipID`) and the petting reaction. There are three so far: the
+sheep (the default), the black sheep and the rainbow cat.
 
 - Each buddy's pixels live in a file of its own (`SheepSprites.swift`), which builds its `Buddy`: a `ClipSet` of each
   kind is made from a function with an exhaustive `switch` over the keys, so no clip can be missing. A buddy can also
@@ -298,6 +299,10 @@ and the black sheep.
   is the sheep's figure (`SheepSprites.figure`: every `Body` and `Head` case, the only sprites the sheep's frames are
   made of) recolored with dark wool and a light face and legs, its effects unchanged, so redrawing the sheep redraws
   it too.
+- The rainbow cat (`RainbowCatSprites.swift`) has grids of its own: a grey cat (head, legs, tail) on a pop-tart, flying
+  on a rainbow with twinkling stars while agents work and when it runs off. Its chin rests on the bottom row with its
+  legs, so its head can't move down. The state's signs ("!", ✔ bubble, "?", "zzz", hearts) are the sheep's
+  (`SheepSprites.Effect`), so they look the same on every buddy.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
