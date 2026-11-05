@@ -407,18 +407,13 @@ enum SheepSprites {
         ])
 
         // Still poses: one picture per state that still shows the state's sign, mostly a frame of its clip.
-        static let idleStill = still(idleRest.frames[0].sprite)
-        static let sleepingStill = still(sleeping.frames[1].sprite)
-        static let workingStill = still(
+        static let idleStill = AnimationClip.still(idleRest.frames[0].sprite)
+        static let sleepingStill = AnimationClip.still(sleeping.frames[1].sprite)
+        static let workingStill = AnimationClip.still(
             SpriteFrame(layers: sheep(body: Body.trotA) + [largeDust, fleck(20, 7), fleck(19, 4)]))
-        static let blockedStill = still(blocked.frames[0].sprite)
-        static let doneStill = still(doneHold.frames[1].sprite)
-        static let unknownStill = still(unknown.frames[1].sprite)
-
-        /// The frame is short only so that a state change shows promptly; repeating it changes nothing on screen.
-        private static func still(_ sprite: SpriteFrame) -> AnimationClip {
-            AnimationClip([AnimationFrame(sprite: sprite, duration: .milliseconds(500))])
-        }
+        static let blockedStill = AnimationClip.still(blocked.frames[0].sprite)
+        static let doneStill = AnimationClip.still(doneHold.frames[1].sprite)
+        static let unknownStill = AnimationClip.still(unknown.frames[1].sprite)
     }
 
     // MARK: Escape

@@ -13,6 +13,12 @@ struct AnimationClip: Hashable, Sendable {
         self.frames = frames
     }
 
+    /// A still pose (`AnimationMode`): one picture, every buddy's for the same time. The frame is short only so that a
+    /// state change shows promptly; repeating it changes nothing on screen.
+    static func still(_ sprite: SpriteFrame) -> AnimationClip {
+        AnimationClip([AnimationFrame(sprite: sprite, duration: .milliseconds(500))])
+    }
+
     var cycleDuration: Duration {
         frames.reduce(.zero) { $0 + $1.duration }
     }
