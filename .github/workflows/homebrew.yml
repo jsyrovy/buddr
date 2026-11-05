@@ -12,15 +12,14 @@ on:
         description: Tag of a published release (v<version>)
         required: true
 
-concurrency:
-  group: homebrew
-  cancel-in-progress: false
+concurrency: homebrew
 
 permissions:
   contents: read
 
 jobs:
   cask:
+    # A published prerelease skips the run; the first step refuses one given by hand.
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -30,14 +29,15 @@ jobs:
       - name: Read the release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          [[ $TAG =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "::error::$TAG is not a version tag"; exit 1; }
+          [[ $TAG =~ ^v[0-9]+\.[0-9]+$ ]] || { echo "::error::$TAG is not a version tag (v<major.minor>)"; exit 1; }
           version=${TAG#v}
-          state=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease \
+          state=$(gh release view "$TAG" --json isDraft,isPrerelease \
               --jq 'if .isDraft then "draft" elif .isPrerelease then "prerelease" else "published" end')
           [[ $state == published ]] || { echo "::error::$TAG is a $state"; exit 1; }
           mkdir release
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release \
+          gh release download "$TAG" --dir release \
               --pattern "Buddr-$version.zip" --pattern "Buddr-$version.zip.sha256"
           (cd release && sha256sum --check --strict "Buddr-$version.zip.sha256")
           sha256=$(cut -d ' ' -f 1 "release/Buddr-$version.zip.sha256")
@@ -55,10 +55,8 @@ jobs:
         run: |
           cask=Casks/buddr.rb
           current=$(sed -n -E 's/^  version "(.*)"$/\1/p' "$cask")
-          if [[ $(printf '%s\n' "$current" "$VERSION" | sort -V | tail -n 1) != "$VERSION" ]]; then
-              echo "::error::The cask has $current, newer than $VERSION"
-              exit 1
-          fi
+          printf '%s\n' "$current" "$VERSION" | sort -C -V \
+              || { echo "::error::The cask has $current, newer than $VERSION"; exit 1; }
           sed -i -E -e "s/^  version \"[^\"]*\"$/  version \"$VERSION\"/" \
               -e "s/^  sha256 \"[0-9a-f]{64}\"$/  sha256 \"$SHA256\"/" "$cask"
           grep -qx "  version \"$VERSION\"" "$cask" && grep -qx "  sha256 \"$SHA256\"" "$cask" \
