@@ -9,7 +9,8 @@ documents each) and `petted`. How to meet them:
 - **Something coming in from an edge** (the UFO's sheep rising from the ground) is a cut-off sprite, e.g.
   `Grid.sheep.prefix(rows)` – no layer may reach past the canvas.
 - **Facing left** is untested: check it in the previews. Asymmetric details (glints, lights, speed lines) flip with the
-  mirrored frames when the buddy runs right.
+  mirrored frames when the buddy runs right. It means the direction of travel, not the face: a head turned to the
+  viewer on a body facing left (the corgi) meets it, and such a head takes expressions and a tilt more easily.
 - **At rest** the opaque pixels may be off center by 1 px at most.
 - **Still poses:** `AnimationClip.still(clip.frames[i].sprite)` of the state's clip (done: of `doneHold`).
 
@@ -17,7 +18,9 @@ documents each) and `petted`. How to meet them:
 
 - **Signs:** `SheepSprites.Effect` ("!", ✔ bubble, "?", z's, hearts) – never redraw them. Usual places: ✔ bubble
   (0, 0), "!" (1, 0), "?" (0, 0 / 1); z's and hearts are placed per buddy. They sit at the top left and often overlap
-  the buddy's head a little – check every frame with a sign in `frames.png`.
+  the buddy's head a little – check every frame with a sign in `frames.png`. The ✔ bubble is 10 rows tall and "!"
+  7, so anything above row 10 at rest (tall ears) runs into them, more so in a jump; a choice between a taller look
+  and clear signs is the user's.
 - **Colors:** `SheepSprites.outline` for the outline. A color that has to match a sign (an alarm light next to "!", a
   pink light next to the hearts) comes from `SheepSprites.palette`, so recoloring a sign keeps them together.
 
@@ -27,6 +30,8 @@ documents each) and `petted`. How to meet them:
   animated stripes read as light (the UFO's beam).
 - **Contrast:** signs and effects must read on a dark and a light desktop – the previews show both. Pale on pale
   vanishes (white sparkles on the pale beam did); add a colored edge or a darker core.
+- **Flying bits over the body:** particles drawn over a body of a similar color read as spots on it (the corgi's dirt
+  clods over its orange back did). Draw them behind the body, so they show only against the background.
 - **Small details:** at 22 × 20 a recognisable thing needs about 6 × 5 px with an outline (the beamed sheep is 8 × 6).
   A one-pixel feature (eye, antenna) works when it contrasts with what is around it.
 - **Building parts:** grids as character rows in `Grid`, variants of a part differ only in a row or two (a function

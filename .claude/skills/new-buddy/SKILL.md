@@ -17,10 +17,13 @@ limits, pitfalls met so far) – before drawing.
 
 - **Previews come from the app's code only:** `make -s previews BUDDY=<BuddyID>` (header of
   `scripts/previews.swift`). Never write a separate prototype renderer: a second drawing path drifts from what runs.
-- **Draft in the real file:** `Buddr/Sprite/<Name>Sprites.swift` plus its `BuddyID` case (`Buddy.swift`) from the
-  start, uncommitted until the user approves. Clips not designed yet may reuse the rest pose for now.
+- **Draft in the real file:** `Buddr/Sprite/<Name>Sprites.swift` plus its `BuddyID` case (`Buddy.swift`) as soon as
+  the look is chosen (step 1), uncommitted until the user approves. Clips not designed yet may reuse the rest pose for
+  now. Only competing looks before that live in the variants file (see step 1).
 - **Look before showing:** read `build/previews/<id>/frames.png` yourself (overlaps of signs and buddy, legibility,
-  timing) and fix what is off before the user sees it.
+  timing) and fix what is off before the user sees it. The image is scaled down when read and loses single pixels
+  (eyes): crop the clips in question (`sips -c <height> <width> --cropOffset <y> <x> frames.png --out /tmp/…`) or
+  render just them as variants. The `unknown` clips are dimmed – check their details undimmed in the variants.
 - **Hand over the page:** the `open -a Safari …` command `make previews` prints, for the user to run with `!`.
 - **Checkpoints:** stop and wait. Ask open decisions as a short numbered list, each with a recommendation, so the user
   can answer "1. … 2. …".
@@ -40,7 +43,16 @@ Propose in a few lines and a table:
 - its menu name (`BuddyID.name`).
 
 Draft the rest pose and the buddy's idea in code, render and show them. If the look is open, show two or three
-variants (CLAUDE.md wants variants before a design settles). Ask the decisions, then wait.
+variants (CLAUDE.md wants variants before a design settles). Competing looks (a corgi, a beagle, a dachshund) don't fit
+one `<Name>Sprites.swift`, and the file's and the case's names depend on the choice: draft them in the variants file
+(step 2) as whole-figure literal grids with a scratch palette, each rest pose also with the ✔ bubble and the "!" over
+it, and the sheep as a size reference. Ask the decisions, then wait.
+
+Expect several rounds on the look (more candidates, variants of the favourite, tuning it), often ending in a
+combination of traits from several variants. Keep the current favourite as the reference (`a2-now`), name the others by
+what they change (`a2b-ears-blush`, `a2f-eyes-tail-legs`), say in a line what each changes and how it reads, recommend
+one. Mention a conflict with the signs when the look is chosen (see "Signs" in `references/design-rules.md`). Create
+the real file once the look and the name are settled.
 
 ### 2. Variants of single clips → checkpoint (when something is disputed)
 
@@ -67,6 +79,8 @@ by what they change, describe each in one line with its cycle, recommend one, wa
   petting. Signs from `SheepSprites.Effect`.
 - `BuddrTests/Sprite/<Name>SpritesTests.swift`: every grid valid against the palette; same-size checks only for
   literal grids that must match (e.g. two phases of an effect). `BuddyClipsTests` covers the shared rules by itself.
+- `BuddrTests/Window/BuddyTurnsTests.swift`: `menuListsEveryBuddyByName` lists the menu order literally – add the
+  buddy by its name.
 - Docs: `README.md` (the "Buddy" setting), `CLAUDE.md` (the `Sprite/` line in "Structure"; a bullet in "Buddies" only
   for what is unusual about the buddy). `make screenshots` only if the README images change (they show the sheep and
   the menu with the chosen buddy).
