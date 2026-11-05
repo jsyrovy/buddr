@@ -1,9 +1,18 @@
 # Buddr
 
-Buddr is a desktop buddy for [herdr](https://herdr.dev) agents: a small pixel-art sheep that sits in a corner of your
-macOS screen and reacts to the state of the AI coding agents running in herdr or in herdr-core (`hc`, the terminal
-runtime behind herdr-app). Think Clippy, but it only tells you when an agent is busy, waiting for you, or done – it
-never gets in your way.
+Buddr is a desktop buddy for AI coding agents: a small pixel-art sheep that sits in a corner of your macOS screen and
+shows what your agents are up to – busy, waiting for you, or done. Think Clippy, but it only tells you, it never gets
+in your way.
+
+<p align="center">
+  <img src="docs/images/hero.gif" width="592" alt="The sheep in every state: blocked, done, working, idle, sleeping and unknown">
+</p>
+
+It watches the agents in [herdr](https://herdr.dev), a terminal workspace for running coding agents side by side, and
+in herdr-core (`hc`), the terminal runtime behind herdr-app – on this Mac and on the machines added to them. One sheep
+shows all agents together.
+
+## What the sheep shows
 
 | Agent state | The sheep… |
 |---|---|
@@ -11,26 +20,72 @@ never gets in your way.
 | blocked (waiting for you; also herdr-core's `error`) | jumps, with a blinking "!" |
 | done | does a happy jump, shows a "✔" |
 | idle | blinks, looks around, falls asleep after a while |
-| no agents / unknown | is dimmed, with a "?" |
+| no agents, or herdr isn't running | is dimmed, with a "?" |
 
-With several agents, the most urgent state wins: blocked > done > working > idle > unknown. While the sheep is
-blocked or done, a small plate under it names the agent – `[machine · ]workspace · title`, with `+N` when more agents
-wait for you.
+With several agents, the most urgent state wins: blocked > done > working > idle.
 
-The menu bar item lists all agents and holds the settings. "Agents from" picks herdr, hc or both (the default); a
-chosen one that isn't installed or running shows up with a ⚠ in the list.
+<img src="docs/images/blocked.gif" width="300" align="right" alt="A blocked sheep with a name plate under it: blog · Fix CI +1">
 
-> **Status:** early development (MVP). The sheep is a placeholder; the final design comes later.
+While the sheep is blocked or done, a small plate under it names the agent that got there last –
+`machine · workspace · title`, the machine only for remote agents – with `+N` for the other agents in the same state.
+
+Click the sheep to pet it. Drag it anywhere; it stays on its screen and remembers the position. When a fullscreen app
+covers its display, the sheep runs off the screen and comes back when the app is gone.
+
+<br clear="right">
+
+## The menu bar
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/menu-dark.png">
+  <img src="docs/images/menu-light.png" width="360" align="right" alt="The menu bar list: agents by machine and workspace, and the settings">
+</picture>
+
+The sheep in the menu bar opens a list of all agents, grouped by machine and workspace, followed by the settings:
+
+- **Agents from** – herdr, hc or both (the default). A chosen one that isn't installed or running shows up with a ⚠.
+- **Animation** – always, only for a while after a change (5 s to 1 min), or off: a still picture of the state.
+- **Hide** – never (the default), when all agents are idle, or unless one needs you, after 1 to 30 minutes of it. The
+  sheep walks off the screen and comes back as soon as that changes; "Show Sheep" in the list calls it back sooner.
+- **Name Plate** – on or off, and which parts it shows.
+- **Watch Remote Machines** – off reads this Mac only.
+
+A machine that can't be reached shows up with a ⚠ and its error in the list; the sheep doesn't count it.
+
+<br clear="right">
+
+## Install
+
+1. Download `Buddr-<version>.zip` from [Releases](https://github.com/jsyrovy/buddr/releases). It runs on Apple
+   Silicon and Intel Macs, and is signed and notarized by Apple.
+2. Unzip it, move `Buddr.app` to Applications and open it.
+
+The sheep appears in the bottom-right corner of the screen, and a pixel-art sheep in the menu bar. There is no Dock
+icon: quit Buddr with "Quit Buddr" at the bottom of the menu bar list. To start it at login, add it in System Settings
+→ General → Login Items.
+
+To uninstall, quit Buddr and delete the app; `defaults delete cz.jsyrovy.buddr` removes its settings too.
+
+Changes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## Requirements
 
 - macOS 14 Sonoma or later
-- [herdr](https://herdr.dev) installed (looked up in `PATH`, `/opt/homebrew/bin` and `/usr/local/bin`), or
-  herdr-core running – Buddr talks to its socket in the default session
-  (`~/.local/state/herdr-core/default/default.sock`) and never starts it
-- To build: Xcode 27 (Swift 6)
+- [herdr](https://herdr.dev) (tested with 0.9.3), looked up in `PATH`, `/opt/homebrew/bin` and `/usr/local/bin`,
+  and/or herdr-core (tested with 0.1.16) running in its default session
+  (`~/.local/state/herdr-core/default/default.sock`). An agent shows as done until you have seen it in herdr-app
+  0.1.12 or later; with older clients, until it starts working again.
+
+## Privacy
+
+Buddr only reads: it asks herdr (`herdr agent list`, `workspace list`, …) and herdr-core's socket for the agents'
+state, and never focuses, controls or sends anything to an agent. It never starts herdr-core when it isn't running.
+Buddr itself makes no network connections; for remote machines, herdr connects over its own SSH setup and herdr-core
+over its own connections. "Watch Remote Machines" turns these queries off.
 
 ## Building from source
+
+Requires Xcode 27 (Swift 6).
 
 ```bash
 git clone https://github.com/jsyrovy/buddr.git
@@ -40,35 +95,13 @@ make install  # builds Release, installs it to ~/Applications and opens it
 ```
 
 Install somewhere else with `make install INSTALL_DIR=/Applications`; `make uninstall` removes the app again.
-Other targets: `make build`, `make test`, `make lint`, `make format`, `make clean`. The app has no Dock icon; quit it
-from its menu bar item.
+[CLAUDE.md](CLAUDE.md) is the developer documentation: the other make targets, structure, conventions and design
+decisions.
 
-## Distribution
+## Why not the Mac App Store
 
-Buddr is not going to be in the Mac App Store: the App Sandbox forbids running the system-installed `herdr` and `ssh`
-binaries, the herdr and herdr-core sockets live outside the app container, remote machines would need an own SSH
-client with access to `~/.ssh`, and the app does nothing without herdr or herdr-core anyway.
-
-Releases are on [GitHub](https://github.com/jsyrovy/buddr/releases): a zip of `Buddr.app`, signed with Developer ID
-and notarized by Apple, so it opens without Gatekeeper warnings – unpack it and move `Buddr.app` to Applications.
-Changes are in [CHANGELOG.md](CHANGELOG.md). The plan is a Homebrew cask (herdr users already have Homebrew).
-
-## Roadmap
-
-1. **MVP** – floating, draggable, transparent window with a placeholder sheep drawn from a pixel grid; animations for
-   `working`, `blocked`, `done`, `idle` and `unknown`; local herdr state via CLI polling, aggregated by priority; menu
-   bar item with Quit.
-2. Info bubble with the agent list (machine, session, workspace, agent, status, terminal title).
-3. Remote machines (all enabled saved herdr SSH machines), unreachable-machine badge, S/M/L size, remembered
-   position, launch at login.
-4. Event-driven local updates over the herdr socket (and herdr-core's `events.subscribe`), more animations, final
-   sheep design.
-5. Packaging: signed and notarized `.app`, Homebrew cask, screenshots.
-
-Done outside this list: herdr-core (`hc`) as a second backend, with its machines.
-
-Out of scope for now: sounds and notifications, focusing or replying to agents, one character per agent, agent sources
-other than herdr and herdr-core.
+The App Sandbox forbids running the `herdr` binary installed on the system (which runs `ssh` for remote machines) and
+reaching herdr-core's socket outside the app's container, and Buddr does nothing without them.
 
 ## License
 
