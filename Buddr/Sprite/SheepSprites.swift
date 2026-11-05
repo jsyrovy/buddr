@@ -3,17 +3,12 @@
 // The current sheep is a placeholder.
 
 enum SheepSprites {
-    /// Size of the sprite canvas in pixels: the sheep plus room for effects above and behind it.
-    static let canvasWidth = 22
-    static let canvasHeight = 20
     /// Top-left corner of the sheep body on the canvas when standing.
     static let sheepX = 3
     static let sheepY = 8
     /// Offset of the head relative to the body.
     static let headX = 0
     static let headY = 1
-    /// Opacity of the whole picture while the state is unknown.
-    static let unknownOpacity = 0.45
     /// Size of one menu bar icon pixel in points: a whole number of device pixels on every display.
     static let menuBarIconPointsPerPixel = 1.0
 
@@ -376,8 +371,8 @@ enum SheepSprites {
             frame(400, sheep() + [checkBubble]),
         ])
         static let unknown = AnimationClip([
-            frame(800, sheep() + [question(1)], opacity: unknownOpacity),
-            frame(800, sheep() + [question(0)], opacity: unknownOpacity),
+            frame(800, sheep() + [question(1)], opacity: BuddyCanvas.unknownOpacity),
+            frame(800, sheep() + [question(0)], opacity: BuddyCanvas.unknownOpacity),
         ])
 
         // Still poses: one picture per state that still shows the state's sign, mostly a frame of its clip.
@@ -469,50 +464,6 @@ enum SheepSprites {
             ("escapeArrive", Escape.arrive),
             ("petted", petted),
         ]
-
-    // MARK: Name plate
-
-    /// The plate under the sheep naming the agent it reports (`NamePlate.Label`): light text in `PixelFont` on a dark plate
-    /// with cut corners. Drawn with its own, smaller pixels (`NamePlateLayout.plateScale(buddyScale:)`).
-    enum Plate {
-        /// A plate pixel is this many times smaller than a sheep pixel (rounded down, at least one point).
-        static let pixelDivisor = 3
-        static let fill = outline
-        static let text = palette["W"]!
-        /// Plate pixels between the text and the left and right edges.
-        static let paddingX = 3
-        /// Plate pixels above the text and below its descender rows, so text without descenders looks centered.
-        static let paddingTop = 3
-        static let paddingBottom = 1
-        /// Plate pixels between the sheep's feet and the plate.
-        static let gap = 2
-        /// Longest text in plate pixels; longer ones are shortened (`text(for:maxWidth:)`).
-        static let maxTextWidth = 100
-        static let height = paddingTop + PixelFont.height + paddingBottom
-
-        /// The text of `label`, at most `maxWidth` pixels wide: the title is shortened with `…`, keeping the machine
-        /// and workspace before it and the `+N` after it. When even those don't fit, the whole text is cut at the end.
-        static func text(for label: NamePlate.Label, maxWidth: Int = maxTextWidth) -> String {
-            let shortenedTitle =
-                label.title.isEmpty
-                ? nil
-                : PixelFont.shortened(label.title, between: label.lead, and: label.suffix, maxWidth: maxWidth)
-            return shortenedTitle ?? PixelFont.shortened(label.text, maxWidth: maxWidth) ?? ""
-        }
-
-        static func sprite(for plate: NamePlate.Label) -> PixelSprite {
-            let label = PixelFont.sprite(for: text(for: plate), color: Plate.text)
-            let width = label.width + 2 * paddingX
-            let pixels = (0..<height).flatMap { y in
-                (0..<width).map { x -> PixelColor? in
-                    let isCorner = (x == 0 || x == width - 1) && (y == 0 || y == height - 1)
-                    if isCorner { return nil }
-                    return label.color(x: x - paddingX, y: y - paddingTop) ?? fill
-                }
-            }
-            return PixelSprite(width: width, height: height, pixels: pixels)
-        }
-    }
 
     private static func sprite(_ rows: [String]) -> PixelSprite {
         PixelSprite(rows: rows, palette: palette)

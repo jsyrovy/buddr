@@ -4,7 +4,7 @@ import Foundation
 ///
 /// The text (`Label`) is `[machine · ][workspace · ]title`, followed by `+N` when more agents are in the same status.
 /// Which of the three parts are shown is set in the menu bar (`Field`). Only the title may be shortened to fit
-/// (`SheepSprites.Plate.text(for:maxWidth:)`).
+/// (`NamePlateSprite.text(for:maxWidth:)`).
 struct NamePlate: Equatable, Sendable {
     static let separator = " · "
 

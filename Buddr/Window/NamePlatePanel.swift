@@ -21,7 +21,7 @@ final class NamePlatePanel: FloatingPanel {
 
     /// Shows `label` and resizes the panel to fit it, keeping its origin.
     func show(_ label: NamePlate.Label) {
-        let sprite = SheepSprites.Plate.sprite(for: label)
+        let sprite = NamePlateSprite.sprite(for: label)
         hostingView.rootView = SpriteCanvas(sprite: sprite, scale: scale)
         let size = SpriteCanvas.size(gridWidth: sprite.width, gridHeight: sprite.height, scale: scale)
         setFrame(NSRect(origin: frame.origin, size: size), display: true)

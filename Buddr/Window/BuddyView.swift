@@ -7,11 +7,11 @@ struct BuddyView: View {
 
     var body: some View {
         SpriteCanvas(
-            frame: animation.sprite, gridWidth: SheepSprites.canvasWidth, gridHeight: SheepSprites.canvasHeight,
+            frame: animation.sprite, gridWidth: BuddyCanvas.width, gridHeight: BuddyCanvas.height,
             scale: scale)
     }
 
     static func size(scale: Int) -> CGSize {
-        SpriteCanvas.size(gridWidth: SheepSprites.canvasWidth, gridHeight: SheepSprites.canvasHeight, scale: scale)
+        SpriteCanvas.size(gridWidth: BuddyCanvas.width, gridHeight: BuddyCanvas.height, scale: scale)
     }
 }

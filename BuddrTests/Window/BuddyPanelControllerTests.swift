@@ -8,7 +8,7 @@ struct BuddyPanelControllerTests {
     @Test func panelHasTheSizeOfTheSpriteCanvasBeforeItIsShown() {
         let controller = BuddyPanelController(animation: BuddyAnimationDriver(), scale: 6)
         #expect(
-            controller.frame.size == CGSize(width: SheepSprites.canvasWidth * 6, height: SheepSprites.canvasHeight * 6))
+            controller.frame.size == CGSize(width: BuddyCanvas.width * 6, height: BuddyCanvas.height * 6))
     }
 
     @Test func defaultPositionKeepsThePanelAndTheRoomBelowItInsideTheVisibleFrame() {

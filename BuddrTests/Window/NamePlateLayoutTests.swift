@@ -22,7 +22,7 @@ struct NamePlateLayoutTests {
     }
 
     @Test func reservedRoomHoldsThePlateAndTheGap() {
-        let plate = SheepSprites.Plate.self
+        let plate = NamePlateSprite.self
         #expect(NamePlateLayout.reservedHeight(buddyScale: 6) == CGFloat((plate.height + plate.gap) * 2))
     }
 

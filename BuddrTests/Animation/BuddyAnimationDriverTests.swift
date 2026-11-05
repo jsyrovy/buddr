@@ -54,7 +54,7 @@ struct BuddyAnimationDriverTests {
     private static let script = SheepSprites.Escape.startle
 
     private static func mirrored(_ frame: AnimationFrame) -> SpriteFrame {
-        frame.sprite.mirrored(canvasWidth: SheepSprites.canvasWidth)
+        frame.sprite.mirrored(canvasWidth: BuddyCanvas.width)
     }
 
     @Test func playShowsTheClipOnceAndHoldsItsLastFrame() async {

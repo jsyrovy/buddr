@@ -103,7 +103,7 @@ final class BuddyAnimationDriver {
     }
 
     private static func oriented(_ clip: AnimationClip, _ mirrored: Bool) -> AnimationClip {
-        mirrored ? clip.mirrored(canvasWidth: SheepSprites.canvasWidth) : clip
+        mirrored ? clip.mirrored(canvasWidth: BuddyCanvas.width) : clip
     }
 
     private var currentFrame: AnimationFrame {

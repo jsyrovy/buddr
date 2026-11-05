@@ -4,7 +4,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // Renders the README images from Buddr's own code: the sprites and clips (`SheepSprites`), the renderer
-// (`SpriteCanvas`), the state machine (`BuddyAnimator`), the name plate (`AttentionTracker`, `SheepSprites.Plate`,
+// (`SpriteCanvas`), the state machine (`BuddyAnimator`), the name plate (`AttentionTracker`, `NamePlateSprite`,
 // `NamePlateLayout`) and the menu bar list (`AgentListView`). Nothing here draws a pixel of the sheep itself.
 //
 // `make screenshots` compiles this file together with the app's sources (all but its `@main` entry point, without
@@ -99,7 +99,7 @@ struct Renderer {
         guard let plate = tracker.update(with: Self.snapshot, status: Self.snapshot.status),
             let label = plate.label(showing: NamePlate.Field.all)
         else { throw Failure("no name plate for the sample agents") }
-        let text = SheepSprites.Plate.text(for: label)
+        let text = NamePlateSprite.text(for: label)
         guard text == Self.plateText else {
             throw Failure("the plate reads \"\(text)\": update `plateText` and the alt text in README.md")
         }
@@ -116,7 +116,7 @@ struct Renderer {
         )
         let buddyFrame = CGRect(origin: origin, size: buddySize)
         let plateScale = NamePlateLayout.plateScale(buddyScale: scale)
-        let plate = SheepSprites.Plate.sprite(for: label)
+        let plate = NamePlateSprite.sprite(for: label)
         let plateSize = SpriteCanvas.size(gridWidth: plate.width, gridHeight: plate.height, scale: plateScale)
         let plateFrame = NamePlateLayout.frame(
             plateSize: plateSize, buddyFrame: buddyFrame, visibleFrame: screen, plateScale: plateScale)
@@ -260,7 +260,7 @@ struct Renderer {
 
     func sheep(_ frame: SpriteFrame, scale: Int) -> SpriteCanvas {
         SpriteCanvas(
-            frame: frame, gridWidth: SheepSprites.canvasWidth, gridHeight: SheepSprites.canvasHeight, scale: scale)
+            frame: frame, gridWidth: BuddyCanvas.width, gridHeight: BuddyCanvas.height, scale: scale)
     }
 
     /// Redrawn into 8-bit sRGB.

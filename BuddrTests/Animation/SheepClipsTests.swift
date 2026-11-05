@@ -26,8 +26,8 @@ struct SheepClipsTests {
         let clip = try #require(Self.clips[name])
         for frame in clip.frames {
             for layer in frame.sprite.layers {
-                #expect(layer.x >= 0 && layer.x + layer.sprite.width <= SheepSprites.canvasWidth)
-                #expect(layer.y >= 0 && layer.y + layer.sprite.height <= SheepSprites.canvasHeight)
+                #expect(layer.x >= 0 && layer.x + layer.sprite.width <= BuddyCanvas.width)
+                #expect(layer.y >= 0 && layer.y + layer.sprite.height <= BuddyCanvas.height)
             }
         }
     }
@@ -35,7 +35,7 @@ struct SheepClipsTests {
     @Test(arguments: ClipID.allCases)
     func onlyTheUnknownStateIsDimmed(id: ClipID) {
         let clip = SheepSprites.clip(id)
-        let expected = [.unknown, .unknownStill].contains(id) ? SheepSprites.unknownOpacity : 1
+        let expected = [.unknown, .unknownStill].contains(id) ? BuddyCanvas.unknownOpacity : 1
         #expect(clip.frames.allSatisfy { $0.sprite.opacity == expected })
     }
 

@@ -106,7 +106,8 @@ CHANGELOG.md  one section per released version
   design, propose a few pixel-art variants to the user.
 - Sprites are drawn with SwiftUI `Canvas` at an integer scale without smoothing. Default scale 6; S/M/L (4/6/8) later.
   Sprites are character grids (`.` = transparent, other characters = palette colors); a frame is a stack of sprites
-  placed on a fixed canvas (`SheepSprites.canvasWidth` × `canvasHeight`) with room for effects above the sheep.
+  placed on a fixed canvas (`BuddyCanvas.width` × `height`, the same for every buddy) with room for effects above
+  the buddy.
   Effect glyphs can be drawn without an outline and get one from `PixelSprite.outlined(with:)`.
 - Window: borderless, transparent, non-activating `NSPanel` (`FloatingPanel`, never steals focus), `level = .floating`,
   on all Spaces (`.canJoinAllSpaces`, `.stationary`). Dragging: `BuddyPanel.sendEvent` turns every left mouse down into
@@ -303,7 +304,7 @@ Implementation (`BuddyAnimator`):
 - `idle` picks `idleRest` / `idleBlink` / `idleLook` at random (seeded `SplitMix64`, deterministic in tests) and
   switches to `sleeping` after 60 s of continuous `idle`. Any status change resets the idle timer.
 - `done` plays `doneJump` when it starts and then every 4th cycle, `doneHold` otherwise.
-- `unknown` is drawn at `SheepSprites.unknownOpacity`.
+- `unknown` is drawn at `BuddyCanvas.unknownOpacity`.
 - Petting: a click on the buddy interrupts the current clip right away (unlike a state change) with
   `SheepSprites.petted` – eye closed, blushing, a rising heart, a small hop. `BuddyAnimationDriver.interject` plays it
   once and hands back to the state machine; it is ignored while a script (escape) or another interjection plays, and a
@@ -419,9 +420,9 @@ A dark plate with light pixel text under the buddy's feet, naming the agent the 
   (`1` redrawn so it doesn't read as `l`). Lowercase letters with a caron, acute or ring get the mark in the two rows
   above the x-height (`í` without its dot); after an ascender a caron becomes an apostrophe to the right (`ď`, `ť`,
   `ľ`). Capitals and other marks are drawn without the mark; characters without a glyph become `?`. The font lives in
-  its own file (not part of the character); the plate's colors (outline and wool), padding, gap, pixel size and
-  `maxTextWidth` (100 px) are in `SheepSprites.Plate`.
-- Truncation by pixel width (`SheepSprites.Plate.text(for:maxWidth:)`, on `PixelFont.shortened`, one pass over the
+  its own file (not part of a buddy); the plate's colors (the sheep's outline and wool, the same for every buddy),
+  padding, gap, pixel size and `maxTextWidth` (100 px) are in `NamePlateSprite`.
+- Truncation by pixel width (`NamePlateSprite.text(for:maxWidth:)`, on `PixelFont.shortened`, one pass over the
   text): only the title is shortened, ending in `…`; the prefix and `+N` are kept. If even those don't fit, the whole
   text is cut at the end.
 - A separate child window (`NamePlatePanel`), not a bigger buddy panel: the plate is wider than the buddy, and growing
@@ -430,10 +431,11 @@ A dark plate with light pixel text under the buddy's feet, naming the agent the 
   collection behaviour, added with `addChildWindow(_:ordered: .above)` so it moves with the buddy (also while
   dragging). `BuddyPanelController` adds and removes it explicitly (`updatePlate`) instead of relying on how AppKit
   orders child windows with their parent.
-- Placement (`NamePlateLayout`): centered under the buddy (the body is centered on the canvas), `Plate.gap` below the
-  feet, moved horizontally into the `visibleFrame` of the buddy's screen; never mirrored or moved above the buddy.
-  Re-laid out on every `setOrigin`, after a drag and on screen parameter changes. Plate pixel: the buddy's scale
-  divided by `Plate.pixelDivisor`, at least one point (2 at the default scale 6).
+- Placement (`NamePlateLayout`): centered under the buddy (the body is centered on the canvas),
+  `NamePlateSprite.gap` below the feet, moved horizontally into the `visibleFrame` of the buddy's screen; never
+  mirrored or moved above the buddy. Re-laid out on every `setOrigin`, after a drag and on screen parameter changes.
+  Plate pixel: the buddy's scale divided by `NamePlateSprite.pixelDivisor`, at least one point (2 at the default
+  scale 6).
 - The text follows the snapshot right away, without waiting for the running clip (≤ 1.6 s of mismatch). The plate is
   redrawn only when its text changes. It stays in every animation mode and while petted, leaves with the buddy
   (fullscreen, hiding), and is hidden during the escape run itself (`BuddyEscape` suppresses it once the startle or
@@ -493,7 +495,7 @@ tests are cheap and stable:
   `UnixSocketTransport` (not running, timeouts, cancellation).
 - `Animation/` except `BuddyAnimationDriver` – the `BuddyAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`, the
-  `PixelFont` glyphs, marks and truncation, the `SheepSprites.Plate` sprite.
+  `PixelFont` glyphs, marks and truncation, the `NamePlateSprite` sprite.
 - Placement math in `BuddyPanelController` (including the room reserved for the plate), `ScreenGeometry`,
   `EscapeRoute`, `NamePlateLayout`.
 - `HideMode` – which statuses are calm in each mode.
