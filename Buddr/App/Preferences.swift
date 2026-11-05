@@ -40,7 +40,7 @@ final class Preferences {
         }
     }
 
-    /// When the sheep moves. Always by default.
+    /// When the buddy moves. Always by default.
     var animationMode: AnimationMode {
         didSet {
             defaults.set(animationMode.rawValue, forKey: Self.animationModeKey)
@@ -48,7 +48,7 @@ final class Preferences {
         }
     }
 
-    /// How long the sheep moves after a change in the `onChange` mode, one of `animationSecondsChoices`.
+    /// How long the buddy moves after a change in the `onChange` mode, one of `animationSecondsChoices`.
     var animationSeconds: Int {
         didSet {
             defaults.set(animationSeconds, forKey: Self.animationSecondsKey)
@@ -56,7 +56,7 @@ final class Preferences {
         }
     }
 
-    /// When the sheep hides on its own. Never by default.
+    /// When the buddy hides on its own. Never by default.
     var hideMode: HideMode {
         didSet {
             defaults.set(hideMode.rawValue, forKey: Self.hideModeKey)
@@ -64,7 +64,7 @@ final class Preferences {
         }
     }
 
-    /// How long the sheep waits before it hides, one of `hideMinutesChoices`.
+    /// How long the buddy waits before it hides, one of `hideMinutesChoices`.
     var hideMinutes: Int {
         didSet {
             defaults.set(hideMinutes, forKey: Self.hideMinutesKey)
@@ -72,7 +72,7 @@ final class Preferences {
         }
     }
 
-    /// Whether a plate under the sheep names the agent it reports. On by default.
+    /// Whether a plate under the buddy names the agent it reports. On by default.
     var showsNamePlate: Bool {
         didSet {
             defaults.set(showsNamePlate, forKey: Self.showsNamePlateKey)

@@ -3,16 +3,16 @@ import Testing
 @testable import Buddr
 
 @MainActor
-struct SheepHidingTests {
+struct BuddyHidingTests {
     private static let delay = Duration.seconds(300)
     private static let shorterDelay = Duration.seconds(60)
 
     private let sleeper = ManualSleeper()
-    private let hiding: SheepHiding
+    private let hiding: BuddyHiding
     private let changes: AsyncStream<Bool>
 
     init() {
-        hiding = SheepHiding(sleep: sleeper.sleep(for:))
+        hiding = BuddyHiding(sleep: sleeper.sleep(for:))
         let (changes, continuation) = AsyncStream.makeStream(of: Bool.self)
         self.changes = changes
         hiding.onChange = { continuation.yield($0) }
@@ -44,7 +44,7 @@ struct SheepHidingTests {
         #expect(await sleeps.next() == Self.delay)
     }
 
-    @Test func statusThatIsNotCalmBringsTheSheepBackAtOnce() async {
+    @Test func statusThatIsNotCalmBringsTheBuddyBackAtOnce() async {
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         var changes = changes.makeAsyncIterator()
         hiding.setMode(.whenIdle, after: Self.delay)
@@ -114,7 +114,7 @@ struct SheepHidingTests {
         #expect(await sleeps.next() == Self.shorterDelay)
     }
 
-    @Test func modeNeverBringsTheSheepBack() async {
+    @Test func modeNeverBringsTheBuddyBack() async {
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         var changes = changes.makeAsyncIterator()
         hiding.setMode(.whenIdle, after: Self.delay)
@@ -128,7 +128,7 @@ struct SheepHidingTests {
         #expect(!hiding.isHidden)
     }
 
-    @Test func showCallsTheSheepBackUntilAnotherDelayOfCalm() async {
+    @Test func showCallsTheBuddyBackUntilAnotherDelayOfCalm() async {
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         var changes = changes.makeAsyncIterator()
         hiding.setMode(.whenIdle, after: Self.delay)
@@ -145,7 +145,7 @@ struct SheepHidingTests {
         #expect(await changes.next() == true)
     }
 
-    @Test func showDoesNothingWhileTheSheepIsThere() async {
+    @Test func showDoesNothingWhileTheBuddyIsThere() async {
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         var changes = changes.makeAsyncIterator()
         hiding.setMode(.whenIdle, after: Self.delay)

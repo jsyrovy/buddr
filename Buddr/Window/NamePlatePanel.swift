@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The floating panel with the name plate, a child window of the sheep panel so it moves along with it. It never
+/// The floating panel with the name plate, a child window of the buddy panel so it moves along with it. It never
 /// takes the mouse: clicks go through it to whatever is below.
 final class NamePlatePanel: FloatingPanel {
     private let hostingView: NSHostingView<SpriteCanvas>

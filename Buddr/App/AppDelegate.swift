@@ -4,23 +4,23 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = Preferences()
     let snapshots = SnapshotStore()
-    let hiding = SheepHiding()
+    let hiding = BuddyHiding()
     #if DEBUG
         let debug = DebugControls()
     #endif
 
-    private var animation: SheepAnimationDriver?
-    private var panelController: SheepPanelController?
+    private var animation: BuddyAnimationDriver?
+    private var panelController: BuddyPanelController?
     private var herdrMonitor: HerdrMonitor?
     private var fullscreenMonitor: FullscreenMonitor?
-    private var escape: SheepEscape?
+    private var escape: BuddyEscape?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let animation = SheepAnimationDriver()
+        let animation = BuddyAnimationDriver()
         animation.start()
         self.animation = animation
 
-        let panelController = SheepPanelController(animation: animation)
+        let panelController = BuddyPanelController(animation: animation)
         let hiding = hiding
         panelController.onClick = {
             animation.interject(SheepSprites.petted)
@@ -29,10 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panelController.show()
         self.panelController = panelController
 
-        let escape = SheepEscape(panel: panelController, animation: animation)
+        let escape = BuddyEscape(panel: panelController, animation: animation)
         self.escape = escape
 
-        let fullscreenMonitor = FullscreenMonitor(sheepFrame: { escape.homeFrame }) { fullscreen in
+        let fullscreenMonitor = FullscreenMonitor(buddyFrame: { escape.homeFrame }) { fullscreen in
             escape.setAway(fullscreen, for: .fullscreen)
         }
         fullscreenMonitor.start()

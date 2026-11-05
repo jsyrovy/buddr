@@ -1,8 +1,8 @@
 import AppKit
 import os
 
-/// Watches whether the display with the sheep is covered by a fullscreen window and reports changes on the main actor.
-/// `sheepFrame` is where the sheep belongs, also while it is away.
+/// Watches whether the display with the buddy is covered by a fullscreen window and reports changes on the main actor.
+/// `buddyFrame` is where the buddy belongs, also while it is away.
 ///
 /// Checks run on every Space change (a native fullscreen app gets its own Space) and on display changes, repeated
 /// shortly after since the window list can lag behind the notification, and once a second as a fallback for
@@ -13,7 +13,7 @@ final class FullscreenMonitor {
     private static let recheckDelay: Duration = .milliseconds(250)
     private static let interval: Duration = .seconds(1)
 
-    private let sheepFrame: @MainActor () -> NSRect
+    private let buddyFrame: @MainActor () -> NSRect
     private let onChange: @MainActor (Bool) -> Void
     private var observers: [NSObjectProtocol] = []
     private var pollTask: Task<Void, Never>?
@@ -21,8 +21,8 @@ final class FullscreenMonitor {
     private var confirmTask: Task<Void, Never>?
     private var debounce = FullscreenDebounce()
 
-    init(sheepFrame: @escaping @MainActor () -> NSRect, onChange: @escaping @MainActor (Bool) -> Void) {
-        self.sheepFrame = sheepFrame
+    init(buddyFrame: @escaping @MainActor () -> NSRect, onChange: @escaping @MainActor (Bool) -> Void) {
+        self.buddyFrame = buddyFrame
         self.onChange = onChange
     }
 
@@ -85,7 +85,7 @@ final class FullscreenMonitor {
 
     private func fullscreenWindow() -> WindowInfo? {
         let displays = NSScreen.screens.compactMap(Self.displayInfo)
-        guard let display = FullscreenDetector.display(containing: sheepFrame(), in: displays) else { return nil }
+        guard let display = FullscreenDetector.display(containing: buddyFrame(), in: displays) else { return nil }
         let list =
             CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []

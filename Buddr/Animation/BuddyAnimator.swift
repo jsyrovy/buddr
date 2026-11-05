@@ -1,22 +1,22 @@
-/// The sheep's animation state machine.
+/// The buddy's animation state machine.
 ///
 /// The target state can change at any time, but the clip that is playing always finishes its cycle first; only then
 /// is the next clip chosen for the current target state. This avoids jarring cuts in the middle of a jump.
 /// The animator is a pure value: `advance()` moves to the next frame and the caller decides when to call it.
 ///
 /// Depending on the `AnimationMode`, a still pose of the state is chosen instead of its clip: always (`off`), or once
-/// the sheep has been animated for `animatesFor` since the status changed or `replay()` was called (`onChange`).
-struct SheepAnimator {
-    /// After this long in `idle` the sheep falls asleep.
+/// the buddy has been animated for `animatesFor` since the status changed or `replay()` was called (`onChange`).
+struct BuddyAnimator {
+    /// After this long in `idle` the buddy falls asleep.
     static let defaultSleepAfter: Duration = .seconds(60)
     /// While `done` persists, every n-th cycle is a jump; the others are a calm hold.
     static let doneJumpEvery = 4
 
     private(set) var status: AgentStatus
-    private(set) var clipID: SheepClipID
+    private(set) var clipID: ClipID
     private(set) var frameIndex = 0
     private(set) var mode: AnimationMode
-    /// How long the sheep is animated after a change in the `onChange` mode.
+    /// How long the buddy is animated after a change in the `onChange` mode.
     private var animatesFor: Duration
 
     private let sleepAfter: Duration
@@ -94,7 +94,7 @@ struct SheepAnimator {
         }
     }
 
-    private mutating func chooseClip() -> SheepClipID {
+    private mutating func chooseClip() -> ClipID {
         defer { cyclesInStatus += 1 }
         guard isAnimated else {
             return stillPose()
@@ -120,7 +120,7 @@ struct SheepAnimator {
         }
     }
 
-    private func stillPose() -> SheepClipID {
+    private func stillPose() -> ClipID {
         switch status {
         case .working: .workingStill
         case .blocked: .blockedStill

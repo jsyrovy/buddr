@@ -4,7 +4,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // Renders the README images from Buddr's own code: the sprites and clips (`SheepSprites`), the renderer
-// (`SpriteCanvas`), the state machine (`SheepAnimator`), the name plate (`AttentionTracker`, `SheepSprites.Plate`,
+// (`SpriteCanvas`), the state machine (`BuddyAnimator`), the name plate (`AttentionTracker`, `SheepSprites.Plate`,
 // `NamePlateLayout`) and the menu bar list (`AgentListView`). Nothing here draws a pixel of the sheep itself.
 //
 // `make screenshots` compiles this file together with the app's sources (all but its `@main` entry point, without
@@ -52,7 +52,7 @@ struct Renderer {
         let states: [(name: String, frames: [AnimationFrame])] = [
             ("blocked", Self.play(.blocked, cycles: 1).frames),
             // `doneJump` when the state starts, then every 4th cycle, `doneHold` otherwise.
-            ("done", Self.play(.done, cycles: SheepAnimator.doneJumpEvery).frames),
+            ("done", Self.play(.done, cycles: BuddyAnimator.doneJumpEvery).frames),
             ("working", Self.play(.working, cycles: 1).frames),
             ("idle", try Self.idle()),
             ("sleeping", Self.play(.idle, cycles: 1, sleepAfter: .zero).frames),
@@ -109,22 +109,22 @@ struct Renderer {
 
     func screenCorner(frame: SpriteFrame, label: NamePlate.Label) -> some View {
         let screen = CGRect(x: 0, y: 0, width: 300, height: 200)
-        let scale = SheepPanelController.defaultScale
-        let sheepSize = SheepView.size(scale: scale)
-        let origin = SheepPanelController.defaultOrigin(
-            panelSize: sheepSize, visibleFrame: screen, reservedBelow: NamePlateLayout.reservedHeight(sheepScale: scale)
+        let scale = BuddyPanelController.defaultScale
+        let buddySize = BuddyView.size(scale: scale)
+        let origin = BuddyPanelController.defaultOrigin(
+            panelSize: buddySize, visibleFrame: screen, reservedBelow: NamePlateLayout.reservedHeight(buddyScale: scale)
         )
-        let sheepFrame = CGRect(origin: origin, size: sheepSize)
-        let plateScale = NamePlateLayout.plateScale(sheepScale: scale)
+        let buddyFrame = CGRect(origin: origin, size: buddySize)
+        let plateScale = NamePlateLayout.plateScale(buddyScale: scale)
         let plate = SheepSprites.Plate.sprite(for: label)
         let plateSize = SpriteCanvas.size(gridWidth: plate.width, gridHeight: plate.height, scale: plateScale)
         let plateFrame = NamePlateLayout.frame(
-            plateSize: plateSize, sheepFrame: sheepFrame, visibleFrame: screen, plateScale: plateScale)
+            plateSize: plateSize, buddyFrame: buddyFrame, visibleFrame: screen, plateScale: plateScale)
         // AppKit frames have y up, SwiftUI offsets y down.
         func top(_ rect: CGRect) -> CGFloat { screen.height - rect.maxY }
         return ZStack(alignment: .topLeading) {
             Self.wallpaper
-            sheep(frame, scale: scale).offset(x: sheepFrame.minX, y: top(sheepFrame))
+            sheep(frame, scale: scale).offset(x: buddyFrame.minX, y: top(buddyFrame))
             SpriteCanvas(sprite: plate, scale: plateScale).offset(x: plateFrame.minX, y: top(plateFrame))
         }
         .frame(width: screen.width, height: screen.height)
@@ -142,7 +142,7 @@ struct Renderer {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let list = AgentListView(
-            store: store, preferences: Preferences(defaults: defaults), hiding: SheepHiding(), onOpen: {})
+            store: store, preferences: Preferences(defaults: defaults), hiding: BuddyHiding(), onOpen: {})
         for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             let content =
                 list
@@ -212,11 +212,11 @@ struct Renderer {
 
     /// The frames and clips the state machine plays for `status` in its first `cycles` clips.
     static func play(
-        _ status: AgentStatus, cycles: Int, seed: UInt64 = 1, sleepAfter: Duration = SheepAnimator.defaultSleepAfter
-    ) -> (frames: [AnimationFrame], clips: [SheepClipID]) {
-        var animator = SheepAnimator(status: status, sleepAfter: sleepAfter, seed: seed)
+        _ status: AgentStatus, cycles: Int, seed: UInt64 = 1, sleepAfter: Duration = BuddyAnimator.defaultSleepAfter
+    ) -> (frames: [AnimationFrame], clips: [ClipID]) {
+        var animator = BuddyAnimator(status: status, sleepAfter: sleepAfter, seed: seed)
         var frames: [AnimationFrame] = []
-        var clips: [SheepClipID] = []
+        var clips: [ClipID] = []
         for _ in 0..<cycles {
             clips.append(animator.clipID)
             repeat {

@@ -1,32 +1,32 @@
 import AppKit
 
-/// Makes the sheep run off the screen while it should be away – a fullscreen window covers its display, or it hides
-/// (`SheepHiding`) – and come back once there is no reason left.
+/// Makes the buddy run off the screen while it should be away – a fullscreen window covers its display, or it hides
+/// (`BuddyHiding`) – and come back once there is no reason left.
 ///
-/// Running away: the current clip plays to its end, a startled hop (or a yawn when the sheep only hides), turning to the
+/// Running away: the current clip plays to its end, a startled hop (or a yawn when the buddy only hides), turning to the
 /// nearer edge, running (walking) until the panel is off the screen, then the panel is hidden. Coming back: the panel
-/// appears past the same edge and the sheep runs back home. The name plate is hidden from the start of the run until
-/// the sheep is back. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
+/// appears past the same edge and the buddy runs back home. The name plate is hidden from the start of the run until
+/// the buddy is back. Each way is played to its end; a change of mind meanwhile is handled right after it. Without
 /// animation (`AnimationMode.off`) or without any screen, the panel is just hidden and shown again.
 @MainActor
-final class SheepEscape {
+final class BuddyEscape {
     private static let frameInterval: Duration = .milliseconds(16)
 
-    private let panel: SheepPanelController
-    private let animation: SheepAnimationDriver
-    /// Why the sheep should be away; it is away while there is any.
+    private let panel: BuddyPanelController
+    private let animation: BuddyAnimationDriver
+    /// Why the buddy should be away; it is away while there is any.
     private var reasons: Set<Reason> = []
     private var isAway = false
     private var task: Task<Void, Never>?
-    /// Panel origin to come back to, kept from the start of an escape until the sheep is back.
+    /// Panel origin to come back to, kept from the start of an escape until the buddy is back.
     private var home: CGPoint?
 
-    init(panel: SheepPanelController, animation: SheepAnimationDriver) {
+    init(panel: BuddyPanelController, animation: BuddyAnimationDriver) {
         self.panel = panel
         self.animation = animation
     }
 
-    /// Where the sheep belongs: its home while it is away or on the way, otherwise where the panel is.
+    /// Where the buddy belongs: its home while it is away or on the way, otherwise where the panel is.
     var homeFrame: NSRect {
         guard let home else { return panel.frame }
         return NSRect(origin: home, size: panel.frame.size)
@@ -40,7 +40,7 @@ final class SheepEscape {
             case debug(startled: Bool)
         #endif
 
-        /// Whether the sheep leaves startled; it wanders off bored when no reason is.
+        /// Whether the buddy leaves startled; it wanders off bored when no reason is.
         var startles: Bool {
             switch self {
             case .fullscreen: true
@@ -92,7 +92,7 @@ final class SheepEscape {
             hide()
             return
         }
-        // Hiding alone is no hurry: the sheep yawns and wanders off. A fullscreen window startles it.
+        // Hiding alone is no hurry: the buddy yawns and wanders off. A fullscreen window startles it.
         let wandersOff = !reasons.contains(where: \.startles)
         if wandersOff {
             await animation.play(SheepSprites.Escape.yawn)
@@ -105,7 +105,7 @@ final class SheepEscape {
         } else {
             await animation.play(SheepSprites.Escape.startle)
         }
-        // The plate stays home: it would be cut off at the screen edge, and it comes back after the sheep.
+        // The plate stays home: it would be cut off at the screen edge, and it comes back after the buddy.
         panel.setNamePlateSuppressed(true)
         home = frame.origin
         let route = EscapeRoute(panelFrame: frame, screenFrame: screen.frame, pace: wandersOff ? .walk : .run)
@@ -135,7 +135,7 @@ final class SheepEscape {
             panel.setNamePlateSuppressed(false)
             isAway = false
         }
-        // The screen may have gone meanwhile; the sheep then comes back to the nearest one.
+        // The screen may have gone meanwhile; the buddy then comes back to the nearest one.
         guard let screen = panel.screen(for: homeFrame), let target = panel.onScreenOrigin(for: homeFrame) else {
             // No screen at all: just show the panel where it was.
             panel.setHidden(false)
@@ -155,7 +155,7 @@ final class SheepEscape {
         animation.endScript()
     }
 
-    /// The sheep runs off the screen and back only while it is animated at all; read at the start of each way.
+    /// The buddy runs off the screen and back only while it is animated at all; read at the start of each way.
     private var runs: Bool {
         animation.animationMode != .off
     }

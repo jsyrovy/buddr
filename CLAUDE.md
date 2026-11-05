@@ -50,15 +50,15 @@ Xcode 26). `.github/workflows/homebrew.yml` updates the Homebrew cask when a rel
 Buddr/
   App/        @main entry (BuddrMain → BuddrApp with MenuBarExtra, or an empty app under tests), AppDelegate
               wiring, Preferences (menu bar settings in UserDefaults), RuntimeEnvironment
-  Window/     FloatingPanel (shared NSPanel setup), SheepPanel, SheepPanelController (creation, placement, the name
-              plate window), PanelPositionStore (last position in UserDefaults), SheepView (root SwiftUI view),
+  Window/     FloatingPanel (shared NSPanel setup), BuddyPanel, BuddyPanelController (creation, placement, the name
+              plate window), PanelPositionStore (last position in UserDefaults), BuddyView (root SwiftUI view),
               ScreenGeometry (screen choice, clamping), FullscreenDetector + FullscreenDebounce (pure) +
-              FullscreenMonitor (notifications, polling), EscapeRoute (pure) + SheepEscape (runs off the screen and
-              back), HideMode (pure) + SheepHiding (hides the sheep after a while of calm), NamePlatePanel (child
+              FullscreenMonitor (notifications, polling), EscapeRoute (pure) + BuddyEscape (runs off the screen and
+              back), HideMode (pure) + BuddyHiding (hides the buddy after a while of calm), NamePlatePanel (child
               panel) + NamePlateLayout (pure: plate scale, reserved room, placement)
   Sprite/     PixelSprite / SpriteFrame models, SpriteCanvas renderer, SheepSprites (all character data: palette,
               grids, frame composition, clip timing, the plate's look), PixelFont (glyphs, marks, truncation)
-  Animation/  AnimationClip / SheepClipID, AnimationMode, SheepAnimator (pure state machine), SheepAnimationDriver
+  Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
               (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
@@ -72,7 +72,7 @@ Buddr/
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
-  Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the sheep away, override the
+  Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the buddy away, override the
               status, a long name plate), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs, herdr-core API answers (`core-*`)
@@ -109,10 +109,10 @@ CHANGELOG.md  one section per released version
   placed on a fixed canvas (`SheepSprites.canvasWidth` × `canvasHeight`) with room for effects above the sheep.
   Effect glyphs can be drawn without an outline and get one from `PixelSprite.outlined(with:)`.
 - Window: borderless, transparent, non-activating `NSPanel` (`FloatingPanel`, never steals focus), `level = .floating`,
-  on all Spaces (`.canJoinAllSpaces`, `.stationary`). Dragging: `SheepPanel.sendEvent` turns every left mouse down into
+  on all Spaces (`.canJoinAllSpaces`, `.stationary`). Dragging: `BuddyPanel.sendEvent` turns every left mouse down into
   `performDrag(with:)`, which does not depend on how the SwiftUI hosting view handles the event (unlike
   `isMovableByWindowBackground`). A click is a drag that ended with the panel moved by at most
-  `SheepPanel.clickTolerance` points (`onClick`); it pets the sheep (see below). After a drag (the button is released)
+  `BuddyPanel.clickTolerance` points (`onClick`); it pets the buddy (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
   agent list, the settings ("Agents from", "Animation" and "Hide" pop-ups, "Name Plate" checkboxes, "Watch Remote
@@ -131,7 +131,7 @@ CHANGELOG.md  one section per released version
   folded into one "N idle" row that unfolds on click. Status icons are SF Symbols differing in shape and color. Rows are
   information only (no focusing).
 - The list reads `SnapshotStore`, which `AppDelegate` updates with every changed combined snapshot of
-  `HerdrMonitor`, so an open list updates live, and disabled machines disappear from it like from the sheep's state.
+  `HerdrMonitor`, so an open list updates live, and disabled machines disappear from it like from the buddy's state.
   Opening the list (`onAppear`, which a `MenuBarExtra` window calls on every opening) calls `HerdrMonitor.refresh()`:
   every enabled poller that sleeps between polls polls right away (`HerdrPoller.refresh()` replaces the sleeping loop
   with a new one, which starts with a poll); one whose poll runs is left alone, so repeated openings never stack up
@@ -140,12 +140,12 @@ CHANGELOG.md  one section per released version
   the panel goes there, moved into the `visibleFrame` of its screen or the nearest one (displays may have changed);
   without a saved position it starts in the bottom-right corner of `NSScreen.main`. Escape moves are not saved.
   Room for the name plate is always kept below the panel (`NamePlateLayout.reservedHeight`): clamping
-  (`SheepPanelController.onScreenOrigin`) and the default corner use the panel frame extended by it, so the sheep
+  (`BuddyPanelController.onScreenOrigin`) and the default corner use the panel frame extended by it, so the buddy
   doesn't jump up when a plate appears. A saved position that is too low moves up at the next launch or drag.
-- Fullscreen: while a fullscreen window covers the display with the sheep, the sheep runs off the screen and comes
+- Fullscreen: while a fullscreen window covers the display with the buddy, the buddy runs off the screen and comes
   back when it is gone. Details in "Fullscreen escape" below.
-- Hiding: the sheep can leave the screen on its own after a while of calm. Details in "Hiding" below.
-- Name plate: while the sheep is `blocked` or `done`, a plate under it names the agent. Details in "Name plate" below.
+- Hiding: the buddy can leave the screen on its own after a while of calm. Details in "Hiding" below.
+- Name plate: while the buddy is `blocked` or `done`, a plate under it names the agent. Details in "Name plate" below.
 - Data sources: running local herdr sessions and all *enabled* saved herdr machines, both discovered on every poll
   (nothing hardcoded), and herdr-core on this Mac with the machines added to it. `HerdrMonitor` polls every kind of
   source (`HerdrMonitor.SourceKind`: `localSessions`, `machines`, `core`) in an independent loop – herdr locally every
@@ -171,7 +171,7 @@ CHANGELOG.md  one section per released version
 - Debug builds (`#if DEBUG`, set in the Debug configuration) show an orange "DEBUG" box in the menu bar list
   (`DebugSection`, `DebugControls`): a button for every clip (`SheepSprites.allClips`), played once over whatever
   plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" /
-  "Come Back" (`SheepEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
+  "Come Back" (`BuddyEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
   animation, hiding and the name plate (not for the list) – overridden to `blocked` / `done` without an agent in it,
   the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). Release
   builds contain none of it;
@@ -265,7 +265,7 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
   herdr-app labels its terminals `where` (`"buddr / 1"`: workspace / tab) and `herdr.space` (workspace ID); terminals
   started with `hc run` have none and are grouped by the last component of their working directory.
 - `state` is `idle`, `working`, `done`, `blocked` or `error`; there is no `unknown`. `error` (the program stopped on an
-  error and needs a person) counts as `blocked` (`AgentStatus(coreState:turn:seenTurn:)`), so the sheep, plate and
+  error and needs a person) counts as `blocked` (`AgentStatus(coreState:turn:seenTurn:)`), so the buddy, plate and
   hiding treat it like a question; the list shows it as blocked too. Unknown future words decode as `unknown`.
 - `done` from the core only means the program finished its turn (Claude Code keeps it until the next prompt); it is
   not "unseen" as in herdr. herdr clients share what a person has seen in the label `herdr.seen` (herdr-app ≥ 0.1.12,
@@ -281,12 +281,12 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
   15 s, `missed` + a fresh snapshot for a subscriber that fell behind) could replace polling; it needs a feed that
   pushes snapshots instead of `HerdrPoller.Feed`.
 
-## Agent states → sheep behaviour
+## Agent states → buddy behaviour
 
 Aggregated state priority: **blocked > done > working > idle > unknown**. No agents (or herdr unavailable) counts as
 `unknown`.
 
-| State | Sheep behaviour |
+| State | Buddy behaviour |
 |---|---|
 | `working` | busy: trotting in place / bouncing, little bits flying around |
 | `blocked` | pronounced: jumping, blinking "!" above the head |
@@ -296,7 +296,7 @@ Aggregated state priority: **blocked > done > working > idle > unknown**. No age
 
 A running animation finishes its cycle before the state machine switches to another one.
 
-Implementation (`SheepAnimator`):
+Implementation (`BuddyAnimator`):
 
 - The poller sets the target status (`snapshot.status`); the animator picks the next clip only when the current clip
   has played its last frame. Keep every clip cycle short (tests enforce ≤ 1.6 s) so state changes show promptly.
@@ -304,14 +304,14 @@ Implementation (`SheepAnimator`):
   switches to `sleeping` after 60 s of continuous `idle`. Any status change resets the idle timer.
 - `done` plays `doneJump` when it starts and then every 4th cycle, `doneHold` otherwise.
 - `unknown` is drawn at `SheepSprites.unknownOpacity`.
-- Petting: a click on the sheep interrupts the current clip right away (unlike a state change) with
-  `SheepSprites.petted` – eye closed, blushing, a rising heart, a small hop. `SheepAnimationDriver.interject` plays it
+- Petting: a click on the buddy interrupts the current clip right away (unlike a state change) with
+  `SheepSprites.petted` – eye closed, blushing, a rising heart, a small hop. `BuddyAnimationDriver.interject` plays it
   once and hands back to the state machine; it is ignored while a script (escape) or another interjection plays, and a
   script replaces it.
 - The sheep is composed of a body sprite and a head sprite drawn on top (offset `headX`/`headY`), so leg and head
   variants combine freely; effects (`!`, `?`, `z`, ✔ bubble, dust, hearts) are separate layers placed on the canvas.
 
-Animation modes (`AnimationMode`, set with `SheepAnimator.setAnimation(_:for:)`):
+Animation modes (`AnimationMode`, set with `BuddyAnimator.setAnimation(_:for:)`):
 
 - `always`: as above. `off`: a still pose of the state instead of its clip (`idleStill`, `sleepingStill` after the
   usual 60 s, `workingStill`, `blockedStill`, `doneStill`, `unknownStill`) – one picture made of the clip's pictures,
@@ -325,7 +325,7 @@ Animation modes (`AnimationMode`, set with `SheepAnimator.setAnimation(_:for:)`)
   takes effect when the clip ends; the time already played since the last change counts towards a new duration.
 - A still pose is one 500 ms frame, so a state change still shows within half a second.
 - Petting plays in every mode and hands back to the still pose. Without animation (`off`) the fullscreen escape
-  doesn't run: the panel is just hidden and shown again (`SheepEscape` reads `SheepAnimationDriver.animationMode`).
+  doesn't run: the panel is just hidden and shown again (`BuddyEscape` reads `BuddyAnimationDriver.animationMode`).
 
 ## Fullscreen escape
 
@@ -348,26 +348,26 @@ Detection (`FullscreenDetector`, `FullscreenDebounce`, `FullscreenMonitor`):
   has been gone for 600 ms (`FullscreenDebounce`): during transitions the fullscreen window shrinks or vanishes for a
   moment.
 - The notification arrives after the Space slide animation, and the panel (`.canJoinAllSpaces`) is shown on the new
-  fullscreen Space at once – the sheep is briefly visible over the fullscreen app. That is where its escape starts.
+  fullscreen Space at once – the buddy is briefly visible over the fullscreen app. That is where its escape starts.
   Faster polling would catch the window during the slide, but then nobody would see the escape.
-- The display is the one of the sheep's home (`SheepEscape.homeFrame`), not of the panel, which moves off the screen.
+- The display is the one of the buddy's home (`BuddyEscape.homeFrame`), not of the panel, which moves off the screen.
 - Logs: category `fullscreen` (on with the window's owner and layer, off).
 
-Escape (`SheepEscape`, `EscapeRoute`, `SheepSprites.Escape`):
+Escape (`BuddyEscape`, `EscapeRoute`, `SheepSprites.Escape`):
 
-- Away: the current clip plays to its end (`SheepAnimationDriver.waitForCycleEnd`), a startled hop, the sheep turns
+- Away: the current clip plays to its end (`BuddyAnimationDriver.waitForCycleEnd`), a startled hop, the buddy turns
   to the nearer of the left and right screen edges (tie: right) and gallops until the panel is completely past it;
-  then the panel is hidden. Back: the panel appears past the same edge and the sheep runs home with an ease-out,
+  then the panel is hidden. Back: the panel appears past the same edge and the buddy runs home with an ease-out,
   catches breath and continues with the state machine. Neighbouring displays are deliberately ignored.
 - Speed (`EscapeRoute.Pace`): running 150 pt/s, but one way never takes longer than 1.2 s (longer distances are run
   faster); walking (hiding) 45 pt/s, at most 3 s. The panel moves ~60 times a second in whole sprite pixels (`scale`
   points) to keep the pixel-art look.
-- Each way plays to its end; if fullscreen ends before the clip does, the sheep doesn't leave at all. The panel
-  ignores the mouse during the escape. If the home screen is gone, the sheep returns to the nearest one.
-- The sheep faces left; running right uses mirrored frames (`SpriteFrame.mirrored(canvasWidth:)`). Escape clips are
-  played as scripts by `SheepAnimationDriver` (`play` once, `loop`, `endScript`), outside the state machine, which
+- Each way plays to its end; if fullscreen ends before the clip does, the buddy doesn't leave at all. The panel
+  ignores the mouse during the escape. If the home screen is gone, the buddy returns to the nearest one.
+- The buddy faces left; running right uses mirrored frames (`SpriteFrame.mirrored(canvasWidth:)`). Escape clips are
+  played as scripts by `BuddyAnimationDriver` (`play` once, `loop`, `endScript`), outside the state machine, which
   keeps its target status and continues where it stopped.
-- With the animation mode `off` (`SheepAnimationDriver.animationMode`, read at the start of each way) the panel is
+- With the animation mode `off` (`BuddyAnimationDriver.animationMode`, read at the start of each way) the panel is
   hidden right away, without waiting for the clip, and shown again at home.
 
 ## Hiding
@@ -376,24 +376,24 @@ Set in the menu bar (`Preferences.hideMode`, key `hideMode`: `never` / `whenIdle
 `Preferences.hideMinutes`, key `hideAfterMinutes`, one of 1 / 5 / 15 / 30 min, default 5).
 
 - Calm (`HideMode.isCalm`): `whenIdle` – the aggregated status is `idle` or `unknown`; `unlessNeeded` – it is not
-  `blocked` or `done` (agents may work). `unknown` (no agents, herdr not running) counts as calm, so a hidden sheep
+  `blocked` or `done` (agents may work). `unknown` (no agents, herdr not running) counts as calm, so a hidden buddy
   doesn't show "?" when herdr goes away.
-- `SheepHiding` hides the sheep after `hideMinutes` of continuous calm and brings it back as soon as the status isn't
+- `BuddyHiding` hides the buddy after `hideMinutes` of continuous calm and brings it back as soon as the status isn't
   calm. The countdown (real time) starts again on every status change, settings change, petting and `show()`; at
-  launch the sheep is visible and the countdown runs from the start. While hidden, a change between two calm statuses
+  launch the buddy is visible and the countdown runs from the start. While hidden, a change between two calm statuses
   (e.g. `idle` → `working` in `unlessNeeded`) keeps it hidden.
-- The sheep can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`SheepHiding.show()`), which
+- The buddy can't be clicked while hidden; the menu bar list then shows "Show Sheep" (`BuddyHiding.show()`), which
   calls it back until another `hideMinutes` of calm.
-- Moving uses `SheepEscape` with the same route as the fullscreen escape. When hiding is the only reason, the sheep
+- Moving uses `BuddyEscape` with the same route as the fullscreen escape. When hiding is the only reason, the buddy
   leaves bored instead of startled: a yawn (`SheepSprites.Escape.yawn`; if the reason is gone by its end, it stays),
   then a slow walk (`Escape.walk`, `EscapeRoute.Pace.walk`). It comes back running, like after a fullscreen window.
   `off` animation just hides the panel.
-- `SheepEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the sheep is away while there is any.
+- `BuddyEscape.setAway(_:for:)` keeps a set of reasons (`fullscreen`, `hiding`); the buddy is away while there is any.
 - Logs: category `hiding`.
 
 ## Name plate
 
-A dark plate with light pixel text under the sheep's feet, naming the agent the sheep reports.
+A dark plate with light pixel text under the buddy's feet, naming the agent the buddy reports.
 
 - Shown only while the aggregated (or debug-overridden) status is `blocked` or `done` – the statuses that are not calm
   in `HideMode.unlessNeeded`. It names one agent in that status, the one that got into it last, and adds `+N` for the
@@ -404,11 +404,11 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
   default), and while on, a checkbox per part – Machine, Workspace, Title (`Preferences.namePlateFields`,
   `NamePlate.Field`, key `namePlateFields`, an array of the names, all by default) – picks what it shows. `+N` is
   always shown. Unchecking the last part turns the plate off and checks all parts for the next time
-  (`Preferences.setNamePlate(_:shown:)`), so the plate is never on without parts. The room below the sheep is
-  reserved even while the plate is off, so switching it never moves the sheep. The row is 329 of the 336 pt
+  (`Preferences.setNamePlate(_:shown:)`), so the plate is never on without parts. The room below the buddy is
+  reserved even while the plate is off, so switching it never moves the buddy. The row is 329 of the 336 pt
   available – no room for a longer label.
 - `AttentionTracker` names the agent with all its parts (`NamePlate`); the parts are chosen where the plate is shown
-  (`SheepPanelController.setNamePlateFields`, `NamePlate.label(showing:)`), so a settings change applies at once
+  (`BuddyPanelController.setNamePlateFields`, `NamePlate.label(showing:)`), so a settings change applies at once
   without re-running the status. The title repeating the workspace is dropped only when the workspace is shown. When
   the chosen parts have no text for the agent (only Machine for a local agent), there is no plate.
 - Order without clocks (`AttentionTracker`, which also tells `replay()` about new arrivals): every agent keyed by
@@ -424,19 +424,19 @@ A dark plate with light pixel text under the sheep's feet, naming the agent the 
 - Truncation by pixel width (`SheepSprites.Plate.text(for:maxWidth:)`, on `PixelFont.shortened`, one pass over the
   text): only the title is shortened, ending in `…`; the prefix and `+N` are kept. If even those don't fit, the whole
   text is cut at the end.
-- A separate child window (`NamePlatePanel`), not a bigger sheep panel: the plate is wider than the sheep, and growing
-  `SheepPanel` would break the clamping, `EscapeRoute` distances, the saved position and the click / drag area. The
-  plate panel is borderless, transparent, non-activating, `ignoresMouseEvents`, with the sheep panel's level and
-  collection behaviour, added with `addChildWindow(_:ordered: .above)` so it moves with the sheep (also while
-  dragging). `SheepPanelController` adds and removes it explicitly (`updatePlate`) instead of relying on how AppKit
+- A separate child window (`NamePlatePanel`), not a bigger buddy panel: the plate is wider than the buddy, and growing
+  `BuddyPanel` would break the clamping, `EscapeRoute` distances, the saved position and the click / drag area. The
+  plate panel is borderless, transparent, non-activating, `ignoresMouseEvents`, with the buddy panel's level and
+  collection behaviour, added with `addChildWindow(_:ordered: .above)` so it moves with the buddy (also while
+  dragging). `BuddyPanelController` adds and removes it explicitly (`updatePlate`) instead of relying on how AppKit
   orders child windows with their parent.
-- Placement (`NamePlateLayout`): centered under the sheep (the body is centered on the canvas), `Plate.gap` below the
-  feet, moved horizontally into the `visibleFrame` of the sheep's screen; never mirrored or moved above the sheep.
-  Re-laid out on every `setOrigin`, after a drag and on screen parameter changes. Plate pixel: the sheep's scale
+- Placement (`NamePlateLayout`): centered under the buddy (the body is centered on the canvas), `Plate.gap` below the
+  feet, moved horizontally into the `visibleFrame` of the buddy's screen; never mirrored or moved above the buddy.
+  Re-laid out on every `setOrigin`, after a drag and on screen parameter changes. Plate pixel: the buddy's scale
   divided by `Plate.pixelDivisor`, at least one point (2 at the default scale 6).
 - The text follows the snapshot right away, without waiting for the running clip (≤ 1.6 s of mismatch). The plate is
-  redrawn only when its text changes. It stays in every animation mode and while petted, leaves with the sheep
-  (fullscreen, hiding), and is hidden during the escape run itself (`SheepEscape` suppresses it once the startle or
+  redrawn only when its text changes. It stays in every animation mode and while petted, leaves with the buddy
+  (fullscreen, hiding), and is hidden during the escape run itself (`BuddyEscape` suppresses it once the startle or
   yawn is over and lifts it after the arrival). The menu bar list is unchanged.
 
 ## Testing
@@ -491,10 +491,10 @@ tests are cheap and stable:
   fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
   grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
   `UnixSocketTransport` (not running, timeouts, cancellation).
-- `Animation/` except `SheepAnimationDriver` – the `SheepAnimator` state machine, clip timing, `SplitMix64`.
+- `Animation/` except `BuddyAnimationDriver` – the `BuddyAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – `SheepSprites` grids and frame composition, `PixelSprite`, `SpriteFrame`, the
   `PixelFont` glyphs, marks and truncation, the `SheepSprites.Plate` sprite.
-- Placement math in `SheepPanelController` (including the room reserved for the plate), `ScreenGeometry`,
+- Placement math in `BuddyPanelController` (including the room reserved for the plate), `ScreenGeometry`,
   `EscapeRoute`, `NamePlateLayout`.
 - `HideMode` – which statuses are calm in each mode.
 - `FullscreenDetector` – window list parsing and the covering rules (notch, zoomed windows, other displays, layers);
@@ -502,7 +502,7 @@ tests are cheap and stable:
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
-- `HerdrPoller`, `HerdrMonitor`, `SheepAnimationDriver`, `SheepHiding` – timer-driven loops. They take injectable
+- `HerdrPoller`, `HerdrMonitor`, `BuddyAnimationDriver`, `BuddyHiding` – timer-driven loops. They take injectable
   `sleep` (and the pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass
   `ManualSleeper` (one per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by
   step, and `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and
@@ -518,9 +518,9 @@ Fine to leave uncovered:
 - `App/` – `BuddrMain`, `BuddrApp`, `AppDelegate` and the non-test branch of `RuntimeEnvironment`. Covering them
   means starting the real panel, menu bar and herdr polling under tests, which defeats `TestHostApp` and makes tests
   depend on the machine. Keep these files pure wiring instead: logic that needs a test moves into a testable type.
-- `Window/` SwiftUI / AppKit glue – `SheepView`, `SheepPanel` event handling, `FullscreenMonitor` (notifications, window
-  server queries), `SheepEscape` (moving the real panel in real time), `NamePlatePanel` and showing the plate in
-  `SheepPanelController`. Check them by running the app.
+- `Window/` SwiftUI / AppKit glue – `BuddyView`, `BuddyPanel` event handling, `FullscreenMonitor` (notifications, window
+  server queries), `BuddyEscape` (moving the real panel in real time), `NamePlatePanel` and showing the plate in
+  `BuddyPanelController`. Check them by running the app.
 - `Menu/` – `AgentListView` (layout only; the logic is in `AgentOverview`). Check it with `ImageRenderer` or the app.
 - Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
   `ProcessRunner.signalProcessGroup`, or failing `socket` / `poll` / `read` in `UnixSocketTransport`.

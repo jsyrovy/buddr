@@ -1,6 +1,6 @@
 import Foundation
 
-/// A small proportional pixel font for the name plate under the sheep: glyphs 5 pixels wide at most (some symbols are
+/// A small proportional pixel font for the name plate under the buddy: glyphs 5 pixels wide at most (some symbols are
 /// wider), 7 rows up to the cap height plus 2 for descenders, 1 pixel between glyphs.
 ///
 /// Lowercase letters with a caron, an acute or a ring get the mark drawn in the two rows above the x-height; after a

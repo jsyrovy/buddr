@@ -24,8 +24,8 @@ struct AnimationClip: Hashable, Sendable {
     }
 }
 
-/// Every clip the sheep can play. The pixels and timing of each clip live in `SheepSprites.clip(_:)`.
-enum SheepClipID: CaseIterable, Hashable, Sendable {
+/// Every clip the buddy can play. The pixels and timing of each clip live in `SheepSprites.clip(_:)`.
+enum ClipID: CaseIterable, Hashable, Sendable {
     case idleRest
     case idleBlink
     case idleLook
@@ -36,7 +36,7 @@ enum SheepClipID: CaseIterable, Hashable, Sendable {
     case doneJump
     case doneHold
     case unknown
-    /// Still poses, shown instead of the clips above while the sheep is not animated (`AnimationMode`).
+    /// Still poses, shown instead of the clips above while the buddy is not animated (`AnimationMode`).
     case idleStill
     case sleepingStill
     case workingStill

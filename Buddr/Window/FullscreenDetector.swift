@@ -23,7 +23,7 @@ struct DisplayInfo: Equatable, Sendable {
     var topInset: CGFloat
 }
 
-/// Decides whether the display with the sheep is covered by a fullscreen window – a native fullscreen app as well as
+/// Decides whether the display with the buddy is covered by a fullscreen window – a native fullscreen app as well as
 /// a borderless window (game, video) covering the whole display.
 enum FullscreenDetector {
     /// Window server layer of normal application windows, including native fullscreen ones.

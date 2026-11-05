@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Remembers where the user left the sheep, so it sits there again after the next launch.
+/// Remembers where the user left the buddy, so it sits there again after the next launch.
 enum PanelPositionStore {
     private static let key = "panelOrigin"
 

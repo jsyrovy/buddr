@@ -1,10 +1,10 @@
 import AppKit
 
-/// The floating panel that hosts the sheep.
+/// The floating panel that hosts the buddy.
 ///
-/// A mouse down on the sheep drags the panel; when the button is released before the panel has moved, it was a click.
+/// A mouse down on the buddy drags the panel; when the button is released before the panel has moved, it was a click.
 /// Clicking it does not steal focus from the active app (`FloatingPanel`).
-final class SheepPanel: FloatingPanel {
+final class BuddyPanel: FloatingPanel {
     /// How far the panel may move during a click, in points: a click with a slightly shaking hand moves it a little.
     static let clickTolerance: CGFloat = 2
 

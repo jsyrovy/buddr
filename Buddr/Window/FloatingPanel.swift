@@ -1,6 +1,6 @@
 import AppKit
 
-/// Borderless, transparent, non-activating panel floating on every Space: the setup shared by the sheep panel and the
+/// Borderless, transparent, non-activating panel floating on every Space: the setup shared by the buddy panel and the
 /// name plate under it. It never becomes key or main, so it never steals focus from the active app.
 class FloatingPanel: NSPanel {
     init(contentRect: NSRect) {

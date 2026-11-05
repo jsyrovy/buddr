@@ -1,6 +1,6 @@
 import Foundation
 
-/// What the plate under the sheep can say: which agent the sheep reports while it is `blocked` or `done`.
+/// What the plate under the buddy can say: which agent the buddy reports while it is `blocked` or `done`.
 ///
 /// The text (`Label`) is `[machine · ][workspace · ]title`, followed by `+N` when more agents are in the same status.
 /// Which of the three parts are shown is set in the menu bar (`Field`). Only the title may be shortened to fit

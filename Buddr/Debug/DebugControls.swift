@@ -1,12 +1,12 @@
 #if DEBUG
     import Observation
 
-    /// What the debug section of the menu bar list (`DebugSection`) does: plays any clip by hand, sends the sheep away
-    /// and back, overrides the status the sheep shows and the text of its name plate. Debug builds only.
+    /// What the debug section of the menu bar list (`DebugSection`) does: plays any clip by hand, sends the buddy away
+    /// and back, overrides the status the buddy shows and the text of its name plate. Debug builds only.
     @MainActor
     @Observable
     final class DebugControls {
-        /// Shown by the sheep (and used for hiding) instead of the aggregated herdr status while set.
+        /// Shown by the buddy (and used for hiding) instead of the aggregated herdr status while set.
         var statusOverride: AgentStatus? {
             didSet { onChange?() }
         }
@@ -21,8 +21,8 @@
 
         /// Called when the status override or the name plate sample changes.
         @ObservationIgnored var onChange: (@MainActor () -> Void)?
-        @ObservationIgnored var animation: SheepAnimationDriver?
-        @ObservationIgnored var escape: SheepEscape?
+        @ObservationIgnored var animation: BuddyAnimationDriver?
+        @ObservationIgnored var escape: BuddyEscape?
 
         /// The plate shown for `status` instead of `plate`: the long sample, or a placeholder when the status is
         /// overridden and no agent is in it, so the plate can be checked without agents.
@@ -31,7 +31,7 @@
             if longNamePlate {
                 return NamePlate(
                     machine: "Devbox", workspace: "a-workspace-with-a-long-name",
-                    title: "Refactor the escape route so that the sheep always finds its way back home", more: 3)
+                    title: "Refactor the escape route so that the buddy always finds its way back home", more: 3)
             }
             return plate ?? NamePlate(machine: nil, workspace: "debug", title: status.rawValue, more: 0)
         }
@@ -51,12 +51,12 @@
             animation?.endScript()
         }
 
-        /// Sends the sheep off the screen: running like from a fullscreen window, or wandering off like when it hides.
+        /// Sends the buddy off the screen: running like from a fullscreen window, or wandering off like when it hides.
         func sendAway(startled: Bool) {
             escape?.setAway(true, for: .debug(startled: startled))
         }
 
-        /// Brings the sheep back unless it is away for a real reason.
+        /// Brings the buddy back unless it is away for a real reason.
         func callBack() {
             escape?.setAway(false, for: .debug(startled: true))
             escape?.setAway(false, for: .debug(startled: false))

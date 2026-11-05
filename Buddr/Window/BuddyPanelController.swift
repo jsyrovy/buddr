@@ -1,40 +1,40 @@
 import AppKit
 import SwiftUI
 
-/// Owns the sheep panel: creates it with the SwiftUI content and places it on screen, where the user left it last
-/// time. Also owns the name plate under the sheep, a child window of the sheep panel; room for it is always kept
+/// Owns the buddy panel: creates it with the SwiftUI content and places it on screen, where the user left it last
+/// time. Also owns the name plate under the buddy, a child window of the buddy panel; room for it is always kept
 /// below the panel.
 @MainActor
-final class SheepPanelController {
+final class BuddyPanelController {
     static let defaultScale = 6
     /// Distance of the panel from the screen edges in its default position.
     private static let margin: CGFloat = 24
 
     /// Points per sprite pixel.
     let scale: Int
-    /// Called when the sheep is clicked rather than dragged.
+    /// Called when the buddy is clicked rather than dragged.
     var onClick: (() -> Void)?
-    private let panel: SheepPanel
+    private let panel: BuddyPanel
     private let plate: NamePlatePanel
     /// The agent the name plate names, and which of its parts are shown.
     private var namePlate: NamePlate?
     private var namePlateFields = NamePlate.Field.all
     /// What the name plate shows; `nil` without a plate.
     private var label: NamePlate.Label?
-    /// Whether the plate is hidden although it has a text, while the sheep runs away and back.
+    /// Whether the plate is hidden although it has a text, while the buddy runs away and back.
     private var isPlateSuppressed = false
     private var screenObserver: NSObjectProtocol?
 
-    init(animation: SheepAnimationDriver, scale: Int = defaultScale) {
+    init(animation: BuddyAnimationDriver, scale: Int = defaultScale) {
         self.scale = scale
         // The size is set explicitly: `NSHostingView.fittingSize` is still zero here, and placing a zero-sized panel
         // in the corner pushed the real panel off screen.
-        panel = SheepPanel(contentRect: NSRect(origin: .zero, size: SheepView.size(scale: scale)))
-        let hostingView = NSHostingView(rootView: SheepView(animation: animation, scale: scale))
+        panel = BuddyPanel(contentRect: NSRect(origin: .zero, size: BuddyView.size(scale: scale)))
+        let hostingView = NSHostingView(rootView: BuddyView(animation: animation, scale: scale))
         // The content has a fixed size; don't let SwiftUI updates re-evaluate the window size on every frame.
         hostingView.sizingOptions = []
         panel.contentView = hostingView
-        plate = NamePlatePanel(scale: NamePlateLayout.plateScale(sheepScale: scale))
+        plate = NamePlatePanel(scale: NamePlateLayout.plateScale(buddyScale: scale))
         panel.onDragEnd = { [weak self] in
             self?.dragEnded()
         }
@@ -75,7 +75,7 @@ final class SheepPanelController {
         layoutPlate()
     }
 
-    /// Names `namePlate` on the plate under the sheep, or shows no plate for `nil`.
+    /// Names `namePlate` on the plate under the buddy, or shows no plate for `nil`.
     func setNamePlate(_ namePlate: NamePlate?) {
         self.namePlate = namePlate
         updateLabel()
@@ -98,7 +98,7 @@ final class SheepPanelController {
         updatePlate()
     }
 
-    /// Hides the plate while the sheep runs away and back; it shows again (if there is one) when lifted.
+    /// Hides the plate while the buddy runs away and back; it shows again (if there is one) when lifted.
     func setNamePlateSuppressed(_ suppressed: Bool) {
         isPlateSuppressed = suppressed
         updatePlate()
@@ -108,7 +108,7 @@ final class SheepPanelController {
         label != nil && !isPlateSuppressed && panel.isVisible
     }
 
-    /// Shows the plate as a child of the sheep panel while it should be seen, otherwise takes it away. Done explicitly
+    /// Shows the plate as a child of the buddy panel while it should be seen, otherwise takes it away. Done explicitly
     /// rather than relying on how AppKit orders child windows with their parent.
     private func updatePlate() {
         if showsPlate {
@@ -125,19 +125,19 @@ final class SheepPanelController {
         }
     }
 
-    /// Places a visible plate under the sheep, inside the visible area of the sheep's screen. A child window moves
-    /// with its parent on its own, but keeping it on screen depends on where the sheep is.
+    /// Places a visible plate under the buddy, inside the visible area of the buddy's screen. A child window moves
+    /// with its parent on its own, but keeping it on screen depends on where the buddy is.
     private func layoutPlate() {
         guard showsPlate, let screen = screen(for: panel.frame) else { return }
         let frame = NamePlateLayout.frame(
-            plateSize: plate.frame.size, sheepFrame: panel.frame, visibleFrame: screen.visibleFrame,
+            plateSize: plate.frame.size, buddyFrame: panel.frame, visibleFrame: screen.visibleFrame,
             plateScale: plate.scale)
         if frame.origin != plate.frame.origin {
             plate.setFrameOrigin(frame.origin)
         }
     }
 
-    /// Whether the sheep can be dragged and clicked; off while it escapes, so it can't be grabbed on the run.
+    /// Whether the buddy can be dragged and clicked; off while it escapes, so it can't be grabbed on the run.
     func setInteractive(_ interactive: Bool) {
         panel.ignoresMouseEvents = !interactive
     }
@@ -158,7 +158,7 @@ final class SheepPanelController {
 
     /// Room for the name plate below the panel.
     private var reservedBelow: CGFloat {
-        NamePlateLayout.reservedHeight(sheepScale: scale)
+        NamePlateLayout.reservedHeight(buddyScale: scale)
     }
 
     /// Origin that moves a panel at `frame` into `visibleFrame`, together with `reservedBelow` points below it.

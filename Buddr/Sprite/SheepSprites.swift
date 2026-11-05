@@ -314,7 +314,7 @@ enum SheepSprites {
 
     // Keep every clip short (well under 1.5 s): a clip always plays to its end before the state machine switches.
 
-    static func clip(_ id: SheepClipID) -> AnimationClip {
+    static func clip(_ id: ClipID) -> AnimationClip {
         switch id {
         case .idleRest: Clip.idleRest
         case .idleBlink: Clip.idleBlink
@@ -398,7 +398,7 @@ enum SheepSprites {
     // MARK: Escape
 
     /// Clips of leaving the screen – escaping from a fullscreen window or wandering off bored when it hides – and of
-    /// the return. They are played by `SheepEscape` rather than the state machine; the sheep faces left, moving right
+    /// the return. They are played by `BuddyEscape` rather than the state machine; the sheep faces left, moving right
     /// uses the mirrored frames.
     enum Escape {
         /// A startled hop with an open mouth before running away.
@@ -460,7 +460,7 @@ enum SheepSprites {
 
     /// Every clip with a name: the state machine's, the escape's and the petting reaction.
     static let allClips: [(name: String, clip: AnimationClip)] =
-        SheepClipID.allCases.map { ("\($0)", clip($0)) } + [
+        ClipID.allCases.map { ("\($0)", clip($0)) } + [
             ("escapeStartle", Escape.startle),
             ("escapeYawn", Escape.yawn),
             ("escapeTurn", Escape.turn),
@@ -473,7 +473,7 @@ enum SheepSprites {
     // MARK: Name plate
 
     /// The plate under the sheep naming the agent it reports (`NamePlate.Label`): light text in `PixelFont` on a dark plate
-    /// with cut corners. Drawn with its own, smaller pixels (`NamePlateLayout.plateScale(sheepScale:)`).
+    /// with cut corners. Drawn with its own, smaller pixels (`NamePlateLayout.plateScale(buddyScale:)`).
     enum Plate {
         /// A plate pixel is this many times smaller than a sheep pixel (rounded down, at least one point).
         static let pixelDivisor = 3

@@ -1,14 +1,14 @@
 import Observation
 import os
 
-/// Decides when the sheep hides: after `delay` of calm (see `HideMode`), and back at once when it isn't calm anymore.
+/// Decides when the buddy hides: after `delay` of calm (see `HideMode`), and back at once when it isn't calm anymore.
 ///
-/// The countdown starts again whenever the status or the settings change, when the sheep is petted
+/// The countdown starts again whenever the status or the settings change, when the buddy is petted
 /// (`restartCountdown()`) and when it is called back (`show()`). While hidden, a change between two calm statuses
 /// keeps it hidden. Moving the panel is up to `onChange`.
 @MainActor
 @Observable
-final class SheepHiding {
+final class BuddyHiding {
     private static let logger = Logger(subsystem: "cz.jsyrovy.buddr", category: "hiding")
 
     private(set) var isHidden = false
@@ -41,13 +41,13 @@ final class SheepHiding {
         update()
     }
 
-    /// Starts the countdown again, e.g. when the sheep was petted. Does nothing while it is hidden.
+    /// Starts the countdown again, e.g. when the buddy was petted. Does nothing while it is hidden.
     func restartCountdown() {
         guard !isHidden else { return }
         update()
     }
 
-    /// Calls the sheep back; it hides again after another `delay` of calm.
+    /// Calls the buddy back; it hides again after another `delay` of calm.
     func show() {
         guard isHidden else { return }
         setHidden(false)
@@ -84,7 +84,7 @@ final class SheepHiding {
     private func setHidden(_ hidden: Bool) {
         guard hidden != isHidden else { return }
         isHidden = hidden
-        Self.logger.info("\(hidden ? "Hiding" : "Showing", privacy: .public) the sheep")
+        Self.logger.info("\(hidden ? "Hiding" : "Showing", privacy: .public) the buddy")
         onChange?(hidden)
     }
 }

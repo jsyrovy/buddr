@@ -3,16 +3,16 @@ import Testing
 @testable import Buddr
 
 @MainActor
-struct SheepAnimationDriverTests {
+struct BuddyAnimationDriverTests {
     private let sleeper = ManualSleeper()
 
-    private func driver(_ animator: SheepAnimator) -> SheepAnimationDriver {
-        SheepAnimationDriver(animator: animator, sleep: sleeper.sleep(for:))
+    private func driver(_ animator: BuddyAnimator) -> BuddyAnimationDriver {
+        BuddyAnimationDriver(animator: animator, sleep: sleeper.sleep(for:))
     }
 
     @Test func playsTheAnimatorFrameByFrame() async {
         // A copy of the animator with the same seed plays the expected frames.
-        var expected = SheepAnimator(status: .working, seed: 7)
+        var expected = BuddyAnimator(status: .working, seed: 7)
         let driver = driver(expected)
         var sleeps = sleeper.sleeps.makeAsyncIterator()
 
@@ -35,7 +35,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func stopFreezesThePicture() async throws {
-        let animator = SheepAnimator(status: .working, seed: 7)
+        let animator = BuddyAnimator(status: .working, seed: 7)
         var next = animator
         next.advance()
         try #require(next.frame.sprite != animator.frame.sprite)
@@ -58,7 +58,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func playShowsTheClipOnceAndHoldsItsLastFrame() async {
-        let animator = SheepAnimator(status: .working, seed: 7)
+        let animator = BuddyAnimator(status: .working, seed: 7)
         let driver = driver(animator)
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         driver.start()
@@ -89,7 +89,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func loopRepeatsTheClipUntilTheScriptEnds() async {
-        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        let driver = driver(BuddyAnimator(status: .working, seed: 7))
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         driver.start()
         _ = await sleeps.next()
@@ -104,7 +104,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func waitForCycleEndReturnsAfterTheLastFrameOfTheClip() async {
-        let animator = SheepAnimator(status: .working, seed: 7)
+        let animator = BuddyAnimator(status: .working, seed: 7)
         let frames = animator.clip.frames.count
         let driver = driver(animator)
         var sleeps = sleeper.sleeps.makeAsyncIterator()
@@ -132,7 +132,7 @@ struct SheepAnimationDriverTests {
     private static let interjection = SheepSprites.petted
 
     @Test func interjectShowsTheClipOnceAndHandsBackToTheStateMachine() async {
-        let animator = SheepAnimator(status: .working, seed: 7)
+        let animator = BuddyAnimator(status: .working, seed: 7)
         let driver = driver(animator)
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         driver.start()
@@ -152,7 +152,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func interjectIsIgnoredWhileAScriptPlays() async {
-        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        let driver = driver(BuddyAnimator(status: .working, seed: 7))
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         driver.start()
         _ = await sleeps.next()
@@ -168,7 +168,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func interjectIsIgnoredWhileStopped() {
-        let animator = SheepAnimator(status: .working, seed: 7)
+        let animator = BuddyAnimator(status: .working, seed: 7)
         let driver = driver(animator)
         driver.interject(Self.interjection)
         #expect(driver.sprite == animator.frame.sprite)
@@ -176,7 +176,7 @@ struct SheepAnimationDriverTests {
 
     /// The escape must not be cut short by a petting that was playing when it started.
     @Test func aScriptReplacesAnInterjectionAndHoldsItsLastFrame() async {
-        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        let driver = driver(BuddyAnimator(status: .working, seed: 7))
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         driver.start()
         _ = await sleeps.next()
@@ -196,7 +196,7 @@ struct SheepAnimationDriverTests {
     }
 
     @Test func stopEndsAPendingPlay() async {
-        let driver = driver(SheepAnimator(status: .working, seed: 7))
+        let driver = driver(BuddyAnimator(status: .working, seed: 7))
         var sleeps = sleeper.sleeps.makeAsyncIterator()
         driver.start()
         _ = await sleeps.next()

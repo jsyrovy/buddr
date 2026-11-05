@@ -1,4 +1,4 @@
-/// When the sheep moves. Without animation it shows a still pose of its state.
+/// When the buddy moves. Without animation it shows a still pose of its state.
 enum AnimationMode: String, CaseIterable, Sendable {
     /// Always a still pose.
     case off

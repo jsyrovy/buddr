@@ -6,7 +6,7 @@ import SwiftUI
 struct AgentListView: View {
     let store: SnapshotStore
     @Bindable var preferences: Preferences
-    let hiding: SheepHiding
+    let hiding: BuddyHiding
     /// Called when the list is shown, to poll right away.
     let onOpen: @MainActor () -> Void
 

@@ -99,7 +99,7 @@ struct HerdrSnapshot: Hashable, Sendable {
             sources: sources.filter { !$0.isRemote })
     }
 
-    /// Aggregated state shown by the sheep; `unknown` when there are no agents.
+    /// Aggregated state shown by the buddy; `unknown` when there are no agents.
     var status: AgentStatus {
         AgentStatus.aggregate(agents.map(\.status))
     }

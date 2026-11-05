@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// Where the sheep goes when it leaves the screen: to the nearer of the left and right screen edges, until the panel is
+/// Where the buddy goes when it leaves the screen: to the nearer of the left and right screen edges, until the panel is
 /// fully past it, and back the same way. Neighbouring displays are deliberately ignored.
 struct EscapeRoute: Equatable {
     enum Edge: Equatable {
@@ -30,14 +30,14 @@ struct EscapeRoute: Equatable {
     }
 
     let edge: Edge
-    /// Panel origin in its normal position, where the sheep comes back to.
+    /// Panel origin in its normal position, where the buddy comes back to.
     let home: CGPoint
     /// Panel origin just past the edge, with the panel completely off the screen.
     let away: CGPoint
     /// Time of one way.
     let duration: Duration
 
-    /// `panelFrame` and `screenFrame` are in AppKit screen coordinates. On a tie the sheep goes right.
+    /// `panelFrame` and `screenFrame` are in AppKit screen coordinates. On a tie the buddy goes right.
     init(panelFrame: CGRect, screenFrame: CGRect, pace: Pace = .run) {
         let distanceLeft = panelFrame.maxX - screenFrame.minX
         let distanceRight = screenFrame.maxX - panelFrame.minX
@@ -50,7 +50,7 @@ struct EscapeRoute: Equatable {
     }
 
     /// Panel x after `time` (0…1) of the way from `from` to `to`, in whole steps of `step` points (one sprite pixel)
-    /// so the movement keeps the pixel grid; the end point is always reached exactly. With `easeOut` the sheep slows
+    /// so the movement keeps the pixel grid; the end point is always reached exactly. With `easeOut` the buddy slows
     /// down towards the end.
     static func x(from: CGFloat, to: CGFloat, time: Double, step: CGFloat, easeOut: Bool = false) -> CGFloat {
         guard time < 1 else { return to }

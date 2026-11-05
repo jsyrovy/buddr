@@ -1,16 +1,16 @@
 import Observation
 
-/// Plays the sheep animation in real time and publishes the current picture to SwiftUI.
+/// Plays the buddy animation in real time and publishes the current picture to SwiftUI.
 ///
-/// Normally the frames come from the `SheepAnimator` state machine. A scripted clip (`play`, `loop`) takes over until
+/// Normally the frames come from the `BuddyAnimator` state machine. A scripted clip (`play`, `loop`) takes over until
 /// `endScript()`, an interjection (`interject`) until its last frame; the state machine keeps its target status
 /// meanwhile and continues where it stopped.
 @MainActor
 @Observable
-final class SheepAnimationDriver {
+final class BuddyAnimationDriver {
     private(set) var sprite: SpriteFrame
 
-    @ObservationIgnored private var animator: SheepAnimator
+    @ObservationIgnored private var animator: BuddyAnimator
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var script: Script?
@@ -29,7 +29,7 @@ final class SheepAnimationDriver {
 
     /// `sleep` is replaced in tests to play the animation frame by frame.
     init(
-        animator: SheepAnimator = SheepAnimator(),
+        animator: BuddyAnimator = BuddyAnimator(),
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) {
         self.animator = animator
@@ -41,7 +41,7 @@ final class SheepAnimationDriver {
         animator.setStatus(status)
     }
 
-    /// See `SheepAnimator.replay()`.
+    /// See `BuddyAnimator.replay()`.
     func replay() {
         animator.replay()
     }
@@ -50,7 +50,7 @@ final class SheepAnimationDriver {
         animator.mode
     }
 
-    /// See `SheepAnimator.setAnimation(_:for:)`.
+    /// See `BuddyAnimator.setAnimation(_:for:)`.
     func setAnimation(_ mode: AnimationMode, for duration: Duration) {
         animator.setAnimation(mode, for: duration)
     }

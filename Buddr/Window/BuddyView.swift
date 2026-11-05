@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Root view of the sheep panel.
-struct SheepView: View {
-    let animation: SheepAnimationDriver
+/// Root view of the buddy panel.
+struct BuddyView: View {
+    let animation: BuddyAnimationDriver
     let scale: Int
 
     var body: some View {
