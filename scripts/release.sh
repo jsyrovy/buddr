@@ -110,4 +110,4 @@ syspolicy_check distribution "$download/Buddr.app"
 
 step "Done: Buddr $VERSION ($BUILD)"
 ls -l "$OUT"/Buddr-"$VERSION"*
-echo "Next: git push origin main $TAG"
+echo "Next: git push origin main $TAG, then make publish"

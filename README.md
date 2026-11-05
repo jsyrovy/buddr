@@ -49,9 +49,9 @@ Buddr is not going to be in the Mac App Store: the App Sandbox forbids running t
 binaries, the herdr and herdr-core sockets live outside the app container, remote machines would need an own SSH
 client with access to `~/.ssh`, and the app does nothing without herdr or herdr-core anyway.
 
-Releases are signed with Developer ID and notarized by Apple, so a downloaded copy opens without Gatekeeper warnings
-(`make release`, for the maintainer; changes in [CHANGELOG.md](CHANGELOG.md)). Until the first one is published, build
-it from source. The plan is a Homebrew cask (herdr users already have Homebrew).
+Releases are on [GitHub](https://github.com/jsyrovy/buddr/releases): a zip of `Buddr.app`, signed with Developer ID
+and notarized by Apple, so it opens without Gatekeeper warnings – unpack it and move `Buddr.app` to Applications.
+Changes are in [CHANGELOG.md](CHANGELOG.md). The plan is a Homebrew cask (herdr users already have Homebrew).
 
 ## Roadmap
 

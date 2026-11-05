@@ -14,6 +14,7 @@ make coverage # tests + line coverage report of the app target (result bundle bu
 make run      # build, kill a running instance, open the app
 make install  # Release build into ~/Applications (INSTALL_DIR=…), restart it; make uninstall removes it
 make release  # signed, notarized zip in build/release from a commit tagged v<version> (see "Releasing")
+make publish  # that zip as a draft GitHub release of the pushed tag
 make measure  # CPU, wakeups, power and memory of the running app (scripts/measure.swift; ARGS="…")
 make format   # xcrun swift-format, in place
 make lint     # xcrun swift-format lint --strict
@@ -78,7 +79,7 @@ BuddrTests/   Swift Testing tests, mirroring the app folders
               AgentRecord.stub,
               HerdrSnapshot init that derives the queried sources
 scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage"), release.sh
-              (`make release`, see "Releasing")
+              (`make release`) and publish.sh (`make publish`), see "Releasing"
 CHANGELOG.md  one section per released version
 ```
 
@@ -555,20 +556,24 @@ testable (a clock for the poller), not to reach one more branch.
 
 Releases are distributed outside the Mac App Store (the sandbox rules it out, see README): signed with Developer ID,
 hardened runtime, notarized by Apple and stapled, so Gatekeeper opens a downloaded copy without warnings. The format is
-a zip of `Buddr.app`. Where releases are published is not decided yet (a Homebrew cask is the plan).
+a zip of `Buddr.app`, published as a GitHub release of the version's tag (a Homebrew cask is the plan).
 
 - A release is made only by hand, never by a push. Between releases the version stays the last released one.
 - Steps: set `MARKETING_VERSION` to the new `major.minor` (Xcode: target → General → Version, or both configurations in
   the pbxproj), add a section `## <version> – <YYYY-MM-DD>` to `CHANGELOG.md` (a few lines for users, drafted from
-  `git log v<previous>..HEAD`), commit ("Release 0.2"), `git tag v0.2`, `make release`, then
-  `git push origin main v0.2`. The tag is pushed only after a successful release; if it fails, fix, commit and move
-  the unpushed tag (`git tag -f`).
+  `git log v<previous>..HEAD`), commit ("Release 0.2"), `git tag v0.2`, `make release`, `git push origin main v0.2`,
+  `make publish`, then check the draft on GitHub and publish it. The tag is pushed only after a successful release; if
+  it fails, fix, commit and move the unpushed tag (`git tag -f`).
 - `scripts/release.sh` changes nothing in git. It checks the preconditions first (clean tree, tag, dated changelog
   section, identity, notary profile), then archives (signed with Developer ID right away, so there is no export step;
   build number = `git rev-list --count HEAD`), checks the signature, notarizes, staples, zips and checks the zip as a
   download with `syspolicy_check distribution`. A run takes a few minutes, most of it notarization.
 - Output: `build/release/Buddr-<version>.zip`, its `.sha256`, `Buddr-<version>-dSYMs.zip` (for symbolicating crash
-  reports; keep it with the release) and the archive.
+  reports) and the archive.
+- `scripts/publish.sh` (needs `gh`, logged in) uploads the zip, its checksum and the dSYMs as a *draft* release of the
+  tag, with the tag's `CHANGELOG.md` section as the notes; publishing stays a step on GitHub. It refuses when the zip
+  doesn't match its checksum or wasn't built from the tag (build number), the tag isn't on GitHub as it is locally, or
+  the release exists already.
 - Credentials live in the login keychain only, never in the repo: the identity "Developer ID Application: Jiri Syrovy
   (DZ7S6R9RRN)" (expires 2027-12-05; renew it before, already shipped versions keep working thanks to the timestamp)
   and the `notarytool` keychain profile `notary` (an App Store Connect API team key with the Developer role;
