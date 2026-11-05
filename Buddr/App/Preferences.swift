@@ -12,16 +12,18 @@ final class Preferences {
     private static let animationModeKey = "animationMode"
     private static let animationSecondsKey = "animationDurationSeconds"
     private static let hideModeKey = "hideMode"
-    private static let hideMinutesKey = "hideAfterMinutes"
+    private static let hideSecondsKey = "hideAfterSeconds"
+    /// Saved by versions that offered whole minutes only; read when `hideSecondsKey` is missing.
+    private static let legacyHideMinutesKey = "hideAfterMinutes"
     private static let showsNamePlateKey = "showsNamePlate"
     private static let namePlateFieldsKey = "namePlateFields"
 
     /// The choices for `animationSeconds`.
     static let animationSecondsChoices = [5, 10, 30, 60]
     static let defaultAnimationSeconds = 10
-    /// The choices for `hideMinutes`.
-    static let hideMinutesChoices = [1, 5, 15, 30]
-    static let defaultHideMinutes = 5
+    /// The choices for `hideSeconds`: 5 s, 30 s, 1 min, 5 min, 15 min, 30 min.
+    static let hideSecondsChoices = [5, 30, 60, 300, 900, 1800]
+    static let defaultHideSeconds = 300
 
     /// Which backends the agents are read from. Both by default.
     var backendChoice: BackendChoice {
@@ -64,10 +66,10 @@ final class Preferences {
         }
     }
 
-    /// How long the sheep waits before it hides, one of `hideMinutesChoices`.
-    var hideMinutes: Int {
+    /// How long the sheep waits before it hides, one of `hideSecondsChoices`.
+    var hideSeconds: Int {
         didSet {
-            defaults.set(hideMinutes, forKey: Self.hideMinutesKey)
+            defaults.set(hideSeconds, forKey: Self.hideSecondsKey)
             onChange?()
         }
     }
@@ -124,8 +126,10 @@ final class Preferences {
         let seconds = defaults.integer(forKey: Self.animationSecondsKey)
         animationSeconds = Self.animationSecondsChoices.contains(seconds) ? seconds : Self.defaultAnimationSeconds
         hideMode = defaults.string(forKey: Self.hideModeKey).flatMap { HideMode(rawValue: $0) } ?? .never
-        let minutes = defaults.integer(forKey: Self.hideMinutesKey)
-        hideMinutes = Self.hideMinutesChoices.contains(minutes) ? minutes : Self.defaultHideMinutes
+        let hideSeconds =
+            defaults.object(forKey: Self.hideSecondsKey) != nil
+            ? defaults.integer(forKey: Self.hideSecondsKey) : defaults.integer(forKey: Self.legacyHideMinutesKey) * 60
+        self.hideSeconds = Self.hideSecondsChoices.contains(hideSeconds) ? hideSeconds : Self.defaultHideSeconds
         let fields = Set(
             (defaults.stringArray(forKey: Self.namePlateFieldsKey) ?? []).compactMap(NamePlate.Field.init(rawValue:)))
         // Without a saved part to show (none saved, or edited by hand), the plate shows all of them.

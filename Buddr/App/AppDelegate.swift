@@ -80,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 backends: preferences.backendChoice.backends,
                 watchesRemoteMachines: preferences.watchesRemoteMachines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
-            hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))
+            hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideSeconds))
             panelController.setNamePlateFields(preferences.shownNamePlateFields)
         }
         applyPreferences()

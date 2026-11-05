@@ -86,9 +86,8 @@ final class FullscreenMonitor {
     private func fullscreenWindow() -> WindowInfo? {
         let displays = NSScreen.screens.compactMap(Self.displayInfo)
         guard let display = FullscreenDetector.display(containing: sheepFrame(), in: displays) else { return nil }
-        let list =
-            CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
-            as? [[String: Any]] ?? []
+        // Desktop elements are needed: Finder's desktop icon window tells a normal Space from a fullscreen one.
+        let list = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] ?? []
         return FullscreenDetector.fullscreenWindow(
             in: FullscreenDetector.windows(from: list), display: display,
             excludingPID: ProcessInfo.processInfo.processIdentifier)
