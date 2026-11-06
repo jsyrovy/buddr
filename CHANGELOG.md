@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2 – 2026-11-06
+
+- New buddies next to the sheep: a corgi that digs while agents work, the Earth that spins with the Moon circling it,
+  a rainbow cat flying on a pop-tart, and a UFO that beams up little sheep. They show the same signs as the sheep.
+- Choose the buddy in the menu bar ("Buddy"), or let them take turns every 15, 30 or 60 minutes. A turn ends only
+  while no agent needs you; the old buddy walks off the screen and the new one runs in.
+- Install with Homebrew: `brew install --cask jsyrovy/tap/buddr`.
+
 ## 0.1 – 2026-11-05
 
 The first release.
