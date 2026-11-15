@@ -62,7 +62,8 @@ Buddr/
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), RainbowCatSprites (a cat of its own, with the
               sheep's effects), UFOSprites (a flying saucer, likewise), EarthSprites (a planet, likewise),
-              CorgiSprites (a dog, likewise), NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
+              CorgiSprites (a dog, likewise), SnakeSprites (a rattlesnake, likewise), NamePlateSprite (the plate's
+              look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
@@ -318,6 +319,11 @@ The character on the screen is a buddy (`Buddy`): every clip it plays – the st
   back onto a heap behind its back paws, drawn behind the body so they never look like spots on the fur. When the
   state is unknown it tilts its head (`Grid.headTilt`, a larger grid drawn one pixel up and left). Its signs are the
   sheep's.
+- The snake (`SnakeSprites.swift`) is a green rattlesnake coiled in two rings, its head raised over them and the rattle
+  sticking up behind. At rest its neck is hidden under the head; raising the head adds a row of neck per pixel
+  (`snake(raised:)`). While agents work it rears up 2 px and swallows eggs: one comes in at the top edge (a cut-off
+  grid with its outline), it catches it in its open mouth and a bulge slides down its neck. When blocked it rears up,
+  hisses and shakes the rattle; it runs off in spring-like hops. Its signs are the sheep's.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
