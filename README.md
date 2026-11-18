@@ -93,13 +93,14 @@ Changes are in [CHANGELOG.md](CHANGELOG.md).
 ## Requirements
 
 - macOS 14 Sonoma or later
-- [herdr](https://herdr.dev) (tested with 0.9.3), looked up in `PATH`, `/opt/homebrew/bin` and `/usr/local/bin`,
-  and/or herdr-core (tested with 0.1.16) running in its default session
-  (`~/.local/state/herdr-core/default/default.sock`). An agent shows as done until you have seen it in herdr-app
-  0.1.12 or later; with older clients, until it starts working again.
-- and/or Rex (tested with 0.1.0-preview.19) with its server running. Agents report their state to Rex themselves
-  (Claude Code and Codex do). Rex's SSH hosts are watched while Rex.app is connected to them; hosts it reaches
-  over Tailscale are not.
+- one or more of:
+  - herdr (tested with 0.9.3), looked up in `PATH`, `/opt/homebrew/bin` and `/usr/local/bin`.
+  - herdr-core (tested with 0.1.16) running in its default session
+    (`~/.local/state/herdr-core/default/default.sock`). An agent shows as done until you have seen it in herdr-app
+    0.1.12 or later; with older clients, until it starts working again.
+  - Rex (tested with 0.1.0-preview.19) with its server running. Agents report their state to Rex themselves
+    (Claude Code and Codex do). Rex's SSH hosts are watched while Rex.app is connected to them; hosts it reaches
+    over Tailscale are not.
 
 ## Privacy
 
