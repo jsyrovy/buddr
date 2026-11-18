@@ -1,8 +1,8 @@
 # Buddr
 
 Buddr is a small native macOS desktop buddy: a pixel-art character – the buddy, so far a sheep – sitting in a corner
-of the screen that reacts to the state of AI coding agents running in [herdr](https://herdr.dev) or in herdr-core (`hc`, the terminal runtime behind
-herdr-app). One character shows the aggregated state of all agents. It is information only – it never focuses,
+of the screen that reacts to the state of AI coding agents running in [herdr](https://herdr.dev), in herdr-core (`hc`, the terminal runtime behind
+herdr-app) or in [Rex](https://www.superlogical.com/rex). One character shows the aggregated state of all agents. It is information only – it never focuses,
 attaches to, or sends anything to agents.
 
 ## Commands
@@ -68,12 +68,17 @@ Buddr/
               (@Observable timer that plays it), SplitMix64
   Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
               (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
-              of local sessions or of saved machines, sources queried concurrently), CoreSocket (CoreTransport,
+              of local sessions or of saved machines, sources queried concurrently), UnixSocket (connected
+              non-blocking socket with deadlines, shared by herdr-core and Rex), CoreSocket (CoreTransport,
               UnixSocketTransport: one JSON-RPC line over herdr-core's socket), CoreClient (CoreError, CoreLocator:
               socket path, typed calls + parsing), CoreModels, CoreStatusFetcher (herdr-core's terminals on this Mac
-              and on its machines as agents, one call), HerdrPoller (periodic loop on the main actor), HerdrMonitor
-              (one poller per kind of source; combines, filters remote sources and logs changes)
-  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / AgentSource (herdr or herdr-core) /
+              and on its machines as agents, one call), WebSocket (WebSocketProtocol: pure framing and upgrade;
+              WebSocketConnection over a UnixSocket), RexClient (RexError, RexRequest, RexConnection /
+              RexConnector, RexSocketConnector: Rex's control connection, RexLocator: socket paths), RexModels,
+              RexTunnels (Rex.app's SSH tunnels from `ssh` command lines, ProcessTable), RexStatusFetcher (Rex's
+              terminals with a status as agents, this Mac or the hosts), HerdrPoller (periodic loop on the main
+              actor), HerdrMonitor (one poller per kind of source; combines, filters remote sources and logs changes)
+  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / AgentSource (herdr, herdr-core, Rex) /
               HerdrSource / SourceFailure, Backend + BackendChoice (which backends are read),
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
@@ -82,8 +87,8 @@ Buddr/
               status, a long name plate), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs, herdr-core API answers (`core-*`)
-  Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, ManualSleeper, ScriptedFetch + SnapshotRecorder,
-              AgentRecord.stub,
+  Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, FakeRexConnector, WebSocketServer, ManualSleeper,
+              ScriptedFetch + SnapshotRecorder, AgentRecord.stub,
               HerdrSnapshot init that derives the queried sources
 scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage"), screenshots.swift
               (`make screenshots`, see "README images"), previews.swift (`make previews`, see "Buddies"),
@@ -103,10 +108,11 @@ CHANGELOG.md  one section per released version
 - Swift 6 strict concurrency: UI types are `@MainActor`; data crossing actors is `Sendable`. Default actor isolation
   is left at `nonisolated` (no `SWIFT_DEFAULT_ACTOR_ISOLATION`), and functions that must run off the main actor are
   marked `@concurrent`. Locks: `OSAllocatedUnfairLock` (`Mutex` needs macOS 15).
-- The UI never waits on a subprocess or a socket: all `herdr` and herdr-core calls are async, off the main actor,
+- The UI never waits on a subprocess or a socket: all `herdr`, herdr-core and Rex calls are async, off the main actor,
   with timeouts.
-- `herdr` and herdr-core are used read-only (state queries only). Never run commands that change sessions, panes,
-  terminals or agents, and never start herdr-core (every `hc` command does when it isn't running, see "herdr-core").
+- `herdr`, herdr-core and Rex are used read-only (state queries only). Never run commands that change sessions, panes,
+  terminals or agents, and never start herdr-core (every `hc` command does when it isn't running, see "herdr-core")
+  or Rex's server (`rex` does unless `--autostart=false`, see "Rex").
 
 ## Design decisions
 
@@ -131,13 +137,14 @@ CHANGELOG.md  one section per released version
   width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
   itself to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section per
-  source – "This Mac" (herdr with the session name when several local sessions run, then herdr-core), then the machines
-  by label (herdr's) or name (herdr-core's) – in the order of discovery (`HerdrSnapshot.sources`, so sources without
-  agents and failed ones show up too). While sources of both backends are read, every section header shows its backend
-  (`herdr` / `hc`) on the right. The same machine in both backends stays two sections: herdr's label and SSH target and
+  source – "This Mac" (herdr with the session name when several local sessions run, then herdr-core, then Rex), then the
+  machines by label (herdr's, Rex's) or name (herdr-core's) – in the order of discovery (`HerdrSnapshot.sources`, so sources without
+  agents and failed ones show up too). While sources of several backends are read, every section header shows its backend
+  (`herdr` / `hc` / `rex`) on the right. The same machine in several backends stays two sections: herdr's label and SSH target and
   herdr-core's name and host can't be matched reliably (aliases, `user@host`). A failed source shows only its error, no
-  stale agents. Within a source, workspaces in herdr's sidebar order (`number`; herdr-core has none, so its workspaces
-  are in the order of their first agent); agents in `agent list` / `terminal.list` order. Order never depends on status,
+  stale agents. Within a source, workspaces in herdr's sidebar order (`number`; Rex's sessions in the server's order;
+  herdr-core has none, so its workspaces are in the order of their first agent); agents in `agent list` /
+  `terminal.list` / block ID order. Order never depends on status,
   so rows don't jump while the list is open. More than `WorkspaceGroup.idleFoldLimit` idle agents in a workspace are
   folded into one "N idle" row that unfolds on click. Status icons are SF Symbols differing in shape and color. Rows are
   information only (no focusing).
@@ -158,21 +165,22 @@ CHANGELOG.md  one section per released version
 - Hiding: the buddy can leave the screen on its own after a while of calm. Details in "Hiding" below.
 - Name plate: while the buddy is `blocked` or `done`, a plate under it names the agent. Details in "Name plate" below.
 - Data sources: running local herdr sessions and all *enabled* saved herdr machines, both discovered on every poll
-  (nothing hardcoded), and herdr-core on this Mac with the machines added to it. `HerdrMonitor` polls every kind of
-  source (`HerdrMonitor.SourceKind`: `localSessions`, `machines`, `core`) in an independent loop – herdr locally every
-  2 s, its machines every 15 s, herdr-core with its machines every 2 s – so a slow machine or backend never delays the
-  others, and shows the combined snapshot (`HerdrSnapshot.combining`: the sources of this Mac first, then the
+  (nothing hardcoded), herdr-core on this Mac with the machines added to it, and Rex's server on this Mac and those of
+  the hosts Rex.app has an SSH tunnel to. `HerdrMonitor` polls every kind of source (`HerdrMonitor.SourceKind`:
+  `localSessions`, `machines`, `core`, `rex`, `rexMachines`) in an independent loop – herdr locally every 2 s, its
+  machines every 15 s, herdr-core with its machines every 2 s, Rex and its hosts every 2 s each – so a slow machine or
+  backend never delays the others, and shows the combined snapshot (`HerdrSnapshot.combining`: the sources of this Mac first, then the
   machines). Sources are queried concurrently. A part that didn't change since its last poll is not combined again.
-- The backends are chosen in the menu bar ("Agents from": herdr / hc / Both; `Preferences.backendChoice`, key
-  `agentBackends`: `herdr` / `hc` / `both`, default `both`). A chosen backend that is missing or not running is a
-  failed source (⚠), also with Both – the user asked for it.
+- The backends are chosen in the menu bar ("Agents from": herdr / hc / rex / All; `Preferences.backendChoice`, key
+  `agentBackends`: `herdr` / `hc` / `rex` / `all`, default `all`; `both`, saved before Rex, reads as `all`). A chosen
+  backend that is missing or not running is a failed source (⚠), also with All – the user asked for it.
 - Remote machines can be switched off in the menu bar (`Preferences.watchesRemoteMachines`, `UserDefaults` key
-  `watchesRemoteMachines`, on by default) for both backends. `HerdrMonitor.configure(backends:watchesRemoteMachines:)`
+  `watchesRemoteMachines`, on by default) for every backend. `HerdrMonitor.configure(backends:watchesRemoteMachines:)`
   applies both settings: it enables the kinds they ask for (`SourceKind.isEnabled(by:watchesRemoteMachines:)`,
   `setEnabled(_:_:)`) and leaves every remote source, with its agents and failures, out of the combined snapshot at
-  once (`HerdrSnapshot.withoutRemoteSources()`). Off stops herdr's machine poller – no `--machine` calls at all, a
-  running one is cancelled; herdr-core's machines come in the same call as this Mac, so they are only filtered out.
-  On polls herdr's machines right away.
+  once (`HerdrSnapshot.withoutRemoteSources()`). Off stops herdr's and Rex's machine pollers – no `--machine` calls
+  or tunnel connections at all, a running one is cancelled; herdr-core's machines come in the same call as this Mac, so
+  they are only filtered out. On polls the machines right away.
 - Animation can be set in the menu bar (`Preferences.animationMode`, key `animationMode`: `off` / `onChange` /
   `always`, default `always`; `Preferences.animationSeconds`, key `animationDurationSeconds`, one of 5 / 10 / 30 /
   60 s, default 10). See "Animation modes" below.
@@ -187,7 +195,7 @@ CHANGELOG.md  one section per released version
   the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). Release
   builds contain none of it; check with `CONFIG=Release make build` after touching it.
 - Out of scope: sounds and notifications, focusing / replying to agents, one character per agent, sources other than
-  herdr and herdr-core.
+  herdr, herdr-core and Rex.
 
 ## herdr CLI
 
@@ -290,6 +298,49 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 - Later: `events.subscribe` (a snapshot, then every change of any terminal, also on the machines, a heartbeat every
   15 s, `missed` + a fresh snapshot for a subscriber that fell behind) could replace polling; it needs a feed that
   pushes snapshots instead of `HerdrPoller.Feed`.
+
+## Rex
+
+[Rex](https://www.superlogical.com/rex) (Superlogical, verified with 0.1.0-preview.19, API revision 14 locally and 19
+on Linux hosts) is a terminal multiplexer with a server per machine. Agents report their status into the terminal
+with OSC 7501 (the protocol herdr-core reads too; Claude Code and Codex send it on their own), and the server keeps it
+per terminal ("block"). The server's own documentation: `GET /llms.txt` on its socket, `rex api describe <method>`.
+
+- Buddr doesn't run `rex`: **`rex` starts a missing local server** (`--autostart`, on by default). It talks to the
+  server's Unix socket instead, `~/Library/Application Support/rex/server.sock` (`RexLocator`; `REX_SERVER`, set in
+  Rex's terminals as `unix://<percent-encoded path>`, wins). Nothing listening is `RexError.notRunning`.
+- The control API is a WebSocket at `GET /api/control` on that socket, subprotocol `rex.control.v1` – not a line
+  protocol: `URLSessionWebSocketTask` can't use a Unix socket, so `WebSocketConnection` implements the client side of
+  RFC 6455 on `UnixSocket` (masked frames, fragments, answering pings, no compression offered). The client sends a
+  `hello` (`api_revision` 14, `kind: other`, name Buddr) and gets a `welcome`; then `{"type":"request","id":…,
+  "method":…,"payload":…}` and `{"type":"response","id":…,"payload"|"error":{"code","message","status"}}`. Responses
+  may come in any order and `event` messages in between; both are handled (`RexSocketConnection.call`). A connection
+  is closed with a close frame: without one the server keeps the client for 60 s.
+- One connection per poll and server (`RexStatusFetcher`), four rounds of requests, each sent at once:
+  `session.attach_all` with `event_scope: session` (methods that name a session need an attachment; it lists the
+  sessions without joining them, so Buddr doesn't show up among a session's clients), `session.list_blocks` per
+  session, `block.method` `program_status` per terminal (`creator_name` `com.superlogical.terminal`), and `title` +
+  `pwd` of the terminals with a status record – the agents. A session or block gone in between (`not_found`,
+  `session_not_found`) is skipped; another error fails the server. ~50 ms locally, ~100 ms per host over SSH.
+- `program_status` records: `id` (`build/test`, none for the root), `state` (`idle`, `working`, `done`, `blocked`,
+  `error`; an unknown word counts as `idle`, as Rex asks), `kind` of blocked (`permission`, `question`, `auth`),
+  `app`, `effective_app`, `msg`, `updated_at` (RFC 3339 with nanoseconds, by the server's clock →
+  `AgentRecord.statusOrder`), `owner`. A terminal can hold several records; the agent's status is the most urgent one.
+  `error` counts as `blocked` (as in herdr-core). `done` means a result the user hasn't seen; Rex decides when to drop
+  it. `working` and `blocked` go away when the program exits, `idle`, `done` and `error` stay.
+- Mapping: the session is the workspace (`label`, its ID when empty; `workspaceNumber` = the session's position), the
+  block the pane, `title` the title, `pwd` (`file://host/path` from OSC 7, or a plain path) the working directory.
+- Hosts: Rex.app connects to the server of each SSH host (`hosts.list`: `label`, `endpoints` such as `ssh://studio`)
+  through `rex __internal ssh-tunnel ssh://studio`, which runs `ssh -N … -L <tunnel directory>/<hash>.sock:<remote
+  socket> -- ssh://studio` (tunnel directory `ssh/` next to the server socket; `askpass-<pid>.sock` there are ssh's
+  password prompts, never connect to them). The API doesn't say which socket is which host and the hash isn't
+  derivable, so `RexTunnels` reads the user's `ssh` processes (`sysctl` `KERN_PROC_UID`, `KERN_PROCARGS2`; no
+  permission needed) – how Rex.app works today, not a documented interface. The label comes from `hosts.list` of the
+  local server by endpoint, else the endpoint's host name. Hosts are watched only while Rex.app keeps a tunnel open;
+  hosts reached over Tailscale (TCP/TLS) are not read. Buddr never runs `ssh` itself.
+- Every connection is a client on the server for its moment (`client.list`), and Rex.app may see `client_joined` /
+  `client_left` events. A persistent connection with `events.subscribe`-like push (`attach_all` with
+  `event_scope: all` delivers `terminal.program_status_changed`) could replace polling later.
 
 ## Buddies
 
@@ -539,6 +590,11 @@ A dark plate with light pixel text under the buddy's feet, naming the agent the 
   herdr-core logic is tested through `FakeCoreTransport` (one canned answer, records the request lines);
   `UnixSocketTransport` with real Unix sockets (`LineServer`: answers in chunks, a missing and a stale socket, a
   silent server, a closed connection, cancellation). Never point tests at the user's running core.
+  Rex logic is tested through `FakeRexConnector` (a payload or an error code per `RexRequest`, records every round of
+  requests and closed connections; answers are inline JSON in Rex 0.1.0-preview.19's shapes); `RexSocketConnector` and
+  `WebSocketConnection` with `WebSocketServer` (a real Unix socket that speaks WebSocket: hello, out-of-order answers,
+  events, pings, fragments, a refused upgrade, a close frame, a silent server, cancellation); `WebSocketProtocol` and
+  the tunnel and `KERN_PROCARGS2` parsing as pure functions. Never point tests at the user's Rex servers.
 - Logs: `os.Logger` subsystem `cz.jsyrovy.buddr`. Watch with
   `/usr/bin/log stream --level info --predicate 'subsystem == "cz.jsyrovy.buddr"'` – in zsh, plain `log` is a shell
   builtin.
@@ -564,7 +620,8 @@ tests are cheap and stable:
 - `Herdr/` except `HerdrPoller` and `HerdrMonitor` – output parsing, the error envelope, binary lookup, concurrent
   fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
   grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
-  `UnixSocketTransport` (not running, timeouts, cancellation).
+  `UnixSocketTransport` (not running, timeouts, cancellation); Rex's WebSocket framing and handshake, the control
+  connection, status records as agents, hosts and their tunnels.
 - `Animation/` except `BuddyAnimationDriver` – the `BuddyAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – the sheep's grids, every buddy's clips and what every buddy has to do (`Buddy`, checked for every
   `BuddyID`), `SheepSprites` frame composition, `PixelSprite`, `SpriteFrame`, the `PixelFont` glyphs, marks and
@@ -598,7 +655,8 @@ Fine to leave uncovered:
   `BuddyPanelController`. Check them by running the app.
 - `Menu/` – `AgentListView` (layout only; the logic is in `AgentOverview`). Check it with `ImageRenderer` or the app.
 - Defensive fallbacks that can only be reached by faking system calls, e.g. the `kill(pid, …)` fallback in
-  `ProcessRunner.signalProcessGroup`, or failing `socket` / `poll` / `read` in `UnixSocketTransport`.
+  `ProcessRunner.signalProcessGroup`, or failing `socket` / `poll` / `read` in `UnixSocket`; reading real `ssh`
+  processes in `RexTunnels.find` (check it with Rex.app connected to a host).
 
 Do not add abstractions to production code just to cover lines. A seam is justified when it makes meaningful behaviour
 testable (a clock for the poller), not to reach one more branch.

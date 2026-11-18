@@ -61,7 +61,7 @@ final class Preferences {
         }
     }
 
-    /// Which backends the agents are read from. Both by default.
+    /// Which backends the agents are read from. All by default.
     var backendChoice: BackendChoice {
         didSet {
             defaults.set(backendChoice.rawValue, forKey: Self.backendChoiceKey)
@@ -161,7 +161,7 @@ final class Preferences {
             Self.buddyTurnMinutesChoices.contains(turnMinutes) ? turnMinutes : Self.defaultBuddyTurnMinutes
         shownBuddy = defaults.string(forKey: Self.shownBuddyKey).flatMap { BuddyID(rawValue: $0) } ?? .sheep
         backendChoice =
-            defaults.string(forKey: Self.backendChoiceKey).flatMap { BackendChoice(rawValue: $0) } ?? .both
+            defaults.string(forKey: Self.backendChoiceKey).flatMap { BackendChoice(savedValue: $0) } ?? .all
         watchesRemoteMachines = defaults.object(forKey: Self.watchesRemoteMachinesKey) as? Bool ?? true
         animationMode =
             defaults.string(forKey: Self.animationModeKey).flatMap { AnimationMode(rawValue: $0) } ?? .always

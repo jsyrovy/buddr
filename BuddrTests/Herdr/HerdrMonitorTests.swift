@@ -226,6 +226,10 @@ struct HerdrMonitorTests {
         #expect(enabled([.herdr], remote: false) == [.localSessions])
         // herdr-core's machines come in the same call; they are filtered, not switched off.
         #expect(enabled([.hc], remote: false) == [.core])
+        #expect(enabled([.rex], remote: true) == [.rex, .rexMachines])
+        #expect(enabled([.rex], remote: false) == [.rex])
+        #expect(
+            enabled([.herdr, .hc, .rex], remote: true) == [.localSessions, .machines, .core, .rex, .rexMachines])
     }
 
     @Test func withoutRemoteMachinesEveryRemoteSourceIsLeftOutAtOnce() async {

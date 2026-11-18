@@ -12,15 +12,16 @@ The sheep, the UFO and the corgi are a few of the buddies to choose from; the ot
 [menu bar](#the-menu-bar) settings.
 
 It watches the agents in [herdr](https://herdr.dev), a terminal workspace for running coding agents side by side, and
-in herdr-core (`hc`), the terminal runtime behind herdr-app – on this Mac and on the machines added to them. One buddy
-shows all agents together.
+in herdr-core (`hc`), the terminal runtime behind herdr-app – on this Mac and on the machines added to them – and in
+[Rex](https://www.superlogical.com/rex), on this Mac and on the SSH hosts of Rex.app. One buddy shows all agents
+together.
 
 ## What the sheep shows
 
 | Agent state | The sheep… |
 |---|---|
 | working | trots in place, bits flying around |
-| blocked (waiting for you; also herdr-core's `error`) | jumps, with a blinking "!" |
+| blocked (waiting for you; also herdr-core's and Rex's `error`) | jumps, with a blinking "!" |
 | done | does a happy jump, shows a "✔" |
 | idle | blinks, looks around, falls asleep after a while |
 | no agents, or herdr isn't running | is dimmed, with a "?" |
@@ -49,7 +50,8 @@ The sheep in the menu bar opens a list of all agents, grouped by machine and wor
 - **Buddy** – the corgi, the Earth, the rainbow cat, the sheep (the default), the snake or the UFO, or all of them
   taking turns every 15 to 60 minutes; a turn ends only while no agent needs you. The old buddy walks off the screen
   and the new one runs in.
-- **Agents from** – herdr, hc or both (the default). A chosen one that isn't installed or running shows up with a ⚠.
+- **Agents from** – herdr, hc, rex or all of them (the default). A chosen one that isn't installed or running shows up
+  with a ⚠.
 - **Animation** – always, only for a while after a change (5 s to 1 min), or off: a still picture of the state.
 - **Hide** – never (the default), when all agents are idle, or unless one needs you, after 1 to 30 minutes of it. The
   sheep walks off the screen and comes back as soon as that changes; "Show Sheep" in the list calls it back sooner.
@@ -95,13 +97,17 @@ Changes are in [CHANGELOG.md](CHANGELOG.md).
   and/or herdr-core (tested with 0.1.16) running in its default session
   (`~/.local/state/herdr-core/default/default.sock`). An agent shows as done until you have seen it in herdr-app
   0.1.12 or later; with older clients, until it starts working again.
+- and/or Rex (tested with 0.1.0-preview.19) with its server running. Agents report their state to Rex themselves
+  (Claude Code and Codex do). Rex's SSH hosts are watched while Rex.app is connected to them; hosts it reaches
+  over Tailscale are not.
 
 ## Privacy
 
-Buddr only reads: it asks herdr (`herdr agent list`, `workspace list`, …) and herdr-core's socket for the agents'
-state, and never focuses, controls or sends anything to an agent. It never starts herdr-core when it isn't running.
-Buddr itself makes no network connections; for remote machines, herdr connects over its own SSH setup and herdr-core
-over its own connections. "Watch Remote Machines" turns these queries off.
+Buddr only reads: it asks herdr (`herdr agent list`, `workspace list`, …), herdr-core's socket and Rex's server for
+the agents' state, and never focuses, controls or sends anything to an agent. It never starts herdr-core or Rex's
+server when it isn't running. Buddr itself makes no network connections; for remote machines, herdr connects over its
+own SSH setup, herdr-core over its own connections, and Buddr reaches Rex's hosts through the SSH tunnels Rex.app keeps
+open. "Watch Remote Machines" turns these queries off.
 
 ## Building from source
 
@@ -121,7 +127,7 @@ decisions.
 ## Why not the Mac App Store
 
 The App Sandbox forbids running the `herdr` binary installed on the system (which runs `ssh` for remote machines) and
-reaching herdr-core's socket outside the app's container, and Buddr does nothing without them.
+reaching herdr-core's and Rex's sockets outside the app's container, and Buddr does nothing without them.
 
 ## License
 

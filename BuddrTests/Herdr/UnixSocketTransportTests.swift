@@ -129,7 +129,7 @@ final class LineServer: Sendable {
 
     static func boundSocket(at path: String) throws -> Int32 {
         let socket = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        var address = try UnixSocketTransport.address(for: path)
+        var address = try UnixSocket.address(for: path)
         let result = withUnsafePointer(to: &address) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 bind(socket, $0, socklen_t(MemoryLayout<sockaddr_un>.size))

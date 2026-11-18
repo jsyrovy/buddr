@@ -83,8 +83,13 @@ struct PreferencesTests {
         #expect(Preferences(defaults: defaults).buddyAtLaunch == .sheep)
     }
 
-    @Test func readsBothBackendsByDefault() {
-        #expect(Preferences(defaults: defaults).backendChoice == .both)
+    @Test func readsAllBackendsByDefault() {
+        #expect(Preferences(defaults: defaults).backendChoice == .all)
+    }
+
+    @Test func savedBothReadsAsAllBackends() {
+        defaults.set("both", forKey: "agentBackends")
+        #expect(Preferences(defaults: defaults).backendChoice == .all)
     }
 
     @Test func backendChoiceIsSavedAndReported() {
@@ -98,9 +103,9 @@ struct PreferencesTests {
         #expect(Preferences(defaults: defaults).backendChoice == .hc)
     }
 
-    @Test func invalidSavedBackendChoiceFallsBackToBoth() {
+    @Test func invalidSavedBackendChoiceFallsBackToAll() {
         defaults.set("everything", forKey: "agentBackends")
-        #expect(Preferences(defaults: defaults).backendChoice == .both)
+        #expect(Preferences(defaults: defaults).backendChoice == .all)
     }
 
     @Test func animatesAlwaysByDefault() {

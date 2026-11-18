@@ -1,6 +1,6 @@
 import os
 
-/// Watches all kinds of sources (herdr and herdr-core) and reports their combined snapshot on the main actor when it
+/// Watches all kinds of sources (herdr, herdr-core and Rex) and reports their combined snapshot on the main actor when it
 /// changes.
 ///
 /// Every kind of source has its own `HerdrPoller` and interval, so a slow or unreachable machine never delays the
@@ -17,28 +17,38 @@ final class HerdrMonitor {
         case machines
         /// herdr-core with its machines.
         case core
+        /// Rex's server on this Mac.
+        case rex
+        /// The servers of Rex.app's hosts.
+        case rexMachines
 
-        /// Whether the kind runs with these menu bar settings. herdr's machines are polled only while remote machines
-        /// are watched, because every poll runs `herdr --machine`; herdr-core answers for its machines in the same
-        /// call, so they are just left out of the snapshot.
+        /// Whether the kind runs with these menu bar settings. herdr's and Rex's machines are polled only while remote
+        /// machines are watched, because every poll asks each of them; herdr-core answers for its machines in the
+        /// same call, so they are just left out of the snapshot.
         func isEnabled(by backends: Set<Backend>, watchesRemoteMachines: Bool) -> Bool {
             switch self {
             case .localSessions: backends.contains(.herdr)
             case .machines: backends.contains(.herdr) && watchesRemoteMachines
             case .core: backends.contains(.hc)
+            case .rex: backends.contains(.rex)
+            case .rexMachines: backends.contains(.rex) && watchesRemoteMachines
             }
         }
     }
 
     /// herdr's local sessions every 2 s, its saved machines every 15 s (every poll runs `herdr` per machine).
     /// herdr-core every 2 s: one call needs no subprocess and doesn't wait for machines that are not connected.
+    /// Rex every 2 s, its hosts too: no subprocess either, and Rex.app keeps the SSH connections open.
     static var defaultFeeds: [SourceKind: HerdrPoller.Feed] {
         let herdr = HerdrStatusFetcher()
         let core = CoreStatusFetcher()
+        let rex = RexStatusFetcher()
         return [
             .localSessions: .init(interval: .seconds(2), fetch: { await herdr.fetchSessions() }),
             .machines: .init(interval: .seconds(15), fetch: { await herdr.fetchMachines() }),
             .core: .init(interval: .seconds(2), fetch: { await core.fetch() }),
+            .rex: .init(interval: .seconds(2), fetch: { await rex.fetchLocal() }),
+            .rexMachines: .init(interval: .seconds(2), fetch: { await rex.fetchMachines() }),
         ]
     }
 

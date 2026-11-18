@@ -115,7 +115,7 @@ struct Settings: Codable, Equatable {
             hideMode: choice("hideMode", ["never", "whenIdle", "unlessNeeded"], default: "never"),
             hideMinutes: choice("hideAfterMinutes", [1, 5, 15, 30], default: 5),
             watchesRemoteMachines: choice("watchesRemoteMachines", [false, true], default: true),
-            agentBackends: choice("agentBackends", ["herdr", "hc", "both"], default: "both"))
+            agentBackends: choice("agentBackends", ["herdr", "hc", "rex", "all", "both"], default: "all"))
     }
 
     /// Names as in the JSON; a missing value is `–`.

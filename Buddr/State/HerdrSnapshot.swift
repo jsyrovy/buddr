@@ -1,14 +1,17 @@
-/// A server that agents are read from: a herdr server, or this Mac's herdr-core (`hc`) and the machines added to it.
-/// Keep everything that depends on the kind of source switching over this enum.
+/// A server that agents are read from: a herdr server, this Mac's herdr-core (`hc`) and the machines added to it, or
+/// a Rex server. Keep everything that depends on the kind of source switching over this enum.
 enum AgentSource: Hashable, Sendable {
     case herdr(HerdrSource)
     /// herdr-core on this Mac (`machine == nil`), or a machine added to it, by the name it has there.
     case core(machine: String?)
+    /// Rex's server on this Mac (`machine == nil`), or that of a host of Rex.app, by its label.
+    case rex(machine: String?)
 
     var backend: Backend {
         switch self {
         case .herdr: .herdr
         case .core: .hc
+        case .rex: .rex
         }
     }
 
@@ -16,15 +19,16 @@ enum AgentSource: Hashable, Sendable {
         switch self {
         case .herdr(let source): source.displayName
         case .core(let machine): machine.map { "hc/\($0)" } ?? "hc"
+        case .rex(let machine): machine.map { "rex/\($0)" } ?? "rex"
         }
     }
 
     /// The machine's name for remote sources, `nil` for this Mac.
     var machineLabel: String? {
         switch self {
-        case .herdr(.localSession), .core(machine: nil): nil
+        case .herdr(.localSession), .core(machine: nil), .rex(machine: nil): nil
         case .herdr(.machine(_, let label)): label
-        case .core(let machine?): machine
+        case .core(let machine?), .rex(let machine?): machine
         }
     }
 

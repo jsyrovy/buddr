@@ -98,7 +98,7 @@ private struct BuddySettings: View {
     }
 }
 
-/// "Agents from: herdr / hc / Both".
+/// "Agents from: herdr / hc / rex / All".
 private struct BackendSettings: View {
     @Bindable var preferences: Preferences
 
@@ -115,7 +115,8 @@ private struct BackendSettings: View {
         switch choice {
         case .herdr: "herdr"
         case .hc: "hc"
-        case .both: "Both"
+        case .rex: "rex"
+        case .all: "All"
         }
     }
 }
