@@ -47,9 +47,9 @@ covers its display, the sheep runs off the screen and comes back when the app is
 
 The sheep in the menu bar opens a list of all agents, grouped by machine and workspace, followed by the settings:
 
-- **Buddy** – the corgi, the Earth, the rainbow cat, the sheep (the default), the snake or the UFO, or all of them
-  taking turns every 15 to 60 minutes; a turn ends only while no agent needs you. The old buddy walks off the screen
-  and the new one runs in.
+- **Buddy** – the corgi, the dino, the Earth, the rainbow cat, the sheep (the default), the snake or the UFO, or all of
+  them taking turns every 15 to 60 minutes; a turn ends only while no agent needs you. The old buddy walks off the
+  screen and the new one runs in.
 - **Agents from** – herdr, hc, rex or all of them (the default). A chosen one that isn't installed or running shows up
   with a ⚠.
 - **Animation** – always, only for a while after a change (5 s to 1 min), or off: a still picture of the state.

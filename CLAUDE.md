@@ -62,8 +62,8 @@ Buddr/
               buddy there is), BuddyCanvas (shared canvas), SheepSprites (all of the sheep's data: palette, grids,
               frame composition, clip timing, the menu bar icon), RainbowCatSprites (a cat of its own, with the
               sheep's effects), UFOSprites (a flying saucer, likewise), EarthSprites (a planet, likewise),
-              CorgiSprites (a dog, likewise), SnakeSprites (a rattlesnake, likewise), NamePlateSprite (the plate's
-              look), PixelFont (glyphs, marks, truncation)
+              CorgiSprites (a dog, likewise), SnakeSprites (a rattlesnake, likewise), DinoSprites (a stegosaurus,
+              likewise), NamePlateSprite (the plate's look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
   Backends/   AgentMonitor (one SourcePoller per kind of source; combines, filters remote sources and logs changes),
@@ -384,6 +384,10 @@ The character on the screen is a buddy (`Buddy`): every clip it plays – the st
   (`snake(raised:)`). While agents work it rears up 2 px and swallows eggs: one comes in at the top edge (a cut-off
   grid with its outline), it catches it in its open mouth and a bulge slides down its neck. When blocked it rears up,
   hisses and shakes the rattle; it runs off in spring-like hops. Its signs are the sheep's.
+- The dino (`DinoSprites.swift`, "Dino" in the menu) is a teal stegosaurus with four plates on its back and spikes at
+  the tip of its tail. The plates are drawn behind the body and recolored per `DinoSprites.Glow`. While agents work
+  they light up from the neck to the tail like a progress bar and go out in the same order; `done` keeps them lit,
+  `blocked` turns them red like the "!". Its signs are the sheep's.
 - Shared by every buddy: the canvas (`BuddyCanvas`, 22 × 20 px, so a switch never changes the panel size, the saved
   position, the room for the plate or the escape route), the name plate (`NamePlateSprite`) and the menu bar icon
   (Buddr's own, the sheep).
