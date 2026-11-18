@@ -68,7 +68,7 @@ struct RexRequest: Hashable, Sendable {
 /// A connection to a Rex server. Abstracted so the fetcher can be tested without a server.
 protocol RexConnection: AnyObject {
     /// Sends all requests at once and returns the response message of each, in their order. The server may answer
-    /// them in any order.
+    /// them in any order. No requests send nothing.
     func call(_ requests: [RexRequest], until deadline: ContinuousClock.Instant) throws -> [Data]
     func close()
 }
@@ -87,10 +87,17 @@ struct RexSocketConnector: RexConnector {
     /// The API revision whose shapes Buddr reads (Rex 0.1.0-preview.19); newer servers translate.
     static let apiRevision = 14
 
+    /// Who connects, for showing to people.
+    private static let hello: String = {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        return #"{"type":"hello","api_revision":\#(apiRevision),"#
+            + #""client":{"kind":"other","platform":"macos","name":"Buddr","version":"\#(version)"}}"#
+    }()
+
     let path: String
 
     func connect(until deadline: ContinuousClock.Instant) throws -> any RexConnection {
-        try mappingFailures {
+        try mappingFailures(of: path) {
             let socket = try WebSocketConnection(
                 socketPath: path, path: "/api/control", subprotocol: "rex.control.v1", until: deadline)
             let connection = RexSocketConnection(socket: socket, path: path)
@@ -108,57 +115,32 @@ struct RexSocketConnector: RexConnector {
             return connection
         }
     }
-
-    /// Who connects, for showing to people.
-    private static var hello: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-        return #"{"type":"hello","api_revision":\#(apiRevision),"#
-            + #""client":{"kind":"other","platform":"macos","name":"Buddr","version":"\#(version)"}}"#
-    }
-
-    /// Turns the failures of the socket and the WebSocket into `RexError`.
-    fileprivate func mappingFailures<Result>(_ body: () throws -> Result) throws -> Result {
-        do {
-            return try body()
-        } catch let failure as UnixSocket.Failure {
-            switch failure {
-            case .notListening: throw RexError.notRunning(socketPath: path)
-            case .timedOut: throw RexError.timedOut
-            case .failed(let reason): throw RexError.connectionFailed(reason: reason)
-            }
-        } catch let error as WebSocketError {
-            throw RexError.connectionFailed(reason: error.description)
-        } catch let error as DecodingError {
-            throw RexError.connectionFailed(reason: "unexpected message: \(error)")
-        }
-    }
 }
 
 final class RexSocketConnection: RexConnection {
     private let socket: WebSocketConnection
-    private let connector: RexSocketConnector
+    private let path: String
     private var lastID = 0
 
     init(socket: WebSocketConnection, path: String) {
         self.socket = socket
-        connector = RexSocketConnector(path: path)
+        self.path = path
     }
 
     func call(_ requests: [RexRequest], until deadline: ContinuousClock.Instant) throws -> [Data] {
-        try connector.mappingFailures {
-            let ids = requests.map { _ in
-                lastID += 1
-                return String(lastID)
-            }
+        try mappingFailures(of: path) {
+            let ids = requests.indices.map { String(lastID + 1 + $0) }
+            lastID += requests.count
             for (request, id) in zip(requests, ids) {
                 try socket.send(request.message(id: id), until: deadline)
             }
+            let pending = Set(ids)
             var answers: [String: Data] = [:]
             while answers.count < ids.count {
                 let message = Data(try socket.receive(until: deadline).utf8)
                 let head = try JSONDecoder.snakeCase.decode(RexMessageHead.self, from: message)
                 // Events and messages of types added later are skipped.
-                if head.type == "response", let id = head.id, ids.contains(id) {
+                if head.type == "response", let id = head.id, pending.contains(id) {
                     answers[id] = message
                 }
             }
@@ -168,6 +150,23 @@ final class RexSocketConnection: RexConnection {
 
     func close() {
         socket.close()
+    }
+}
+
+/// Runs `body` with the failures of the socket at `path` and of the WebSocket turned into `RexError`.
+private func mappingFailures<Result>(of path: String, _ body: () throws -> Result) throws -> Result {
+    do {
+        return try body()
+    } catch let failure as UnixSocket.Failure {
+        switch failure {
+        case .notListening: throw RexError.notRunning(socketPath: path)
+        case .timedOut: throw RexError.timedOut
+        case .failed(let reason): throw RexError.connectionFailed(reason: reason)
+        }
+    } catch let error as WebSocketError {
+        throw RexError.connectionFailed(reason: error.description)
+    } catch let error as DecodingError {
+        throw RexError.connectionFailed(reason: "unexpected message: \(error)")
     }
 }
 
@@ -192,13 +191,12 @@ enum RexClient {
         return payload
     }
 
-    /// Calls `requests` and unwraps each answer; no call without requests.
+    /// Calls `requests` and unwraps each answer.
     static func call<Payload: Decodable & Sendable>(
         _ requests: [RexRequest], on connection: any RexConnection, until deadline: ContinuousClock.Instant,
         as _: Payload.Type = Payload.self
     ) throws -> [Result<Payload, RexError>] {
-        guard !requests.isEmpty else { return [] }
-        return try zip(requests, connection.call(requests, until: deadline)).map { request, message in
+        try zip(requests, connection.call(requests, until: deadline)).map { request, message in
             Result { () throws(RexError) -> Payload in try payload(of: message, method: request.method) }
         }
     }

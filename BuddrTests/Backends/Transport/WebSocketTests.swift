@@ -88,6 +88,13 @@ struct WebSocketProtocolTests {
         }
     }
 
+    @Test func unknownOpcodesAreRefused() {
+        var buffer: [UInt8] = [0x83, 0]
+        #expect(throws: WebSocketError.protocolViolation("unknown opcode 3")) {
+            try WebSocketProtocol.takeFrame(from: &buffer, maxPayload: 10)
+        }
+    }
+
     @Test func closePayloadHasTheCodeThenTheReason() {
         #expect(WebSocketProtocol.closePayload(code: 1000) == [0x03, 0xE8])
         #expect(WebSocketProtocol.closePayload(code: 1008, reason: "x") == [0x03, 0xF0, 0x78])

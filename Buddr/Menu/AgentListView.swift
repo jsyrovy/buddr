@@ -111,13 +111,9 @@ private struct BackendSettings: View {
         .fixedSize()
     }
 
+    /// A backend by the name of its CLI, as in the list's section headers.
     private static func title(_ choice: BackendChoice) -> String {
-        switch choice {
-        case .herdr: "herdr"
-        case .hc: "hc"
-        case .rex: "rex"
-        case .all: "All"
-        }
+        choice == .all ? "All" : choice.rawValue
     }
 }
 

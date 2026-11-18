@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import os
 
 @testable import Buddr
 
@@ -146,6 +147,28 @@ struct RexStatusFetcherTests {
         #expect(local.openConnections == 0)
     }
 
+    @Test func hostLabelsAreAskedForAgainOnlyWhenTheTunnelsChange() async {
+        let studio = RexTunnel(socketPath: "\(Self.tunnelDirectory)/1.sock", endpoint: "ssh://studio")
+        let pi = RexTunnel(socketPath: "\(Self.tunnelDirectory)/2.sock", endpoint: "ssh://pi")
+        let local = FakeRexConnector([
+            .hosts: .payload(
+                #"{"hosts":[{"label":"Studio","endpoints":["ssh://studio"]},{"label":"Pi","endpoints":["ssh://pi"]}]}"#)
+        ])
+        let tunnels = OSAllocatedUnfairLock(initialState: [studio])
+        let fetcher = RexStatusFetcher(
+            locator: RexLocator(environment: [:], homeDirectory: Self.home),
+            connector: { $0 == Self.localSocket ? local : FakeRexConnector(failing: .timedOut) },
+            findTunnels: { _ in tunnels.withLock { $0 } })
+
+        #expect(await fetcher.fetchMachines().sources == [.rex(machine: "Studio")])
+        #expect(await fetcher.fetchMachines().sources == [.rex(machine: "Studio")])
+        #expect(local.rounds == [[.hosts]])
+
+        tunnels.withLock { $0 = [studio, pi] }
+        #expect(await fetcher.fetchMachines().sources == [.rex(machine: "Studio"), .rex(machine: "Pi")])
+        #expect(local.rounds == [[.hosts], [.hosts]])
+    }
+
     @Test func hostsAreNamedByTheirHostNameWithoutTheServerOfThisMac() async {
         let tunnel = RexTunnel(socketPath: "\(Self.tunnelDirectory)/1.sock", endpoint: "ssh://studio")
         let snapshot = await fetcher(
@@ -171,25 +194,25 @@ struct RexStatusFetcherTests {
     }
 
     @Test func mostUrgentRecordWinsAndTheFirstOnATie() throws {
-        let session = RexSession(sessionId: "s", label: "web")
-        func record(_ id: String?, _ state: String, app: String?) -> RexProgramStatus.Record {
-            RexProgramStatus.Record(id: id, state: state, app: app, effectiveApp: nil, updatedAt: nil)
+        func record(_ state: String, app: String?) -> RexProgramStatus.Record {
+            RexProgramStatus.Record(state: state, app: app, effectiveApp: nil, updatedAt: nil)
         }
-        let agent = try #require(
-            AgentRecord(
-                rexRecords: [
-                    record(nil, "done", app: "root"), record("a", "done", app: "child"), record("b", "idle", app: nil),
-                ],
-                source: .rex(machine: nil), session: session, sessionNumber: 3, block: "b", title: "", directory: nil))
+        let (top, status) = try #require(
+            RexStatusFetcher.mostUrgent([
+                record("done", app: "root"), record("done", app: "child"), record("idle", app: nil),
+            ]))
 
-        #expect(agent.status == .done)
+        #expect(top == record("done", app: "root"))
+        #expect(status == .done)
+        #expect(RexStatusFetcher.mostUrgent([]) == nil)
+
+        let agent = AgentRecord(
+            rexRecord: top, status: status, source: .rex(machine: nil),
+            session: RexSession(sessionId: "s", label: "web"),
+            sessionNumber: 3, block: "b", title: "", directory: nil)
         #expect(agent.agent == "root")
         #expect(agent.statusOrder == nil)
         #expect(agent.workspaceNumber == 3)
-        #expect(
-            AgentRecord(
-                rexRecords: [], source: .rex(machine: nil), session: session, sessionNumber: 0, block: "b", title: "",
-                directory: nil) == nil)
     }
 
     @Test func timesWithAnyFraction() {

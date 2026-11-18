@@ -73,7 +73,7 @@ final class WebSocketServer: Sendable {
                     guard receive() else { return }
                     continue
                 }
-                switch WebSocketProtocol.Opcode(rawValue: frame.opcode) {
+                switch frame.opcode {
                 case .text:
                     let message = String(decoding: frame.payload, as: UTF8.self)
                     state.withLock { $0.messages.append(message) }

@@ -1,5 +1,5 @@
 /// A tool whose agents Buddr shows.
-enum Backend: String, Sendable {
+enum Backend: String, CaseIterable, Sendable {
     case herdr
     /// herdr-core.
     case hc
@@ -24,7 +24,7 @@ enum BackendChoice: String, CaseIterable, Sendable {
         case .herdr: [.herdr]
         case .hc: [.hc]
         case .rex: [.rex]
-        case .all: [.herdr, .hc, .rex]
+        case .all: Set(Backend.allCases)
         }
     }
 }

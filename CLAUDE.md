@@ -344,7 +344,8 @@ per terminal ("block"). The server's own documentation: `GET /llms.txt` on its s
   password prompts, never connect to them). The API doesn't say which socket is which host and the hash isn't
   derivable, so `RexTunnels` reads the user's `ssh` processes (`sysctl` `KERN_PROC_UID`, `KERN_PROCARGS2`; no
   permission needed) – how Rex.app works today, not a documented interface. The label comes from `hosts.list` of the
-  local server by endpoint, else the endpoint's host name. Hosts are watched only while Rex.app keeps a tunnel open;
+  local server by endpoint, else the endpoint's host name; it is asked for again only when the set of tunnels
+  changes (`RexStatusFetcher.hostLabels`), so polling the hosts doesn't connect to the local server too. Hosts are watched only while Rex.app keeps a tunnel open;
   hosts reached over Tailscale (TCP/TLS) are not read. Buddr never runs `ssh` itself.
 - Every connection is a client on the server for its moment (`client.list`), and Rex.app may see `client_joined` /
   `client_left` events. A persistent connection with `events.subscribe`-like push (`attach_all` with

@@ -4,7 +4,8 @@ import os
 @testable import Buddr
 
 /// A `RexConnector` whose connections answer every request from a script: a payload (JSON) or an error code per
-/// request; anything else fails with `internal`. Records every round of requests and whether connections were closed.
+/// request; anything else fails with `internal`. Records every round of requests (an empty one sends nothing, so it is
+/// not recorded) and whether connections were closed.
 struct FakeRexConnector: RexConnector {
     enum Answer: Sendable {
         case payload(String)
@@ -44,7 +45,9 @@ struct FakeRexConnector: RexConnector {
         }
 
         func call(_ requests: [RexRequest], until deadline: ContinuousClock.Instant) throws -> [Data] {
-            connector.log.withLock { $0.rounds.append(requests) }
+            if !requests.isEmpty {
+                connector.log.withLock { $0.rounds.append(requests) }
+            }
             return requests.map { request in
                 let body =
                     switch connector.answers[request] ?? .error("internal") {

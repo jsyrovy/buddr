@@ -32,15 +32,11 @@ enum WebSocketProtocol {
     }
 
     struct Frame: Equatable, Sendable {
-        var isFinal = true
-        var opcode: UInt8
+        var isFinal: Bool
+        var opcode: Opcode
         var payload: [UInt8]
 
         init(isFinal: Bool = true, _ opcode: Opcode, _ payload: [UInt8] = []) {
-            self.init(isFinal: isFinal, opcode: opcode.rawValue, payload: payload)
-        }
-
-        init(isFinal: Bool, opcode: UInt8, payload: [UInt8]) {
             self.isFinal = isFinal
             self.opcode = opcode
             self.payload = payload
@@ -89,7 +85,7 @@ enum WebSocketProtocol {
 
     /// The frame on the wire. Clients mask every frame (`mask`, 4 bytes); servers don't.
     static func encode(_ frame: Frame, mask: [UInt8]?) -> [UInt8] {
-        var bytes: [UInt8] = [(frame.isFinal ? 0x80 : 0) | frame.opcode]
+        var bytes: [UInt8] = [(frame.isFinal ? 0x80 : 0) | frame.opcode.rawValue]
         let maskBit: UInt8 = mask == nil ? 0 : 0x80
         let length = frame.payload.count
         switch length {
@@ -112,6 +108,9 @@ enum WebSocketProtocol {
         let first = buffer[0]
         let second = buffer[1]
         guard first & 0x70 == 0 else { throw .protocolViolation("reserved bits set") }
+        guard let opcode = Opcode(rawValue: first & 0x0F) else {
+            throw .protocolViolation("unknown opcode \(first & 0x0F)")
+        }
         var offset = 2
         var length = UInt64(second & 0x7F)
         if length >= 126 {
@@ -133,7 +132,7 @@ enum WebSocketProtocol {
             }
         }
         buffer.removeFirst(end)
-        return Frame(isFinal: first & 0x80 != 0, opcode: first & 0x0F, payload: payload)
+        return Frame(isFinal: first & 0x80 != 0, opcode, payload)
     }
 
     /// The payload of a close frame: the status code, then the reason.
@@ -149,7 +148,7 @@ enum WebSocketProtocol {
 final class WebSocketConnection {
     /// Neither the head of the upgrade answer nor a message may grow beyond these.
     private static let maxHeadLength = 16 << 10
-    let maxMessageLength: Int
+    private static let maxMessageLength = 16 << 20
 
     private let socket: UnixSocket
     /// Received bytes not taken as frames yet.
@@ -157,11 +156,7 @@ final class WebSocketConnection {
     private var isClosed = false
 
     /// Connects to `socketPath` and upgrades the connection to a WebSocket at `path` with `subprotocol`.
-    init(
-        socketPath: String, path: String, subprotocol: String, maxMessageLength: Int = 16 << 20,
-        until deadline: ContinuousClock.Instant
-    ) throws {
-        self.maxMessageLength = maxMessageLength
+    init(socketPath: String, path: String, subprotocol: String, until deadline: ContinuousClock.Instant) throws {
         socket = try UnixSocket.connect(to: socketPath, until: deadline)
         let key = WebSocketProtocol.makeKey()
         try socket.write(
@@ -182,10 +177,6 @@ final class WebSocketConnection {
         }
     }
 
-    deinit {
-        socket.close()
-    }
-
     func send(_ text: String, until deadline: ContinuousClock.Instant) throws {
         try send(WebSocketProtocol.Frame(.text, Array(text.utf8)), until: deadline)
     }
@@ -196,22 +187,23 @@ final class WebSocketConnection {
         var fragments: [UInt8] = []
         var isText = false
         while true {
-            guard let frame = try WebSocketProtocol.takeFrame(from: &buffer, maxPayload: maxMessageLength) else {
+            guard let frame = try WebSocketProtocol.takeFrame(from: &buffer, maxPayload: Self.maxMessageLength) else {
                 guard let received = try socket.read(until: deadline) else {
                     throw WebSocketError.closed(code: nil, reason: "closed the connection")
                 }
                 buffer += received
                 continue
             }
-            switch WebSocketProtocol.Opcode(rawValue: frame.opcode) {
+            switch frame.opcode {
             case .text, .binary, .continuation:
-                if frame.opcode != WebSocketProtocol.Opcode.continuation.rawValue {
-                    fragments = []
-                    isText = frame.opcode == WebSocketProtocol.Opcode.text.rawValue
+                if frame.opcode == .continuation {
+                    fragments += frame.payload
+                } else {
+                    fragments = frame.payload
+                    isText = frame.opcode == .text
                 }
-                fragments += frame.payload
-                guard fragments.count <= maxMessageLength else {
-                    throw WebSocketError.protocolViolation("message longer than \(maxMessageLength) bytes")
+                guard fragments.count <= Self.maxMessageLength else {
+                    throw WebSocketError.protocolViolation("message longer than \(Self.maxMessageLength) bytes")
                 }
                 if frame.isFinal, isText {
                     return String(decoding: fragments, as: UTF8.self)
@@ -225,8 +217,6 @@ final class WebSocketConnection {
                 let reason = String(decoding: frame.payload.dropFirst(2), as: UTF8.self)
                 close(until: deadline)
                 throw WebSocketError.closed(code: code, reason: reason)
-            case nil:
-                throw WebSocketError.protocolViolation("unknown opcode \(frame.opcode)")
             }
         }
     }

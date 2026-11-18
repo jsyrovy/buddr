@@ -47,8 +47,6 @@ struct RexBlock: Decodable, Sendable, Equatable {
 /// The result of the terminal method `program_status`: what programs reported with OSC 7501.
 struct RexProgramStatus: Decodable, Sendable {
     struct Record: Decodable, Sendable, Equatable {
-        /// `build/test`; `nil` for the root record.
-        let id: String?
         /// `idle`, `working`, `done`, `blocked` or `error`.
         let state: String
         let app: String?
