@@ -66,19 +66,22 @@ Buddr/
               look), PixelFont (glyphs, marks, truncation)
   Animation/  AnimationClip / ClipID, AnimationMode, BuddyAnimator (pure state machine), BuddyAnimationDriver
               (@Observable timer that plays it), SplitMix64
-  Herdr/      HerdrLocator (binary lookup), ProcessRunner (subprocess with timeout) + OneShotSignal, HerdrClient
-              (typed CLI calls + parsing), HerdrModels (Decodable output shapes), HerdrStatusFetcher (one snapshot
-              of local sessions or of saved machines, sources queried concurrently), UnixSocket (connected
-              non-blocking socket with deadlines, shared by herdr-core and Rex), CoreSocket (CoreTransport,
-              UnixSocketTransport: one JSON-RPC line over herdr-core's socket), CoreClient (CoreError, CoreLocator:
-              socket path, typed calls + parsing), CoreModels, CoreStatusFetcher (herdr-core's terminals on this Mac
-              and on its machines as agents, one call), WebSocket (WebSocketProtocol: pure framing and upgrade;
-              WebSocketConnection over a UnixSocket), RexClient (RexError, RexRequest, RexConnection /
-              RexConnector, RexSocketConnector: Rex's control connection, RexLocator: socket paths), RexModels,
-              RexTunnels (Rex.app's SSH tunnels from `ssh` command lines, ProcessTable), RexStatusFetcher (Rex's
-              terminals with a status as agents, this Mac or the hosts), HerdrPoller (periodic loop on the main
-              actor), HerdrMonitor (one poller per kind of source; combines, filters remote sources and logs changes)
-  State/      AgentStatus (+ priority aggregation), HerdrSnapshot / AgentRecord / AgentSource (herdr, herdr-core, Rex) /
+  Backends/   AgentMonitor (one SourcePoller per kind of source; combines, filters remote sources and logs changes),
+              SourcePoller (periodic loop on the main actor)
+    Herdr/      HerdrLocator (binary lookup), HerdrClient (typed CLI calls + parsing), HerdrModels (Decodable output
+                shapes), HerdrStatusFetcher (one snapshot of local sessions or of saved machines, sources queried
+                concurrently)
+    HerdrCore/  HerdrCoreSocket (HerdrCoreTransport, HerdrCoreSocketTransport: one JSON-RPC line over herdr-core's
+                socket), HerdrCoreClient (HerdrCoreError, HerdrCoreLocator: socket path, typed calls + parsing),
+                HerdrCoreModels, HerdrCoreStatusFetcher (herdr-core's terminals on this Mac and on its machines as
+                agents, one call)
+    Rex/        RexClient (RexError, RexRequest, RexConnection / RexConnector, RexSocketConnector: Rex's control
+                connection, RexLocator: socket paths), RexModels, RexTunnels (Rex.app's SSH tunnels from `ssh` command
+                lines, ProcessTable), RexStatusFetcher (Rex's terminals with a status as agents, this Mac or the hosts)
+    Transport/  ProcessRunner (subprocess with timeout) + OneShotSignal, UnixSocket (connected non-blocking socket with
+                deadlines), WebSocket (WebSocketProtocol: pure framing and upgrade; WebSocketConnection over a
+                UnixSocket), JSONDecoder.snakeCase (the decoder of every backend)
+  State/      AgentStatus (+ priority aggregation), AgentSnapshot / AgentRecord / AgentSource (herdr, herdr-core, Rex) /
               HerdrSource / SourceFailure, Backend + BackendChoice (which backends are read),
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
@@ -87,9 +90,9 @@ Buddr/
               status, a long name plate), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
   Fixtures/   herdr CLI JSON outputs, herdr-core API answers (`core-*`)
-  Support/    fixture loader, FakeCommandRunner, FakeCoreTransport, FakeRexConnector, WebSocketServer, ManualSleeper,
+  Support/    fixture loader, FakeCommandRunner, FakeHerdrCoreTransport, FakeRexConnector, WebSocketServer, ManualSleeper,
               ScriptedFetch + SnapshotRecorder, AgentRecord.stub,
-              HerdrSnapshot init that derives the queried sources
+              AgentSnapshot init that derives the queried sources
 scripts/      measure.swift (resource usage of the running app, see "Measuring resource usage"), screenshots.swift
               (`make screenshots`, see "README images"), previews.swift (`make previews`, see "Buddies"),
               ImageFiles.swift (the image writing of both), release.sh (`make release`) and publish.sh
@@ -102,6 +105,10 @@ CHANGELOG.md  one section per released version
 ## Conventions
 
 - Everything in the repo (code, comments, docs, commit messages) is in English.
+- Names: what serves every backend is named for agents and sources (`AgentSnapshot`, `AgentMonitor`,
+  `SourcePoller`, folder `Backends/`); a backend's own types carry its prefix – `Herdr…` (herdr), `HerdrCore…`
+  (herdr-core; `Backend.hc` and `hc` in the UI are its CLI's name), `Rex…` – and live in its folder under
+  `Backends/`. Shared plumbing (subprocesses, sockets, WebSocket, JSON) is in `Backends/Transport/`.
 - No third-party dependencies. No image assets: all graphics are drawn in code from pixel grids.
 - All sprite pixel data of a buddy lives in one file (`SheepSprites.swift`), so a buddy can be added or redesigned
   in one place (see "Buddies").
@@ -138,7 +145,7 @@ CHANGELOG.md  one section per released version
   itself to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section per
   source – "This Mac" (herdr with the session name when several local sessions run, then herdr-core, then Rex), then the
-  machines by label (herdr's, Rex's) or name (herdr-core's) – in the order of discovery (`HerdrSnapshot.sources`, so sources without
+  machines by label (herdr's, Rex's) or name (herdr-core's) – in the order of discovery (`AgentSnapshot.sources`, so sources without
   agents and failed ones show up too). While sources of several backends are read, every section header shows its backend
   (`herdr` / `hc` / `rex`) on the right. The same machine in several backends stays two sections: herdr's label and SSH target and
   herdr-core's name and host can't be matched reliably (aliases, `user@host`). A failed source shows only its error, no
@@ -149,9 +156,9 @@ CHANGELOG.md  one section per released version
   folded into one "N idle" row that unfolds on click. Status icons are SF Symbols differing in shape and color. Rows are
   information only (no focusing).
 - The list reads `SnapshotStore`, which `AppDelegate` updates with every changed combined snapshot of
-  `HerdrMonitor`, so an open list updates live, and disabled machines disappear from it like from the buddy's state.
-  Opening the list (`onAppear`, which a `MenuBarExtra` window calls on every opening) calls `HerdrMonitor.refresh()`:
-  every enabled poller that sleeps between polls polls right away (`HerdrPoller.refresh()` replaces the sleeping loop
+  `AgentMonitor`, so an open list updates live, and disabled machines disappear from it like from the buddy's state.
+  Opening the list (`onAppear`, which a `MenuBarExtra` window calls on every opening) calls `AgentMonitor.refresh()`:
+  every enabled poller that sleeps between polls polls right away (`SourcePoller.refresh()` replaces the sleeping loop
   with a new one, which starts with a poll); one whose poll runs is left alone, so repeated openings never stack up
   `--machine` calls. No "updated … ago" label for now (the user didn't like a ticking age).
 - Position: the origin after every drag is saved in `UserDefaults` (`panelOrigin`, `PanelPositionStore`). At launch
@@ -166,19 +173,20 @@ CHANGELOG.md  one section per released version
 - Name plate: while the buddy is `blocked` or `done`, a plate under it names the agent. Details in "Name plate" below.
 - Data sources: running local herdr sessions and all *enabled* saved herdr machines, both discovered on every poll
   (nothing hardcoded), herdr-core on this Mac with the machines added to it, and Rex's server on this Mac and those of
-  the hosts Rex.app has an SSH tunnel to. `HerdrMonitor` polls every kind of source (`HerdrMonitor.SourceKind`:
-  `localSessions`, `machines`, `core`, `rex`, `rexMachines`) in an independent loop – herdr locally every 2 s, its
+  the hosts Rex.app has an SSH tunnel to. `AgentMonitor` polls every kind of source (`AgentMonitor.SourceKind`:
+  `herdrSessions`, `herdrMachines`, `herdrCore`, `rex`, `rexMachines`) in an independent loop – herdr locally every 2 s, its
   machines every 15 s, herdr-core with its machines every 2 s, Rex and its hosts every 2 s each – so a slow machine or
-  backend never delays the others, and shows the combined snapshot (`HerdrSnapshot.combining`: the sources of this Mac first, then the
-  machines). Sources are queried concurrently. A part that didn't change since its last poll is not combined again.
+  backend never delays the others, and shows the combined snapshot (`AgentSnapshot.combining`: the sources of this Mac first, then the
+  machines). Sources are queried concurrently. A part that didn't change since its last poll is not combined again. Logs: category
+  `agents` (the status, the number of agents and failures as they change).
 - The backends are chosen in the menu bar ("Agents from": herdr / hc / rex / All; `Preferences.backendChoice`, key
   `agentBackends`: `herdr` / `hc` / `rex` / `all`, default `all`; `both`, saved before Rex, reads as `all`). A chosen
   backend that is missing or not running is a failed source (⚠), also with All – the user asked for it.
 - Remote machines can be switched off in the menu bar (`Preferences.watchesRemoteMachines`, `UserDefaults` key
-  `watchesRemoteMachines`, on by default) for every backend. `HerdrMonitor.configure(backends:watchesRemoteMachines:)`
+  `watchesRemoteMachines`, on by default) for every backend. `AgentMonitor.configure(backends:watchesRemoteMachines:)`
   applies both settings: it enables the kinds they ask for (`SourceKind.isEnabled(by:watchesRemoteMachines:)`,
   `setEnabled(_:_:)`) and leaves every remote source, with its agents and failures, out of the combined snapshot at
-  once (`HerdrSnapshot.withoutRemoteSources()`). Off stops herdr's and Rex's machine pollers – no `--machine` calls
+  once (`AgentSnapshot.withoutRemoteSources()`). Off stops herdr's and Rex's machine pollers – no `--machine` calls
   or tunnel connections at all, a running one is cancelled; herdr-core's machines come in the same call as this Mac, so
   they are only filtered out. On polls the machines right away.
 - Animation can be set in the menu bar (`Preferences.animationMode`, key `animationMode`: `off` / `onChange` /
@@ -190,7 +198,7 @@ CHANGELOG.md  one section per released version
 - Debug builds (`#if DEBUG`, set in the Debug configuration) show an orange "DEBUG" box in the menu bar list
   (`DebugSection`, `DebugControls`): a button for every clip of the buddy (`Buddy.allClips`), played once over whatever
   plays (`endScript()` + `interject`) or looped until "Stop Clip", optionally mirrored; "Run Away" / "Wander Off" /
-  "Come Back" (`BuddyEscape.Reason.debug(startled:)`); a status override that replaces the herdr status for the
+  "Come Back" (`BuddyEscape.Reason.debug(startled:)`); a status override that replaces the agents' status for the
   animation, hiding and the name plate (not for the list) – overridden to `blocked` / `done` without an agent in it,
   the plate shows `debug · blocked`; and "Long Name", a long sample on the plate (shortening, screen edges). Release
   builds contain none of it; check with `CONFIG=Release make build` after touching it.
@@ -264,26 +272,26 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
 
 - Buddr does not run `hc`: **every `hc` command, including `hc ls` and `hc server status`, starts the core when it is
   not running** (checked with a scratch `HC_SESSION`). Buddr talks to the core's Unix socket instead
-  (`UnixSocketTransport`): JSON-RPC 2.0, one message per line, no `hello` needed for a plain call. Nothing listening
+  (`HerdrCoreSocketTransport`): JSON-RPC 2.0, one message per line, no `hello` needed for a plain call. Nothing listening
   (no socket file – the core removes it when it stops – or a stale one: `ENOENT` / `ECONNREFUSED`) is
-  `CoreError.notRunning`, a failed source (This Mac, `hc`). No subprocess is started either.
-- Socket path (`CoreLocator`, mirrors `hc`): `HC_SOCKET`, else `$XDG_RUNTIME_DIR/herdr-core/<session>.sock`, else
+  `HerdrCoreError.notRunning`, a failed source (This Mac, `hc`). No subprocess is started either.
+- Socket path (`HerdrCoreLocator`, mirrors `hc`): `HC_SOCKET`, else `$XDG_RUNTIME_DIR/herdr-core/<session>.sock`, else
   `$XDG_STATE_HOME/herdr-core/<session>/<session>.sock` (state home `~/.local/state`), session `HC_SESSION` or
   `default`. The app normally sees none of these variables: `~/.local/state/herdr-core/default/default.sock`. Only
   the default session is read; a `socket` in `~/.config/herdr-core/config.toml` is not.
 - One call: `{"jsonrpc":"2.0","id":1,"method":"terminal.list","params":{}}` → `{"id":1,"jsonrpc":"2.0","result":
   {"hidden_finished":…,"machines":[…],"terminals":[…]}}`, or `{"error":{"code":…,"message":"…","data":{"kind":"…",
-  "hint":"…"}},…}` (`CoreError.api`). It lists the live terminals of this Mac, then of every connected machine
+  "hint":"…"}},…}` (`HerdrCoreError.api`). It lists the live terminals of this Mac, then of every connected machine
   (address `machine/t7`); `machines` (missing when none was added) lists every added machine with `name`, `state`
   (`connecting`, `connected`, `needs_login`, `unreachable`) and `why`. The core doesn't wait for a machine that is not
-  connected; with two connected machines a call took ~30 ms. Timeout 5 s (`CoreClient.timeout`).
+  connected; with two connected machines a call took ~30 ms. Timeout 5 s (`HerdrCoreClient.timeout`).
 - Terminal fields Buddr reads: `address`, `status` (`{"app":"claude-code","state":"working","msg":"…"}`, `null` for
   programs that never reported – shells; only terminals with a status are agents), `status_ms` (when the status was
   reported, by the machine's clock → `AgentRecord.statusOrder`), `title`, `cwd` / `foreground.cwd`, `turn`, `labels`.
   herdr-app labels its terminals `where` (`"buddr / 1"`: workspace / tab) and `herdr.space` (workspace ID); terminals
   started with `hc run` have none and are grouped by the last component of their working directory.
 - `state` is `idle`, `working`, `done`, `blocked` or `error`; there is no `unknown`. `error` (the program stopped on an
-  error and needs a person) counts as `blocked` (`AgentStatus(coreState:turn:seenTurn:)`), so the buddy, plate and
+  error and needs a person) counts as `blocked` (`AgentStatus(herdrCoreState:turn:seenTurn:)`), so the buddy, plate and
   hiding treat it like a question; the list shows it as blocked too. Unknown future words decode as `unknown`.
 - `done` from the core only means the program finished its turn (Claude Code keeps it until the next prompt); it is
   not "unseen" as in herdr. herdr clients share what a person has seen in the label `herdr.seen` (herdr-app ≥ 0.1.12,
@@ -292,12 +300,12 @@ programs in terminals that outlive their clients; herdr-app shows them. Agents r
   With it, an agent that reported `idle` or `done` is `done` while `turn > herdr.seen`, else `idle` – what herdr-app
   shows. Without it (older clients, terminals no client has shown yet), the word decides. herdr-app's own per-screen
   memory (`attention` in `~/.config/herdr-app/view.json`) is not read.
-- `CoreStatusFetcher.fetch()` makes one `terminal.list` call per poll: the sources are this Mac and every added
+- `HerdrCoreStatusFetcher.fetch()` makes one `terminal.list` call per poll: the sources are this Mac and every added
   machine. A machine that is not connected is a failed source (`state[: why]`) without agents; a core that can't be
   asked is a failure of this Mac only.
 - Later: `events.subscribe` (a snapshot, then every change of any terminal, also on the machines, a heartbeat every
   15 s, `missed` + a fresh snapshot for a subscriber that fell behind) could replace polling; it needs a feed that
-  pushes snapshots instead of `HerdrPoller.Feed`.
+  pushes snapshots instead of `SourcePoller.Feed`.
 
 ## Rex
 
@@ -587,8 +595,8 @@ A dark plate with light pixel text under the buddy's feet, naming the agent the 
   test bundle's `Resources/`; load them with `Fixture.data("name")`.
 - herdr logic is tested through `FakeCommandRunner` (canned output keyed by the joined arguments); `ProcessRunner` is
   tested with real `/bin/sh` processes (timeouts, SIGTERM-ignoring children, grandchildren holding the pipe).
-  herdr-core logic is tested through `FakeCoreTransport` (one canned answer, records the request lines);
-  `UnixSocketTransport` with real Unix sockets (`LineServer`: answers in chunks, a missing and a stale socket, a
+  herdr-core logic is tested through `FakeHerdrCoreTransport` (one canned answer, records the request lines);
+  `HerdrCoreSocketTransport` with real Unix sockets (`LineServer`: answers in chunks, a missing and a stale socket, a
   silent server, a closed connection, cancellation). Never point tests at the user's running core.
   Rex logic is tested through `FakeRexConnector` (a payload or an error code per `RexRequest`, records every round of
   requests and closed connections; answers are inline JSON in Rex 0.1.0-preview.19's shapes); `RexSocketConnector` and
@@ -617,10 +625,10 @@ tests are cheap and stable:
 
 - `State/` – status decoding (including unknown future values), priority aggregation, `AgentOverview` grouping and
   ordering, `AttentionTracker` arrivals and order, `NamePlate` text.
-- `Herdr/` except `HerdrPoller` and `HerdrMonitor` – output parsing, the error envelope, binary lookup, concurrent
+- `Backends/` except `SourcePoller` and `AgentMonitor` – output parsing, the error envelope, binary lookup, concurrent
   fetching and failure isolation between sources, `ProcessRunner` timeouts / process groups / pipes held by
   grandchildren; herdr-core's answers, terminals as agents, machine states, the socket path and
-  `UnixSocketTransport` (not running, timeouts, cancellation); Rex's WebSocket framing and handshake, the control
+  `HerdrCoreSocketTransport` (not running, timeouts, cancellation); Rex's WebSocket framing and handshake, the control
   connection, status records as agents, hosts and their tunnels.
 - `Animation/` except `BuddyAnimationDriver` – the `BuddyAnimator` state machine, clip timing, `SplitMix64`.
 - `Sprite/` data and models – the sheep's grids, every buddy's clips and what every buddy has to do (`Buddy`, checked for every
@@ -634,11 +642,11 @@ tests are cheap and stable:
 
 Also aim high, but these need a seam or a rendering step – never real-time waiting:
 
-- `HerdrPoller`, `HerdrMonitor`, `BuddyAnimationDriver`, `BuddyHiding` – timer-driven loops. They take injectable
-  `sleep` (and the pollers `fetch`) closures, `HerdrMonitor` one `HerdrPoller.Feed` per kind of source; tests pass
+- `SourcePoller`, `AgentMonitor`, `BuddyAnimationDriver`, `BuddyHiding` – timer-driven loops. They take injectable
+  `sleep` (and the pollers `fetch`) closures, `AgentMonitor` one `SourcePoller.Feed` per kind of source; tests pass
   `ManualSleeper` (one per loop), which reports every sleep and suspends until `wake()`, so the loop is driven step by
   step, and `ScriptedFetch`. Tests that sleep are slow and flaky, which is worse than no test. `stop()` is async and
-  returns once the loop has ended, so tests can check that nothing happens after it. `HerdrPoller.cancel()` stops at
+  returns once the loop has ended, so tests can check that nothing happens after it. `SourcePoller.cancel()` stops at
   once without waiting (nothing is reported after it); a restarted loop waits for the cancelled one, so two never
   overlap. `refresh()` is checked the same way: a sleep reported by `ManualSleeper` ends without `wake()`.
 - `SpriteCanvas` – rendered with `ImageRenderer` and compared pixel by pixel with the grid (integer scale, no

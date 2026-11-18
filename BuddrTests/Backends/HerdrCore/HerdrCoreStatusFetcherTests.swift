@@ -3,23 +3,23 @@ import Testing
 
 @testable import Buddr
 
-struct CoreStatusFetcherTests {
-    private static let devbox = AgentSource.core(machine: "devbox")
-    private static let pi = AgentSource.core(machine: "pi")
+struct HerdrCoreStatusFetcherTests {
+    private static let devbox = AgentSource.herdrCore(machine: "devbox")
+    private static let pi = AgentSource.herdrCore(machine: "pi")
 
-    private func fetcher(_ transport: FakeCoreTransport) -> CoreStatusFetcher {
-        CoreStatusFetcher(transport: transport)
+    private func fetcher(_ transport: FakeHerdrCoreTransport) -> HerdrCoreStatusFetcher {
+        HerdrCoreStatusFetcher(transport: transport)
     }
 
     @Test func agentsAreTheTerminalsThatReportAStatus() async throws {
         let snapshot = await fetcher(try .fixture("core-terminal-list")).fetch()
 
-        #expect(snapshot.sources == [.core(machine: nil), Self.devbox, Self.pi])
+        #expect(snapshot.sources == [.herdrCore(machine: nil), Self.devbox, Self.pi])
         // Shells report no status; pi is not connected.
         #expect(snapshot.agents.map(\.paneID) == ["t8", "t10", "t12", "devbox/t7"])
         #expect(
             snapshot.agents.map(\.source) == [
-                .core(machine: nil), .core(machine: nil), .core(machine: nil), Self.devbox,
+                .herdrCore(machine: nil), .herdrCore(machine: nil), .herdrCore(machine: nil), Self.devbox,
             ])
         // `error` (t12) counts as blocked; nobody has seen t8's last turn (3 > `herdr.seen` 2).
         #expect(snapshot.agents.map(\.status) == [.done, .working, .blocked, .blocked])
@@ -33,7 +33,7 @@ struct CoreStatusFetcherTests {
         #expect(
             first
                 == AgentRecord(
-                    source: .core(machine: nil), workspaceID: "sp0d1a0972700155b544e415bdce74f671",
+                    source: .herdrCore(machine: nil), workspaceID: "sp0d1a0972700155b544e415bdce74f671",
                     workspace: "buddr", workspaceNumber: nil, paneID: "t8", agent: "claude-code", status: .done,
                     title: "Fix the parser", cwd: "/Users/me/code/buddr", statusOrder: 1_793_610_990_497))
         // Both tabs of the workspace are one group.
@@ -57,7 +57,7 @@ struct CoreStatusFetcherTests {
             {"id":1,"jsonrpc":"2.0","result":{"terminals":[
             {"address":"t1","labels":\#(labels),"status":{"app":"claude-code","state":"\#(state)"},"turn":\#(turn)}]}}
             """#
-        return await fetcher(FakeCoreTransport(.success(Data(answer.utf8)))).fetch().agents.first?.status
+        return await fetcher(FakeHerdrCoreTransport(.success(Data(answer.utf8)))).fetch().agents.first?.status
     }
 
     @Test func seenTurnComesFromTheHerdrSeenLabel() async {
@@ -66,18 +66,18 @@ struct CoreStatusFetcherTests {
     }
 
     @Test func coreThatIsNotRunningIsAFailureOfThisMac() async {
-        let transport = FakeCoreTransport(.failure(.notRunning(socketPath: "/s.sock")))
+        let transport = FakeHerdrCoreTransport(.failure(.notRunning(socketPath: "/s.sock")))
         let snapshot = await fetcher(transport).fetch()
 
         #expect(
             snapshot
-                == HerdrSnapshot(
+                == AgentSnapshot(
                     agents: [],
                     failures: [
                         SourceFailure(
-                            source: .core(machine: nil), message: "hc is not running (nothing listens on /s.sock)")
+                            source: .herdrCore(machine: nil), message: "hc is not running (nothing listens on /s.sock)")
                     ],
-                    sources: [.core(machine: nil)]))
+                    sources: [.herdrCore(machine: nil)]))
     }
 
     @Test func machineThatIsNotConnectedIsAFailureWithoutAgents() async throws {
@@ -96,7 +96,7 @@ struct CoreStatusFetcherTests {
             {"id":1,"jsonrpc":"2.0","result":{"hidden_finished":0,"terminals":[],"machines":[
             {"host":"pi","id":"2b4d","name":"pi","state":"needs_login","target":"pi","version":"0.1.16"}]}}
             """#
-        let snapshot = await fetcher(FakeCoreTransport(.success(Data(answer.utf8)))).fetch()
+        let snapshot = await fetcher(FakeHerdrCoreTransport(.success(Data(answer.utf8)))).fetch()
 
         #expect(snapshot.failures == [SourceFailure(source: Self.pi, message: "needs login")])
     }
@@ -104,33 +104,33 @@ struct CoreStatusFetcherTests {
     @Test func onlyThisMacWhenNoMachineWasAdded() async throws {
         let snapshot = await fetcher(try .fixture("core-terminal-list-empty")).fetch()
 
-        #expect(snapshot == HerdrSnapshot(agents: [], failures: [], sources: [.core(machine: nil)]))
+        #expect(snapshot == AgentSnapshot(agents: [], failures: [], sources: [.herdrCore(machine: nil)]))
     }
 
     @Test func machineIsThePartOfTheAddressBeforeTheSlash() {
-        #expect(CoreStatusFetcher.machine(of: "t7") == nil)
-        #expect(CoreStatusFetcher.machine(of: "rohan/t7") == "rohan")
+        #expect(HerdrCoreStatusFetcher.machine(of: "t7") == nil)
+        #expect(HerdrCoreStatusFetcher.machine(of: "rohan/t7") == "rohan")
     }
 
     @Test func statusWordsOfTheCore() {
-        #expect(AgentStatus(coreState: "idle") == .idle)
-        #expect(AgentStatus(coreState: "working") == .working)
-        #expect(AgentStatus(coreState: "done") == .done)
-        #expect(AgentStatus(coreState: "blocked") == .blocked)
-        #expect(AgentStatus(coreState: "error") == .blocked)
-        #expect(AgentStatus(coreState: "dreaming") == .unknown)
+        #expect(AgentStatus(herdrCoreState: "idle") == .idle)
+        #expect(AgentStatus(herdrCoreState: "working") == .working)
+        #expect(AgentStatus(herdrCoreState: "done") == .done)
+        #expect(AgentStatus(herdrCoreState: "blocked") == .blocked)
+        #expect(AgentStatus(herdrCoreState: "error") == .blocked)
+        #expect(AgentStatus(herdrCoreState: "dreaming") == .unknown)
     }
 
     @Test func seenTurnDecidesOnlyBetweenDoneAndIdle() {
         // herdr clients share the last turn a person looked at.
-        #expect(AgentStatus(coreState: "done", turn: 3, seenTurn: 3) == .idle)
-        #expect(AgentStatus(coreState: "done", turn: 3, seenTurn: 2) == .done)
+        #expect(AgentStatus(herdrCoreState: "done", turn: 3, seenTurn: 3) == .idle)
+        #expect(AgentStatus(herdrCoreState: "done", turn: 3, seenTurn: 2) == .done)
         // A program that reports `idle` after its turn is done too until seen.
-        #expect(AgentStatus(coreState: "idle", turn: 3, seenTurn: 2) == .done)
-        #expect(AgentStatus(coreState: "done", turn: nil, seenTurn: 3) == .done)
+        #expect(AgentStatus(herdrCoreState: "idle", turn: 3, seenTurn: 2) == .done)
+        #expect(AgentStatus(herdrCoreState: "done", turn: nil, seenTurn: 3) == .done)
         // Work and questions don't depend on it.
-        #expect(AgentStatus(coreState: "working", turn: 3, seenTurn: 2) == .working)
-        #expect(AgentStatus(coreState: "error", turn: 3, seenTurn: 3) == .blocked)
-        #expect(AgentStatus(coreState: "dreaming", turn: 3, seenTurn: 2) == .unknown)
+        #expect(AgentStatus(herdrCoreState: "working", turn: 3, seenTurn: 2) == .working)
+        #expect(AgentStatus(herdrCoreState: "error", turn: 3, seenTurn: 3) == .blocked)
+        #expect(AgentStatus(herdrCoreState: "dreaming", turn: 3, seenTurn: 2) == .unknown)
     }
 }

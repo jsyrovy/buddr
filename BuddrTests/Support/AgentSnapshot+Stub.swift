@@ -1,6 +1,6 @@
 @testable import Buddr
 
-extension HerdrSnapshot {
+extension AgentSnapshot {
     /// A snapshot whose queried sources are those of its agents and failures, in that order.
     init(agents: [AgentRecord], failures: [SourceFailure]) {
         self.init(

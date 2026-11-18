@@ -88,7 +88,7 @@ struct RexStatusFetcherTests {
         let connector = FakeRexConnector([.attachAll: .payload(#"{"sessions":null}"#)])
         let snapshot = await fetcher([Self.localSocket: connector]).fetchLocal()
 
-        #expect(snapshot == HerdrSnapshot(agents: [], failures: [], sources: [.rex(machine: nil)]))
+        #expect(snapshot == AgentSnapshot(agents: [], failures: [], sources: [.rex(machine: nil)]))
         #expect(connector.rounds == [[.attachAll]])
     }
 
@@ -152,7 +152,7 @@ struct RexStatusFetcherTests {
             [tunnel.socketPath: FakeRexConnector([.attachAll: .payload(#"{"sessions":[]}"#)])], tunnels: [tunnel]
         ).fetchMachines()
 
-        #expect(snapshot == HerdrSnapshot(agents: [], failures: [], sources: [.rex(machine: "studio")]))
+        #expect(snapshot == AgentSnapshot(agents: [], failures: [], sources: [.rex(machine: "studio")]))
     }
 
     @Test func withoutTunnelsThereAreNoMachines() async {

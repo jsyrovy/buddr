@@ -1,12 +1,12 @@
 // Decodable shapes of herdr-core API answers (`hc schema` has the full ones). Only the fields Buddr uses are declared.
 
 /// A JSON-RPC response.
-struct CoreResponse<Result: Decodable & Sendable>: Decodable, Sendable {
+struct HerdrCoreResponse<Result: Decodable & Sendable>: Decodable, Sendable {
     let result: Result?
-    let error: CoreErrorBody?
+    let error: HerdrCoreErrorBody?
 }
 
-struct CoreErrorBody: Decodable, Sendable {
+struct HerdrCoreErrorBody: Decodable, Sendable {
     struct Details: Decodable, Sendable {
         /// A stable name of the error, such as `not_found`.
         let kind: String?
@@ -17,13 +17,13 @@ struct CoreErrorBody: Decodable, Sendable {
 }
 
 /// `result` of `terminal.list`
-struct CoreTerminalList: Decodable, Sendable, Equatable {
-    let terminals: [CoreTerminal]
+struct HerdrCoreTerminalList: Decodable, Sendable, Equatable {
+    let terminals: [HerdrCoreTerminal]
     /// Missing when no machine was added.
-    let machines: [CoreMachine]?
+    let machines: [HerdrCoreMachine]?
 }
 
-struct CoreTerminal: Decodable, Sendable, Equatable {
+struct HerdrCoreTerminal: Decodable, Sendable, Equatable {
     struct Foreground: Decodable, Sendable, Equatable {
         let cwd: String?
     }
@@ -53,7 +53,7 @@ struct CoreTerminal: Decodable, Sendable, Equatable {
 }
 
 /// A machine added to herdr-core, as `terminal.list` lists it.
-struct CoreMachine: Decodable, Sendable, Equatable {
+struct HerdrCoreMachine: Decodable, Sendable, Equatable {
     /// What herdr-core calls it: `rohan` in `rohan/t7`.
     let name: String
     /// `connecting`, `connected`, `needs_login` or `unreachable`.

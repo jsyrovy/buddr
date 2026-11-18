@@ -1,11 +1,11 @@
 import Foundation
 
-/// Collects `HerdrSnapshot`s of Rex: the server on this Mac, or the servers of Rex.app's SSH hosts.
+/// Collects `AgentSnapshot`s of Rex: the server on this Mac, or the servers of Rex.app's SSH hosts.
 ///
 /// Every server is read over one connection in four rounds of requests, each round sent at once:
 /// `session.attach_all` (the sessions), `session.list_blocks` of every session, `program_status` of every terminal,
 /// and `title` and `pwd` of the terminals with a status – the agents. Sessions and blocks gone in between are skipped. Never throws: every problem ends up
-/// in `HerdrSnapshot.failures`.
+/// in `AgentSnapshot.failures`.
 struct RexStatusFetcher: Sendable {
     /// The server on this Mac answers at once; a host's goes over SSH.
     static let localTimeout: Duration = .seconds(5)
@@ -18,19 +18,19 @@ struct RexStatusFetcher: Sendable {
 
     /// The server on this Mac; one that is not running is a failure.
     @concurrent
-    func fetchLocal() async -> HerdrSnapshot {
+    func fetchLocal() async -> AgentSnapshot {
         Self.snapshot(of: .rex(machine: nil), from: connector(locator.socketPath), timeout: Self.localTimeout)
     }
 
     /// The servers of Rex.app's hosts that it has a tunnel to, by label (a host without one by its host name); no
     /// sources while Rex.app has none. Every host is a source, a failed one too.
     @concurrent
-    func fetchMachines() async -> HerdrSnapshot {
+    func fetchMachines() async -> AgentSnapshot {
         let tunnels = findTunnels(locator.tunnelDirectory)
         guard !tunnels.isEmpty else { return .empty }
         let labels = hostLabels()
         let sources = tunnels.map { AgentSource.rex(machine: labels[$0.endpoint] ?? $0.hostName) }
-        let parts = await withTaskGroup(of: (Int, HerdrSnapshot).self) { group in
+        let parts = await withTaskGroup(of: (Int, AgentSnapshot).self) { group in
             for (index, tunnel) in tunnels.enumerated() {
                 group.addTask { [connector] in
                     (
@@ -42,7 +42,7 @@ struct RexStatusFetcher: Sendable {
             }
             return await group.reduce(into: [:]) { $0[$1.0] = $1.1 }
         }
-        return HerdrSnapshot.combining(tunnels.indices.compactMap { parts[$0] })
+        return AgentSnapshot.combining(tunnels.indices.compactMap { parts[$0] })
     }
 
     /// The label of every host by endpoint, from the server on this Mac; none if it can't be asked.
@@ -63,15 +63,15 @@ struct RexStatusFetcher: Sendable {
     /// One server as `source`.
     static func snapshot(
         of source: AgentSource, from connector: any RexConnector, timeout: Duration
-    ) -> HerdrSnapshot {
+    ) -> AgentSnapshot {
         do {
             let deadline = ContinuousClock.now + timeout
             let connection = try connector.connect(until: deadline)
             defer { connection.close() }
             let agents = try agents(of: source, on: connection, until: deadline)
-            return HerdrSnapshot(agents: agents, failures: [], sources: [source])
+            return AgentSnapshot(agents: agents, failures: [], sources: [source])
         } catch {
-            return HerdrSnapshot(agents: [], failures: [SourceFailure(source: source, error: error)], sources: [source])
+            return AgentSnapshot(agents: [], failures: [SourceFailure(source: source, error: error)], sources: [source])
         }
     }
 

@@ -1,27 +1,27 @@
 import Foundation
 
-/// Collects one `HerdrSnapshot` of herdr-core with one `terminal.list`: this Mac, then the machines added to the core,
+/// Collects one `AgentSnapshot` of herdr-core with one `terminal.list`: this Mac, then the machines added to the core,
 /// in its order.
 ///
-/// Never throws: every problem ends up in `HerdrSnapshot.failures`. Only terminals with a reported status count as
+/// Never throws: every problem ends up in `AgentSnapshot.failures`. Only terminals with a reported status count as
 /// agents; shells and other programs report none.
-struct CoreStatusFetcher: Sendable {
-    var transport: any CoreTransport = UnixSocketTransport(path: CoreLocator().socketPath)
+struct HerdrCoreStatusFetcher: Sendable {
+    var transport: any HerdrCoreTransport = HerdrCoreSocketTransport(path: HerdrCoreLocator().socketPath)
 
     /// A core that is not running is a failure of this Mac. A machine that is not connected is a failure without
     /// agents.
     @concurrent
-    func fetch() async -> HerdrSnapshot {
-        let local = AgentSource.core(machine: nil)
-        let list: CoreTerminalList
+    func fetch() async -> AgentSnapshot {
+        let local = AgentSource.herdrCore(machine: nil)
+        let list: HerdrCoreTerminalList
         do {
-            list = try await CoreClient(transport: transport).terminals()
+            list = try await HerdrCoreClient(transport: transport).terminals()
         } catch {
-            return HerdrSnapshot(agents: [], failures: [SourceFailure(source: local, error: error)], sources: [local])
+            return AgentSnapshot(agents: [], failures: [SourceFailure(source: local, error: error)], sources: [local])
         }
-        var snapshot = HerdrSnapshot(agents: [], failures: [], sources: [local])
+        var snapshot = AgentSnapshot(agents: [], failures: [], sources: [local])
         for machine in list.machines ?? [] {
-            let source = AgentSource.core(machine: machine.name)
+            let source = AgentSource.herdrCore(machine: machine.name)
             snapshot.sources.append(source)
             if machine.state != "connected" {
                 let state = machine.state.replacing("_", with: " ")
@@ -43,7 +43,7 @@ struct CoreStatusFetcher: Sendable {
 extension AgentRecord {
     /// The agent in a herdr-core terminal; `nil` when the terminal reports no status. The workspace comes from the
     /// labels herdr-app sets, else it is the last component of the working directory.
-    init?(_ terminal: CoreTerminal) {
+    init?(_ terminal: HerdrCoreTerminal) {
         guard let status = terminal.status else { return nil }
         let cwd = terminal.foreground?.cwd ?? terminal.cwd
         let labels = terminal.labels ?? [:]
@@ -54,14 +54,15 @@ extension AgentRecord {
             }
             ?? cwd?.split(separator: "/").last.map(String.init) ?? terminal.address
         self.init(
-            source: .core(machine: CoreStatusFetcher.machine(of: terminal.address)),
+            source: .herdrCore(machine: HerdrCoreStatusFetcher.machine(of: terminal.address)),
             workspaceID: labels["herdr.space"] ?? workspace,
             workspace: workspace,
             workspaceNumber: nil,
             paneID: terminal.address,
             agent: status.app,
             status: AgentStatus(
-                coreState: status.state, turn: terminal.turn, seenTurn: labels["herdr.seen"].flatMap { UInt64($0) }),
+                herdrCoreState: status.state, turn: terminal.turn, seenTurn: labels["herdr.seen"].flatMap { UInt64($0) }
+            ),
             title: terminal.title ?? "",
             cwd: cwd,
             statusOrder: terminal.statusMs)
@@ -73,8 +74,8 @@ extension AgentStatus {
     /// words added by future versions as `unknown`.
     /// With the last turn a person looked at (`seenTurn`, the label `herdr.seen`), `idle` and `done` are `done` while
     /// `turn` is above it, else `idle`.
-    init(coreState: String, turn: UInt64? = nil, seenTurn: UInt64? = nil) {
-        let word = coreState == "error" ? .blocked : AgentStatus(rawValue: coreState) ?? .unknown
+    init(herdrCoreState: String, turn: UInt64? = nil, seenTurn: UInt64? = nil) {
+        let word = herdrCoreState == "error" ? .blocked : AgentStatus(rawValue: herdrCoreState) ?? .unknown
         if word == .idle || word == .done, let turn, let seenTurn {
             self = turn > seenTurn ? .done : .idle
         } else {

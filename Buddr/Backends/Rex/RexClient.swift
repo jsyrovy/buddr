@@ -97,7 +97,7 @@ struct RexSocketConnector: RexConnector {
             do {
                 try socket.send(Self.hello, until: deadline)
                 let welcome = try socket.receive(until: deadline)
-                let head = try HerdrClient.decoder.decode(RexMessageHead.self, from: Data(welcome.utf8))
+                let head = try JSONDecoder.snakeCase.decode(RexMessageHead.self, from: Data(welcome.utf8))
                 guard head.type == "welcome", head.protocol == "rex.control.v1" else {
                     throw RexError.connectionFailed(reason: "expected a welcome, got \(welcome.prefix(200))")
                 }
@@ -156,7 +156,7 @@ final class RexSocketConnection: RexConnection {
             var answers: [String: Data] = [:]
             while answers.count < ids.count {
                 let message = Data(try socket.receive(until: deadline).utf8)
-                let head = try HerdrClient.decoder.decode(RexMessageHead.self, from: message)
+                let head = try JSONDecoder.snakeCase.decode(RexMessageHead.self, from: message)
                 // Events and messages of types added later are skipped.
                 if head.type == "response", let id = head.id, ids.contains(id) {
                     answers[id] = message
@@ -179,7 +179,7 @@ enum RexClient {
     ) throws(RexError) -> Payload {
         let response: RexResponse<Payload>
         do {
-            response = try HerdrClient.decoder.decode(RexResponse<Payload>.self, from: message)
+            response = try JSONDecoder.snakeCase.decode(RexResponse<Payload>.self, from: message)
         } catch {
             throw RexError.invalidOutput(method: method, reason: String(describing: error))
         }

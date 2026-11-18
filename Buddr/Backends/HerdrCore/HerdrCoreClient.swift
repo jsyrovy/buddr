@@ -1,6 +1,6 @@
 import Foundation
 
-enum CoreError: Error, Equatable, Sendable, CustomStringConvertible {
+enum HerdrCoreError: Error, Equatable, Sendable, CustomStringConvertible {
     /// Nothing listens on the socket: herdr-core is not installed, not running, or left a stale socket file.
     case notRunning(socketPath: String)
     case timedOut
@@ -30,7 +30,7 @@ enum CoreError: Error, Equatable, Sendable, CustomStringConvertible {
 /// `~/.local/state` as the state home; the session is `HC_SESSION` or `default`. A GUI app usually has none of these
 /// variables, so it reaches `~/.local/state/herdr-core/default/default.sock`. A `socket` set in hc's `config.toml` is
 /// not read.
-struct CoreLocator: Sendable {
+struct HerdrCoreLocator: Sendable {
     var environment: [String: String] = ProcessInfo.processInfo.environment
     var homeDirectory: String = NSHomeDirectory()
 
@@ -51,14 +51,14 @@ struct CoreLocator: Sendable {
 }
 
 /// Typed access to the read-only herdr-core API calls Buddr needs (JSON-RPC 2.0, one message per line).
-struct CoreClient: Sendable {
+struct HerdrCoreClient: Sendable {
     /// The core answers at once on this Mac and doesn't wait for a machine that is not connected.
     static let timeout: Duration = .seconds(5)
 
-    let transport: any CoreTransport
+    let transport: any HerdrCoreTransport
 
     /// The live terminals of this Mac, then of every connected machine (`machine/t7`), and the added machines.
-    func terminals() async throws -> CoreTerminalList {
+    func terminals() async throws -> HerdrCoreTerminalList {
         try await call("terminal.list")
     }
 
@@ -68,19 +68,19 @@ struct CoreClient: Sendable {
         return try Self.parseResult(answer, method: method)
     }
 
-    /// Unwraps the `result` of a JSON-RPC response, turning an `error` into `CoreError.api`.
+    /// Unwraps the `result` of a JSON-RPC response, turning an `error` into `HerdrCoreError.api`.
     static func parseResult<Result: Decodable & Sendable>(_ data: Data, method: String) throws -> Result {
-        let response: CoreResponse<Result>
+        let response: HerdrCoreResponse<Result>
         do {
-            response = try HerdrClient.decoder.decode(CoreResponse<Result>.self, from: data)
+            response = try JSONDecoder.snakeCase.decode(HerdrCoreResponse<Result>.self, from: data)
         } catch {
-            throw CoreError.invalidOutput(method: method, reason: String(describing: error))
+            throw HerdrCoreError.invalidOutput(method: method, reason: String(describing: error))
         }
         if let error = response.error {
-            throw CoreError.api(method: method, kind: error.data?.kind, message: error.message)
+            throw HerdrCoreError.api(method: method, kind: error.data?.kind, message: error.message)
         }
         guard let result = response.result else {
-            throw CoreError.invalidOutput(method: method, reason: "neither result nor error")
+            throw HerdrCoreError.invalidOutput(method: method, reason: "neither result nor error")
         }
         return result
     }

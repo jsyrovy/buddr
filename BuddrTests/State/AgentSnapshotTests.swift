@@ -2,7 +2,7 @@ import Testing
 
 @testable import Buddr
 
-struct HerdrSnapshotTests {
+struct AgentSnapshotTests {
     @Test func localSessionsAreNamedAfterTheSession() {
         #expect(HerdrSource.localSession("default").displayName == "local/default")
         #expect(HerdrSource.localSession("work").displayName == "local/work")
@@ -16,30 +16,30 @@ struct HerdrSnapshotTests {
         let pi = AgentSource.herdr(.machine(id: "m2", label: "Pi"))
         let missing = SourceFailure(source: nil, message: "herdr not found")
         let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
-        let local = HerdrSnapshot(
+        let local = AgentSnapshot(
             agents: [.stub(.idle)], failures: [missing], sources: [.herdr(.localSession("default"))])
-        let machines = HerdrSnapshot(
+        let machines = AgentSnapshot(
             agents: [.stub(.blocked, source: devbox)],
             failures: [missing, SourceFailure(source: pi, message: "timed out")], sources: [devbox, pi])
-        let combined = HerdrSnapshot.combining([local, machines])
+        let combined = AgentSnapshot.combining([local, machines])
 
         #expect(combined.agents == local.agents + machines.agents)
         #expect(combined.sources == [.herdr(.localSession("default")), devbox, pi])
         #expect(combined.failures == [missing, SourceFailure(source: pi, message: "timed out")])
         #expect(combined.status == .blocked)
-        #expect(HerdrSnapshot.combining([]) == .empty)
+        #expect(AgentSnapshot.combining([]) == .empty)
     }
 
     @Test func statusAggregatesTheAgents() {
-        #expect(HerdrSnapshot.empty.status == .unknown)
-        #expect(HerdrSnapshot(agents: [.stub(.idle), .stub(.done)], failures: []).status == .done)
+        #expect(AgentSnapshot.empty.status == .unknown)
+        #expect(AgentSnapshot(agents: [.stub(.idle), .stub(.done)], failures: []).status == .done)
     }
 
     @Test func sourcesKnowTheirBackendAndMachine() {
         let local = AgentSource.herdr(.localSession("default"))
         let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
-        let core = AgentSource.core(machine: nil)
-        let rohan = AgentSource.core(machine: "rohan")
+        let core = AgentSource.herdrCore(machine: nil)
+        let rohan = AgentSource.herdrCore(machine: "rohan")
 
         #expect([local, devbox, core, rohan].map(\.backend) == [.herdr, .herdr, .hc, .hc])
         #expect([local, devbox, core, rohan].map(\.machineLabel) == [nil, "Devbox", nil, "rohan"])
@@ -49,26 +49,27 @@ struct HerdrSnapshotTests {
 
     @Test func combiningPutsThisMacBeforeTheMachines() {
         let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
-        let herdr = HerdrSnapshot(agents: [], failures: [], sources: [.herdr(.localSession("default")), devbox])
-        let core = HerdrSnapshot(agents: [], failures: [], sources: [.core(machine: nil), .core(machine: "rohan")])
+        let herdr = AgentSnapshot(agents: [], failures: [], sources: [.herdr(.localSession("default")), devbox])
+        let core = AgentSnapshot(
+            agents: [], failures: [], sources: [.herdrCore(machine: nil), .herdrCore(machine: "rohan")])
 
         #expect(
-            HerdrSnapshot.combining([herdr, core]).sources == [
-                .herdr(.localSession("default")), .core(machine: nil), devbox, .core(machine: "rohan"),
+            AgentSnapshot.combining([herdr, core]).sources == [
+                .herdr(.localSession("default")), .herdrCore(machine: nil), devbox, .herdrCore(machine: "rohan"),
             ])
     }
 
     @Test func remoteSourcesCanBeLeftOut() {
         let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
         let missing = SourceFailure(source: nil, message: "herdr not found")
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [.stub(.idle), .stub(.blocked, source: devbox)],
-            failures: [missing, SourceFailure(source: .core(machine: "pi"), message: "unreachable")],
-            sources: [.herdr(.localSession("default")), devbox, .core(machine: "pi")])
+            failures: [missing, SourceFailure(source: .herdrCore(machine: "pi"), message: "unreachable")],
+            sources: [.herdr(.localSession("default")), devbox, .herdrCore(machine: "pi")])
 
         #expect(
             snapshot.withoutRemoteSources()
-                == HerdrSnapshot(
+                == AgentSnapshot(
                     agents: [.stub(.idle)], failures: [missing], sources: [.herdr(.localSession("default"))]))
     }
 

@@ -1,24 +1,24 @@
-/// Polls one kind of herdr source periodically and reports every snapshot on the main actor.
+/// Polls one kind of source of any backend periodically and reports every snapshot on the main actor.
 ///
-/// Polls never overlap: the next one starts `interval` after the previous one finished, so a slow herdr can't pile up
-/// subprocesses. The fetch itself runs off the main actor.
+/// Polls never overlap: the next one starts `interval` after the previous one finished, so a slow backend can't pile
+/// up subprocesses or connections. The fetch itself runs off the main actor.
 @MainActor
-final class HerdrPoller {
+final class SourcePoller {
     struct Feed: Sendable {
         let interval: Duration
-        let fetch: @Sendable () async -> HerdrSnapshot
+        let fetch: @Sendable () async -> AgentSnapshot
         /// Replaced in tests to drive the loop step by step.
         var sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     }
 
     private let feed: Feed
-    private let onUpdate: @MainActor (HerdrSnapshot) -> Void
+    private let onUpdate: @MainActor (AgentSnapshot) -> Void
     /// The latest loop; once cancelled, it may still be finishing its fetch.
     private var loop: Task<Void, Never>?
     /// Whether the loop waits between two polls; `refresh()` restarts it then.
     private var isSleeping = false
 
-    init(_ feed: Feed, onUpdate: @escaping @MainActor (HerdrSnapshot) -> Void) {
+    init(_ feed: Feed, onUpdate: @escaping @MainActor (AgentSnapshot) -> Void) {
         self.feed = feed
         self.onUpdate = onUpdate
     }

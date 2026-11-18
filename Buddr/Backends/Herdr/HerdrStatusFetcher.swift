@@ -1,15 +1,15 @@
 import Foundation
 
-/// Collects one `HerdrSnapshot` of a kind of herdr source: discovers the sources and queries all of them concurrently.
+/// Collects one `AgentSnapshot` of a kind of herdr source: discovers the sources and queries all of them concurrently.
 ///
-/// Never throws: every problem ends up in `HerdrSnapshot.failures`, and a failing source doesn't affect the others.
+/// Never throws: every problem ends up in `AgentSnapshot.failures`, and a failing source doesn't affect the others.
 struct HerdrStatusFetcher: Sendable {
     var locator = HerdrLocator()
     var runner: any CommandRunning = ProcessRunner()
 
     /// Agents of all running local sessions.
     @concurrent
-    func fetchSessions() async -> HerdrSnapshot {
+    func fetchSessions() async -> AgentSnapshot {
         await fetch { client in
             try await client.sessions().filter(\.running).map { .localSession($0.name) }
         }
@@ -18,16 +18,16 @@ struct HerdrStatusFetcher: Sendable {
     /// Agents of all enabled saved machines. herdr connects with SSH batch mode, so a machine that would ask for
     /// authentication fails (or times out) instead of waiting for input.
     @concurrent
-    func fetchMachines() async -> HerdrSnapshot {
+    func fetchMachines() async -> AgentSnapshot {
         await fetch { client in
             try await client.machines().filter(\.enabled).map { .machine(id: $0.id, label: $0.label) }
         }
     }
 
-    private func fetch(discover: (HerdrClient) async throws -> [HerdrSource]) async -> HerdrSnapshot {
+    private func fetch(discover: (HerdrClient) async throws -> [HerdrSource]) async -> AgentSnapshot {
         // Resolved on every poll, so installing herdr while Buddr runs just works.
         guard let executable = locator.locate() else {
-            return HerdrSnapshot(
+            return AgentSnapshot(
                 agents: [], failures: [SourceFailure(source: nil, error: HerdrError.executableNotFound)], sources: [])
         }
 
@@ -37,7 +37,7 @@ struct HerdrStatusFetcher: Sendable {
         do {
             sources = try await discover(client)
         } catch {
-            return HerdrSnapshot(agents: [], failures: [SourceFailure(source: nil, error: error)], sources: [])
+            return AgentSnapshot(agents: [], failures: [SourceFailure(source: nil, error: error)], sources: [])
         }
 
         let results = await withTaskGroup(of: (Int, Result<[AgentRecord], SourceFailure>).self) { group in
@@ -48,7 +48,7 @@ struct HerdrStatusFetcher: Sendable {
         }
 
         // Keep the order of the discovery, so snapshots are stable between polls.
-        var snapshot = HerdrSnapshot(agents: [], failures: [], sources: sources.map(AgentSource.herdr))
+        var snapshot = AgentSnapshot(agents: [], failures: [], sources: sources.map(AgentSource.herdr))
         for (_, result) in results.sorted(by: { $0.0 < $1.0 }) {
             switch result {
             case .success(let agents): snapshot.agents += agents

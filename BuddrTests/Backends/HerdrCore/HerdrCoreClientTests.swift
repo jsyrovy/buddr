@@ -3,10 +3,10 @@ import Testing
 
 @testable import Buddr
 
-struct CoreClientTests {
+struct HerdrCoreClientTests {
     @Test func listsTerminalsWithOneJSONRPCLine() async throws {
-        let transport = try FakeCoreTransport.fixture("core-terminal-list")
-        let list = try await CoreClient(transport: transport).terminals()
+        let transport = try FakeHerdrCoreTransport.fixture("core-terminal-list")
+        let list = try await HerdrCoreClient(transport: transport).terminals()
 
         #expect(list.terminals.map(\.address) == ["t3", "t8", "t10", "t12", "devbox/t5", "devbox/t7", "pi/t1"])
         #expect(list.machines?.map(\.name) == ["devbox", "pi"])
@@ -14,17 +14,17 @@ struct CoreClientTests {
     }
 
     @Test func machinesAreMissingWhenNoneWasAdded() async throws {
-        let list = try await CoreClient(transport: try FakeCoreTransport.fixture("core-terminal-list-empty"))
+        let list = try await HerdrCoreClient(transport: try FakeHerdrCoreTransport.fixture("core-terminal-list-empty"))
             .terminals()
 
-        #expect(list == CoreTerminalList(terminals: [], machines: nil))
+        #expect(list == HerdrCoreTerminalList(terminals: [], machines: nil))
     }
 
     @Test func errorAnswerBecomesAnAPIError() async throws {
-        let client = CoreClient(transport: try FakeCoreTransport.fixture("core-error"))
+        let client = HerdrCoreClient(transport: try FakeHerdrCoreTransport.fixture("core-error"))
 
         await #expect(
-            throws: CoreError.api(
+            throws: HerdrCoreError.api(
                 method: "terminal.list", kind: "unknown_method", message: #"unknown method "nonexistent.method""#)
         ) {
             try await client.terminals()
@@ -33,38 +33,40 @@ struct CoreClientTests {
 
     @Test func garbageIsInvalidOutput() {
         #expect {
-            let _: CoreTerminalList = try CoreClient.parseResult(Data("not json".utf8), method: "terminal.list")
+            let _: HerdrCoreTerminalList = try HerdrCoreClient.parseResult(
+                Data("not json".utf8), method: "terminal.list")
         } throws: { error in
-            if case CoreError.invalidOutput(method: "terminal.list", _) = error { true } else { false }
+            if case HerdrCoreError.invalidOutput(method: "terminal.list", _) = error { true } else { false }
         }
     }
 
     @Test func answerWithoutResultOrErrorIsInvalidOutput() {
-        #expect(throws: CoreError.invalidOutput(method: "terminal.list", reason: "neither result nor error")) {
-            let _: CoreTerminalList = try CoreClient.parseResult(
+        #expect(throws: HerdrCoreError.invalidOutput(method: "terminal.list", reason: "neither result nor error")) {
+            let _: HerdrCoreTerminalList = try HerdrCoreClient.parseResult(
                 Data(#"{"id":1,"jsonrpc":"2.0"}"#.utf8), method: "terminal.list")
         }
     }
 
     @Test func errorsDescribeThemselves() {
         #expect(
-            CoreError.notRunning(socketPath: "/tmp/x.sock").description
+            HerdrCoreError.notRunning(socketPath: "/tmp/x.sock").description
                 == "hc is not running (nothing listens on /tmp/x.sock)")
-        #expect(CoreError.timedOut.description == "hc did not answer in time")
-        #expect(CoreError.connectionFailed(reason: "Broken pipe").description == "hc: Broken pipe")
+        #expect(HerdrCoreError.timedOut.description == "hc did not answer in time")
+        #expect(HerdrCoreError.connectionFailed(reason: "Broken pipe").description == "hc: Broken pipe")
         #expect(
-            CoreError.api(method: "terminal.list", kind: "busy", message: "try again").description
+            HerdrCoreError.api(method: "terminal.list", kind: "busy", message: "try again").description
                 == "terminal.list: try again (busy)")
-        #expect(CoreError.api(method: "terminal.list", kind: nil, message: "no").description == "terminal.list: no")
         #expect(
-            CoreError.invalidOutput(method: "terminal.list", reason: "eof").description
+            HerdrCoreError.api(method: "terminal.list", kind: nil, message: "no").description == "terminal.list: no")
+        #expect(
+            HerdrCoreError.invalidOutput(method: "terminal.list", reason: "eof").description
                 == "terminal.list: unexpected output: eof")
     }
 }
 
-struct CoreLocatorTests {
+struct HerdrCoreLocatorTests {
     private func path(_ environment: [String: String]) -> String {
-        CoreLocator(environment: environment, homeDirectory: "/Users/me").socketPath
+        HerdrCoreLocator(environment: environment, homeDirectory: "/Users/me").socketPath
     }
 
     @Test func defaultSessionLivesInTheStateDirectory() {

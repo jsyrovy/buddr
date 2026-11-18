@@ -3,14 +3,14 @@
 enum AgentSource: Hashable, Sendable {
     case herdr(HerdrSource)
     /// herdr-core on this Mac (`machine == nil`), or a machine added to it, by the name it has there.
-    case core(machine: String?)
+    case herdrCore(machine: String?)
     /// Rex's server on this Mac (`machine == nil`), or that of a host of Rex.app, by its label.
     case rex(machine: String?)
 
     var backend: Backend {
         switch self {
         case .herdr: .herdr
-        case .core: .hc
+        case .herdrCore: .hc
         case .rex: .rex
         }
     }
@@ -18,7 +18,7 @@ enum AgentSource: Hashable, Sendable {
     var displayName: String {
         switch self {
         case .herdr(let source): source.displayName
-        case .core(let machine): machine.map { "hc/\($0)" } ?? "hc"
+        case .herdrCore(let machine): machine.map { "hc/\($0)" } ?? "hc"
         case .rex(let machine): machine.map { "rex/\($0)" } ?? "rex"
         }
     }
@@ -26,9 +26,9 @@ enum AgentSource: Hashable, Sendable {
     /// The machine's name for remote sources, `nil` for this Mac.
     var machineLabel: String? {
         switch self {
-        case .herdr(.localSession), .core(machine: nil), .rex(machine: nil): nil
+        case .herdr(.localSession), .herdrCore(machine: nil), .rex(machine: nil): nil
         case .herdr(.machine(_, let label)): label
-        case .core(let machine?), .rex(let machine?): machine
+        case .herdrCore(let machine?), .rex(let machine?): machine
         }
     }
 
@@ -79,26 +79,26 @@ struct SourceFailure: Error, Hashable, Sendable {
 }
 
 /// Everything known about the agents after one poll.
-struct HerdrSnapshot: Hashable, Sendable {
+struct AgentSnapshot: Hashable, Sendable {
     var agents: [AgentRecord]
     var failures: [SourceFailure]
     /// Every source that was queried, in the order of discovery – including failed ones and ones without agents.
     var sources: [AgentSource]
 
-    static let empty = HerdrSnapshot(agents: [], failures: [], sources: [])
+    static let empty = AgentSnapshot(agents: [], failures: [], sources: [])
 
     /// The snapshots of independently polled sources as one: the sources of this Mac first, then the machines, each
-    /// in the order of the parts. A failure reported by several parts (such as a missing herdr) is kept once.
-    static func combining(_ parts: [HerdrSnapshot]) -> HerdrSnapshot {
+    /// in the order of the parts. A failure reported by several parts (such as a missing backend) is kept once.
+    static func combining(_ parts: [AgentSnapshot]) -> AgentSnapshot {
         let sources = parts.flatMap(\.sources)
-        return HerdrSnapshot(
+        return AgentSnapshot(
             agents: parts.flatMap(\.agents), failures: parts.flatMap(\.failures).uniqued(),
             sources: sources.filter { !$0.isRemote } + sources.filter(\.isRemote))
     }
 
     /// The snapshot without the remote sources, their agents and failures.
-    func withoutRemoteSources() -> HerdrSnapshot {
-        HerdrSnapshot(
+    func withoutRemoteSources() -> AgentSnapshot {
+        AgentSnapshot(
             agents: agents.filter { !$0.source.isRemote }, failures: failures.filter { $0.source?.isRemote != true },
             sources: sources.filter { !$0.isRemote })
     }

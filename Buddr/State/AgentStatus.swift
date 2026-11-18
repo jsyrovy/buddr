@@ -1,4 +1,4 @@
-/// Status of a single herdr agent, as reported in `agent_status`.
+/// Status of a single agent: herdr's `agent_status`, or what herdr-core and Rex report, mapped to these words.
 /// Statuses are ordered by urgency: blocked > done > working > idle > unknown.
 enum AgentStatus: String, Sendable, CaseIterable, Comparable {
     case idle
@@ -35,7 +35,7 @@ enum AgentStatus: String, Sendable, CaseIterable, Comparable {
 }
 
 extension AgentStatus: Decodable {
-    /// Statuses added by future herdr versions decode as `unknown` instead of failing the whole response.
+    /// Statuses added by future herdr versions (`agent_status`) decode as `unknown` instead of failing the whole response.
     init(from decoder: any Decoder) throws {
         let rawValue = try decoder.singleValueContainer().decode(String.self)
         self = AgentStatus(rawValue: rawValue) ?? .unknown

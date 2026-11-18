@@ -7,9 +7,9 @@ final class ScriptedFetch: Sendable {
     /// Reports every poll when it starts.
     let calls: AsyncStream<Void>
     private let callsContinuation: AsyncStream<Void>.Continuation
-    private let state: OSAllocatedUnfairLock<(count: Int, snapshots: [HerdrSnapshot])>
+    private let state: OSAllocatedUnfairLock<(count: Int, snapshots: [AgentSnapshot])>
 
-    init(_ snapshots: [HerdrSnapshot]) {
+    init(_ snapshots: [AgentSnapshot]) {
         (calls, callsContinuation) = AsyncStream.makeStream(of: Void.self)
         state = OSAllocatedUnfairLock(initialState: (0, snapshots))
     }
@@ -18,7 +18,7 @@ final class ScriptedFetch: Sendable {
         state.withLock { $0.count }
     }
 
-    func callAsFunction() async -> HerdrSnapshot {
+    func callAsFunction() async -> AgentSnapshot {
         let snapshot = state.withLock { state in
             state.count += 1
             return state.snapshots.isEmpty ? nil : state.snapshots.removeFirst()
@@ -37,5 +37,5 @@ final class ScriptedFetch: Sendable {
 /// Collects the snapshots a poller or monitor delivers.
 @MainActor
 final class SnapshotRecorder {
-    var snapshots: [HerdrSnapshot] = []
+    var snapshots: [AgentSnapshot] = []
 }

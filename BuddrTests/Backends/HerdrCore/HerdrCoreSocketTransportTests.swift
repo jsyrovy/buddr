@@ -6,12 +6,12 @@ import os
 @testable import Buddr
 
 /// Talks to real Unix sockets served by `LineServer`.
-struct UnixSocketTransportTests {
+struct HerdrCoreSocketTransportTests {
     private static let request = Data("{\"method\":\"terminal.list\"}\n".utf8)
 
     @Test func sendsTheLineAndReturnsTheAnswerWithoutTheNewline() async throws {
         let server = try LineServer { _ in [Data("{\"result\":".utf8), Data("{}}\n{\"ignored\":1}\n".utf8)] }
-        let answer = try await UnixSocketTransport(path: server.path).request(Self.request, timeout: .seconds(5))
+        let answer = try await HerdrCoreSocketTransport(path: server.path).request(Self.request, timeout: .seconds(5))
 
         #expect(String(decoding: answer, as: UTF8.self) == "{\"result\":{}}")
         #expect(server.received() == Self.request)
@@ -19,8 +19,8 @@ struct UnixSocketTransportTests {
 
     @Test func missingSocketMeansNotRunning() async {
         let path = LineServer.temporaryPath()
-        await #expect(throws: CoreError.notRunning(socketPath: path)) {
-            try await UnixSocketTransport(path: path).request(Self.request, timeout: .seconds(5))
+        await #expect(throws: HerdrCoreError.notRunning(socketPath: path)) {
+            try await HerdrCoreSocketTransport(path: path).request(Self.request, timeout: .seconds(5))
         }
     }
 
@@ -31,8 +31,8 @@ struct UnixSocketTransportTests {
         close(socket)
         defer { unlink(path) }
 
-        await #expect(throws: CoreError.notRunning(socketPath: path)) {
-            try await UnixSocketTransport(path: path).request(Self.request, timeout: .seconds(5))
+        await #expect(throws: HerdrCoreError.notRunning(socketPath: path)) {
+            try await HerdrCoreSocketTransport(path: path).request(Self.request, timeout: .seconds(5))
         }
     }
 
@@ -40,8 +40,8 @@ struct UnixSocketTransportTests {
         let server = try LineServer { _ in nil }
         let start = ContinuousClock.now
 
-        await #expect(throws: CoreError.timedOut) {
-            try await UnixSocketTransport(path: server.path).request(Self.request, timeout: .milliseconds(300))
+        await #expect(throws: HerdrCoreError.timedOut) {
+            try await HerdrCoreSocketTransport(path: server.path).request(Self.request, timeout: .milliseconds(300))
         }
         #expect(ContinuousClock.now - start < .seconds(2))
     }
@@ -50,16 +50,16 @@ struct UnixSocketTransportTests {
         let server = try LineServer { _ in [] }
 
         await #expect(
-            throws: CoreError.connectionFailed(reason: "herdr-core closed the connection without an answer")
+            throws: HerdrCoreError.connectionFailed(reason: "herdr-core closed the connection without an answer")
         ) {
-            try await UnixSocketTransport(path: server.path).request(Self.request, timeout: .seconds(5))
+            try await HerdrCoreSocketTransport(path: server.path).request(Self.request, timeout: .seconds(5))
         }
     }
 
     @Test func cancellationStopsWaiting() async throws {
         let server = try LineServer { _ in nil }
         let task = Task {
-            try await UnixSocketTransport(path: server.path).request(Self.request, timeout: .seconds(30))
+            try await HerdrCoreSocketTransport(path: server.path).request(Self.request, timeout: .seconds(30))
         }
         let start = ContinuousClock.now
         task.cancel()
@@ -70,8 +70,8 @@ struct UnixSocketTransportTests {
 
     @Test func tooLongPathFails() async {
         let path = "/tmp/" + String(repeating: "x", count: 200)
-        await #expect(throws: CoreError.connectionFailed(reason: "socket path longer than 103 bytes: \(path)")) {
-            try await UnixSocketTransport(path: path).request(Self.request, timeout: .seconds(5))
+        await #expect(throws: HerdrCoreError.connectionFailed(reason: "socket path longer than 103 bytes: \(path)")) {
+            try await HerdrCoreSocketTransport(path: path).request(Self.request, timeout: .seconds(5))
         }
     }
 }

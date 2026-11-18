@@ -18,7 +18,7 @@
                     Toggle("Long Name", isOn: $controls.longNamePlate)
                         .toggleStyle(.checkbox)
                     Picker("Status", selection: $controls.statusOverride) {
-                        Text("herdr").tag(AgentStatus?.none)
+                        Text("agents").tag(AgentStatus?.none)
                         ForEach(AgentStatus.allCases, id: \.self) { status in
                             Text(status.rawValue).tag(AgentStatus?.some(status))
                         }

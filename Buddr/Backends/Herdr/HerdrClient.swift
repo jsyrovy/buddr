@@ -88,7 +88,7 @@ struct HerdrClient: Sendable {
             throw HerdrError.launchFailed(command: command, reason: reason)
         }
         guard output.exitStatus == 0 else {
-            if let response = try? Self.decoder.decode(HerdrResponse<HerdrEmpty>.self, from: output.stderr),
+            if let response = try? JSONDecoder.snakeCase.decode(HerdrResponse<HerdrEmpty>.self, from: output.stderr),
                 let error = response.error
             {
                 throw HerdrError.api(command: command, code: error.code, message: error.message)
@@ -100,12 +100,6 @@ struct HerdrClient: Sendable {
     }
 
     // MARK: Parsing
-
-    static let decoder: JSONDecoder = {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return decoder
-    }()
 
     static func parseSessions(_ data: Data, command: String = "session list") throws -> [HerdrSession] {
         try decode(HerdrSessionList.self, from: data, command: command).sessions
@@ -129,7 +123,7 @@ struct HerdrClient: Sendable {
 
     private static func decode<T: Decodable>(_ type: T.Type, from data: Data, command: String) throws -> T {
         do {
-            return try decoder.decode(type, from: data)
+            return try JSONDecoder.snakeCase.decode(type, from: data)
         } catch {
             throw HerdrError.invalidOutput(command: command, reason: String(describing: error))
         }

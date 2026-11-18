@@ -27,7 +27,7 @@ struct AttentionTracker {
 
     /// Records the arrivals in `snapshot` and returns the plate for the aggregated `status`; `nil` unless the status
     /// is `blocked` or `done` and an agent is in it.
-    mutating func update(with snapshot: HerdrSnapshot, status: AgentStatus) -> NamePlate? {
+    mutating func update(with snapshot: AgentSnapshot, status: AgentStatus) -> NamePlate? {
         let waiting = snapshot.agents.filter(\.status.needsAttention)
         let present = Set(waiting.map(Key.init))
         arrivals = arrivals.filter { present.contains($0.key) }

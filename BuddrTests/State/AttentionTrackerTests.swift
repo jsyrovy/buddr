@@ -5,8 +5,8 @@ import Testing
 struct AttentionTrackerTests {
     private static let devbox = AgentSource.herdr(.machine(id: "m1", label: "Devbox"))
 
-    private static func snapshot(_ agents: AgentRecord...) -> HerdrSnapshot {
-        HerdrSnapshot(agents: agents, failures: [])
+    private static func snapshot(_ agents: AgentRecord...) -> AgentSnapshot {
+        AgentSnapshot(agents: agents, failures: [])
     }
 
     // MARK: Name plate

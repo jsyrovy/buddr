@@ -3,29 +3,29 @@ import Testing
 @testable import Buddr
 
 @MainActor
-struct HerdrMonitorTests {
-    private static let local = HerdrSnapshot(agents: [.stub(.working)], failures: [])
-    private static let localBlocked = HerdrSnapshot(agents: [.stub(.blocked)], failures: [])
-    private static let machine = HerdrSnapshot(
+struct AgentMonitorTests {
+    private static let local = AgentSnapshot(agents: [.stub(.working)], failures: [])
+    private static let localBlocked = AgentSnapshot(agents: [.stub(.blocked)], failures: [])
+    private static let machine = AgentSnapshot(
         agents: [.stub(.done, source: .herdr(.machine(id: "m1", label: "Devbox")))],
         failures: [SourceFailure(source: .herdr(.machine(id: "m2", label: "Pi")), message: "timed out")])
-    private static let localAndMachine = HerdrSnapshot(
+    private static let localAndMachine = AgentSnapshot(
         agents: local.agents + machine.agents, failures: machine.failures)
-    private static let machineBlocked = HerdrSnapshot(
+    private static let machineBlocked = AgentSnapshot(
         agents: [.stub(.blocked, source: .herdr(.machine(id: "m1", label: "Devbox")))], failures: [])
-    private static let missingHerdr = HerdrSnapshot(
+    private static let missingHerdr = AgentSnapshot(
         agents: [], failures: [SourceFailure(source: nil, error: HerdrError.executableNotFound)])
 
     private let localSleeper = ManualSleeper()
     private let machineSleeper = ManualSleeper()
     private let delivered = SnapshotRecorder()
 
-    private func monitor(local: ScriptedFetch, machines: ScriptedFetch) -> HerdrMonitor {
-        HerdrMonitor(
+    private func monitor(local: ScriptedFetch, machines: ScriptedFetch) -> AgentMonitor {
+        AgentMonitor(
             feeds: [
-                .localSessions: .init(
+                .herdrSessions: .init(
                     interval: .seconds(2), fetch: local.callAsFunction, sleep: localSleeper.sleep(for:)),
-                .machines: .init(
+                .herdrMachines: .init(
                     interval: .seconds(15), fetch: machines.callAsFunction, sleep: machineSleeper.sleep(for:)),
             ],
             onUpdate: { [delivered] in delivered.snapshots.append($0) })
@@ -101,7 +101,7 @@ struct HerdrMonitorTests {
         monitor.start()
         _ = await localSleeps.next()
         _ = await machineSleeps.next()
-        monitor.setEnabled(false, .machines)
+        monitor.setEnabled(false, .herdrMachines)
 
         #expect(delivered.snapshots.last == Self.local)
         await monitor.stop()
@@ -114,11 +114,11 @@ struct HerdrMonitorTests {
         var localSleeps = localSleeper.sleeps.makeAsyncIterator()
         var machineSleeps = machineSleeper.sleeps.makeAsyncIterator()
 
-        monitor.setEnabled(false, .machines)
+        monitor.setEnabled(false, .herdrMachines)
         monitor.start()
         _ = await localSleeps.next()
         #expect(machines.count == 0)
-        monitor.setEnabled(true, .machines)
+        monitor.setEnabled(true, .herdrMachines)
         #expect(await machineSleeps.next() == .seconds(15))
         await monitor.stop()
 
@@ -131,8 +131,8 @@ struct HerdrMonitorTests {
         var localSleeps = localSleeper.sleeps.makeAsyncIterator()
         var machineSleeps = machineSleeper.sleeps.makeAsyncIterator()
 
-        monitor.setEnabled(false, .machines)
-        monitor.setEnabled(true, .machines)
+        monitor.setEnabled(false, .herdrMachines)
+        monitor.setEnabled(true, .herdrMachines)
         #expect(machines.count == 0)
         monitor.start()
         _ = await localSleeps.next()
@@ -151,7 +151,7 @@ struct HerdrMonitorTests {
         monitor.start()
         _ = await localSleeps.next()
         _ = await machineCalls.next()
-        monitor.setEnabled(false, .machines)
+        monitor.setEnabled(false, .herdrMachines)
         await monitor.stop()
 
         #expect(delivered.snapshots == [Self.local])
@@ -166,8 +166,8 @@ struct HerdrMonitorTests {
         monitor.start()
         _ = await localSleeps.next()
         _ = await machineSleeps.next()
-        monitor.setEnabled(false, .machines)
-        monitor.setEnabled(true, .machines)
+        monitor.setEnabled(false, .herdrMachines)
+        monitor.setEnabled(true, .herdrMachines)
         // The new loop starts once the cancelled one has left its sleep, so the two never sleep at once.
         _ = await machineSleeps.next()
         await monitor.stop()
@@ -175,7 +175,7 @@ struct HerdrMonitorTests {
         #expect(machines.count == 2)
         #expect(
             delivered.snapshots.last
-                == HerdrSnapshot(agents: Self.local.agents + Self.machineBlocked.agents, failures: []))
+                == AgentSnapshot(agents: Self.local.agents + Self.machineBlocked.agents, failures: []))
     }
 
     @Test func refreshPollsEveryEnabledKindRightAway() async {
@@ -197,7 +197,7 @@ struct HerdrMonitorTests {
         #expect(machines.count == 2)
         #expect(
             delivered.snapshots.last
-                == HerdrSnapshot(agents: Self.localBlocked.agents + Self.machineBlocked.agents, failures: []))
+                == AgentSnapshot(agents: Self.localBlocked.agents + Self.machineBlocked.agents, failures: []))
     }
 
     @Test func refreshLeavesADisabledKindAlone() async {
@@ -205,7 +205,7 @@ struct HerdrMonitorTests {
         let monitor = monitor(local: ScriptedFetch([Self.local, Self.localBlocked]), machines: machines)
         var localSleeps = localSleeper.sleeps.makeAsyncIterator()
 
-        monitor.setEnabled(false, .machines)
+        monitor.setEnabled(false, .herdrMachines)
         monitor.start()
         _ = await localSleeps.next()
         monitor.refresh()
@@ -217,26 +217,28 @@ struct HerdrMonitorTests {
     }
 
     @Test func settingsEnableTheKindsOfTheChosenBackends() {
-        func enabled(_ backends: Set<Backend>, remote: Bool) -> [HerdrMonitor.SourceKind] {
-            HerdrMonitor.SourceKind.allCases.filter { $0.isEnabled(by: backends, watchesRemoteMachines: remote) }
+        func enabled(_ backends: Set<Backend>, remote: Bool) -> [AgentMonitor.SourceKind] {
+            AgentMonitor.SourceKind.allCases.filter { $0.isEnabled(by: backends, watchesRemoteMachines: remote) }
         }
-        #expect(enabled([.herdr, .hc], remote: true) == [.localSessions, .machines, .core])
-        #expect(enabled([.herdr, .hc], remote: false) == [.localSessions, .core])
-        #expect(enabled([.herdr], remote: true) == [.localSessions, .machines])
-        #expect(enabled([.herdr], remote: false) == [.localSessions])
+        #expect(enabled([.herdr, .hc], remote: true) == [.herdrSessions, .herdrMachines, .herdrCore])
+        #expect(enabled([.herdr, .hc], remote: false) == [.herdrSessions, .herdrCore])
+        #expect(enabled([.herdr], remote: true) == [.herdrSessions, .herdrMachines])
+        #expect(enabled([.herdr], remote: false) == [.herdrSessions])
         // herdr-core's machines come in the same call; they are filtered, not switched off.
-        #expect(enabled([.hc], remote: false) == [.core])
+        #expect(enabled([.hc], remote: false) == [.herdrCore])
         #expect(enabled([.rex], remote: true) == [.rex, .rexMachines])
         #expect(enabled([.rex], remote: false) == [.rex])
         #expect(
-            enabled([.herdr, .hc, .rex], remote: true) == [.localSessions, .machines, .core, .rex, .rexMachines])
+            enabled([.herdr, .hc, .rex], remote: true) == [
+                .herdrSessions, .herdrMachines, .herdrCore, .rex, .rexMachines,
+            ])
     }
 
     @Test func withoutRemoteMachinesEveryRemoteSourceIsLeftOutAtOnce() async {
-        let rohan = AgentSource.core(machine: "rohan")
-        let core = HerdrSnapshot(
-            agents: [.stub(.working, source: .core(machine: nil)), .stub(.blocked, source: rohan)],
-            failures: [SourceFailure(source: AgentSource.core(machine: "pi"), message: "unreachable")])
+        let rohan = AgentSource.herdrCore(machine: "rohan")
+        let core = AgentSnapshot(
+            agents: [.stub(.working, source: .herdrCore(machine: nil)), .stub(.blocked, source: rohan)],
+            failures: [SourceFailure(source: AgentSource.herdrCore(machine: "pi"), message: "unreachable")])
         let monitor = monitor(local: ScriptedFetch([core]), machines: ScriptedFetch([Self.machine]))
         var localSleeps = localSleeper.sleeps.makeAsyncIterator()
         var machineSleeps = machineSleeper.sleeps.makeAsyncIterator()
@@ -250,7 +252,7 @@ struct HerdrMonitorTests {
         let all = delivered.snapshots.last
         await monitor.stop()
 
-        #expect(local == HerdrSnapshot(agents: [.stub(.working, source: .core(machine: nil))], failures: []))
+        #expect(local == AgentSnapshot(agents: [.stub(.working, source: .herdrCore(machine: nil))], failures: []))
         #expect(all?.agents == core.agents)
         #expect(all?.failures == core.failures)
     }

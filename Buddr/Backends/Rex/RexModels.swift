@@ -1,5 +1,5 @@
 // Decodable shapes of Rex's control API (`GET /api/help` or `rex api describe` on a server has the full ones). Only
-// the fields Buddr uses are declared; keys are snake_case (`HerdrClient.decoder`).
+// the fields Buddr uses are declared; keys are snake_case (`JSONDecoder.snakeCase`).
 
 /// The fields every message has.
 struct RexMessageHead: Decodable, Sendable {

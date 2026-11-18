@@ -47,7 +47,7 @@ struct AgentOverview: Equatable, Sendable {
     /// Number of agents per status, most urgent first; statuses without agents are left out.
     let statusCounts: [StatusCount]
 
-    init(_ snapshot: HerdrSnapshot) {
+    init(_ snapshot: AgentSnapshot) {
         let localSessions = snapshot.sources.count { if case .herdr(.localSession) = $0 { true } else { false } }
         let tagsBackend = Set(snapshot.sources.map(\.backend)).count > 1
 

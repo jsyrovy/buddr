@@ -7,7 +7,7 @@ struct AgentOverviewTests {
     private static let pi = AgentSource.herdr(.machine(id: "m2", label: "Pi"))
 
     @Test func sectionsFollowTheQueriedSourcesIncludingEmptyAndFailedOnes() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [.stub(.working, source: Self.devbox)],
             failures: [SourceFailure(source: Self.pi, message: "timed out")],
             sources: [.herdr(.localSession("default")), Self.devbox, Self.pi])
@@ -19,7 +19,7 @@ struct AgentOverviewTests {
     }
 
     @Test func severalLocalSessionsAreNamed() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [], failures: [],
             sources: [.herdr(.localSession("default")), .herdr(.localSession("work")), Self.devbox])
 
@@ -27,7 +27,7 @@ struct AgentOverviewTests {
     }
 
     @Test func failuresWithoutASourceAreGeneral() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [], failures: [SourceFailure(source: nil, message: "herdr not found")], sources: [])
         let overview = AgentOverview(snapshot)
 
@@ -36,7 +36,7 @@ struct AgentOverviewTests {
     }
 
     @Test func workspacesAreOrderedLikeHerdrsSidebar() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [
                 .stub(.working, workspace: "buddr", number: 5, pane: "a"),
                 .stub(.idle, workspace: "loose", pane: "b"),
@@ -54,7 +54,7 @@ struct AgentOverviewTests {
     }
 
     @Test func workspacesOfDifferentSourcesStaySeparate() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [.stub(.working), .stub(.idle, source: Self.devbox)], failures: [])
         let sections = AgentOverview(snapshot).sections
 
@@ -81,7 +81,7 @@ struct AgentOverviewTests {
     }
 
     @Test func statusCountsAreMostUrgentFirstWithoutEmptyStatuses() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [.stub(.idle), .stub(.working), .stub(.blocked), .stub(.working)], failures: [])
 
         #expect(
@@ -100,8 +100,8 @@ struct AgentOverviewTests {
     }
 
     @Test func herdrCoreIsThisMacAndItsMachinesGoByName() {
-        let snapshot = HerdrSnapshot(
-            agents: [], failures: [], sources: [.core(machine: nil), .core(machine: "rohan")])
+        let snapshot = AgentSnapshot(
+            agents: [], failures: [], sources: [.herdrCore(machine: nil), .herdrCore(machine: "rohan")])
         let overview = AgentOverview(snapshot)
 
         #expect(overview.sections.map(\.title) == ["This Mac", "rohan"])
@@ -109,9 +109,11 @@ struct AgentOverviewTests {
     }
 
     @Test func sectionsNameTheirBackendWhenBothAreRead() {
-        let snapshot = HerdrSnapshot(
+        let snapshot = AgentSnapshot(
             agents: [], failures: [],
-            sources: [.herdr(.localSession("default")), .core(machine: nil), Self.devbox, .core(machine: "rohan")])
+            sources: [
+                .herdr(.localSession("default")), .herdrCore(machine: nil), Self.devbox, .herdrCore(machine: "rohan"),
+            ])
         let overview = AgentOverview(snapshot)
 
         #expect(overview.sections.map(\.title) == ["This Mac", "This Mac", "Devbox", "rohan"])

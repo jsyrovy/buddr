@@ -6,7 +6,7 @@
     @MainActor
     @Observable
     final class DebugControls {
-        /// Shown by the buddy (and used for hiding) instead of the aggregated herdr status while set.
+        /// Shown by the buddy (and used for hiding) instead of the aggregated status of the agents while set.
         var statusOverride: AgentStatus? {
             didSet { onChange?() }
         }

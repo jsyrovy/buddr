@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var animation: BuddyAnimationDriver?
     private var turns: BuddyTurns?
     private var panelController: BuddyPanelController?
-    private var herdrMonitor: HerdrMonitor?
+    private var agentMonitor: AgentMonitor?
     private var fullscreenMonitor: FullscreenMonitor?
     private var escape: BuddyEscape?
 
@@ -81,12 +81,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             debug.escape = escape
             debug.onChange = applyStatus
         #endif
-        let herdrMonitor = HerdrMonitor { snapshot in
+        let agentMonitor = AgentMonitor { snapshot in
             snapshots.snapshot = snapshot
             applyStatus()
         }
         let applyPreferences: @MainActor @Sendable () -> Void = {
-            herdrMonitor.configure(
+            agentMonitor.configure(
                 backends: preferences.backendChoice.backends,
                 watchesRemoteMachines: preferences.watchesRemoteMachines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
@@ -96,11 +96,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         applyPreferences()
         preferences.onChange = applyPreferences
-        herdrMonitor.start()
-        self.herdrMonitor = herdrMonitor
+        agentMonitor.start()
+        self.agentMonitor = agentMonitor
     }
 
     func agentListOpened() {
-        herdrMonitor?.refresh()
+        agentMonitor?.refresh()
     }
 }

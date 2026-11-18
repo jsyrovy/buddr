@@ -187,11 +187,11 @@ struct Renderer {
     // MARK: Sample agents
 
     /// The agents behind the name plate and the menu bar list.
-    static let snapshot: HerdrSnapshot = {
+    static let snapshot: AgentSnapshot = {
         let local = AgentSource.herdr(.localSession("default"))
-        let core = AgentSource.core(machine: nil)
+        let core = AgentSource.herdrCore(machine: nil)
         let devel = AgentSource.herdr(.machine(id: "3f2a", label: "devel"))
-        let buildBox = AgentSource.core(machine: "build-box")
+        let buildBox = AgentSource.herdrCore(machine: "build-box")
         func agent(
             _ source: AgentSource, _ workspace: String, _ number: Int?, _ pane: String, _ kind: String,
             _ status: AgentStatus, _ title: String, order: UInt64? = nil
@@ -200,7 +200,7 @@ struct Renderer {
                 source: source, workspaceID: workspace, workspace: workspace, workspaceNumber: number, paneID: pane,
                 agent: kind, status: status, title: title, cwd: "/Users/me/code/\(workspace)", statusOrder: order)
         }
-        return HerdrSnapshot(
+        return AgentSnapshot(
             agents: [
                 agent(local, "buddr", 1, "p1", "claude", .working, "Add README screenshots"),
                 agent(local, "buddr", 1, "p2", "codex", .idle, "Review the changelog"),

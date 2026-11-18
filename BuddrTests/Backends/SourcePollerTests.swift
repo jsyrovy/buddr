@@ -3,18 +3,18 @@ import Testing
 @testable import Buddr
 
 @MainActor
-struct HerdrPollerTests {
+struct SourcePollerTests {
     private static let interval = Duration.seconds(2)
-    private static let working = HerdrSnapshot(agents: [.stub(.working)], failures: [])
-    private static let blocked = HerdrSnapshot(agents: [.stub(.blocked)], failures: [])
-    private static let failure = HerdrSnapshot(
+    private static let working = AgentSnapshot(agents: [.stub(.working)], failures: [])
+    private static let blocked = AgentSnapshot(agents: [.stub(.blocked)], failures: [])
+    private static let failure = AgentSnapshot(
         agents: [], failures: [SourceFailure(source: nil, message: "herdr executable not found")])
 
     private let sleeper = ManualSleeper()
     private let delivered = SnapshotRecorder()
 
-    private func poller(_ fetch: ScriptedFetch) -> HerdrPoller {
-        HerdrPoller(.init(interval: Self.interval, fetch: fetch.callAsFunction, sleep: sleeper.sleep(for:))) {
+    private func poller(_ fetch: ScriptedFetch) -> SourcePoller {
+        SourcePoller(.init(interval: Self.interval, fetch: fetch.callAsFunction, sleep: sleeper.sleep(for:))) {
             [delivered] in delivered.snapshots.append($0)
         }
     }
@@ -35,7 +35,7 @@ struct HerdrPollerTests {
         }
         await poller.stop()
 
-        // Unchanged snapshots are filtered by `HerdrMonitor`, after combining the feeds.
+        // Unchanged snapshots are filtered by `AgentMonitor`, after combining the feeds.
         #expect(delivered.snapshots == [Self.working, Self.working, Self.failure, Self.failure, Self.blocked])
     }
 
