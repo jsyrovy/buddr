@@ -87,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let applyPreferences: @MainActor @Sendable () -> Void = {
             agentMonitor.configure(
-                backends: preferences.backendChoice.backends,
+                backends: preferences.backends,
                 watchesRemoteMachines: preferences.watchesRemoteMachines)
             animation.setAnimation(preferences.animationMode, for: .seconds(preferences.animationSeconds))
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))

@@ -50,8 +50,8 @@ The sheep in the menu bar opens a list of all agents, grouped by machine and wor
 - **Buddy** – the corgi, the dino, the Earth, the rainbow cat, the sheep (the default), the snake or the UFO, or all of
   them taking turns every 15 to 60 minutes; a turn ends only while no agent needs you. The old buddy walks off the
   screen and the new one runs in.
-- **Agents from** – herdr, hc, rex or all of them (the default). A chosen one that isn't installed or running shows up
-  with a ⚠.
+- **Agents from** – herdr, hc and rex, any of them (all by default). A checked one that isn't installed or running
+  shows up with a ⚠.
 - **Animation** – always, only for a while after a change (5 s to 1 min), or off: a still picture of the state.
 - **Hide** – never (the default), when all agents are idle, or unless one needs you, after 1 to 30 minutes of it. The
   sheep walks off the screen and comes back as soon as that changes; "Show Sheep" in the list calls it back sooner.

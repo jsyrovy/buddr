@@ -10,7 +10,7 @@ final class Preferences {
     private static let buddyChoiceKey = "buddy"
     private static let buddyTurnMinutesKey = "buddyTurnMinutes"
     private static let shownBuddyKey = "shownBuddy"
-    private static let backendChoiceKey = "agentBackends"
+    private static let backendsKey = "agentBackends"
     private static let watchesRemoteMachinesKey = "watchesRemoteMachines"
     private static let animationModeKey = "animationMode"
     private static let animationSecondsKey = "animationDurationSeconds"
@@ -61,12 +61,27 @@ final class Preferences {
         }
     }
 
-    /// Which backends the agents are read from. All by default.
-    var backendChoice: BackendChoice {
+    /// Which backends the agents are read from, all by default; never empty (`setBackend(_:read:)`).
+    private(set) var backends: Set<Backend> {
         didSet {
-            defaults.set(backendChoice.rawValue, forKey: Self.backendChoiceKey)
+            defaults.set(Backend.allCases.filter(backends.contains).map(\.rawValue), forKey: Self.backendsKey)
             onChange?()
         }
+    }
+
+    /// Reads agents from one backend or stops reading them. The last backend read can't be dropped
+    /// (`canStopReading(_:)`), so agents are always read from somewhere.
+    func setBackend(_ backend: Backend, read: Bool) {
+        if read {
+            backends.insert(backend)
+        } else if canStopReading(backend) {
+            backends.remove(backend)
+        }
+    }
+
+    /// Whether agents can stop being read from `backend`: not from the last one read.
+    func canStopReading(_ backend: Backend) -> Bool {
+        backends != [backend]
     }
 
     /// Whether agents on remote machines (herdr's saved machines, herdr-core's added ones) count, besides this Mac's.
@@ -160,8 +175,7 @@ final class Preferences {
         buddyTurnMinutes =
             Self.buddyTurnMinutesChoices.contains(turnMinutes) ? turnMinutes : Self.defaultBuddyTurnMinutes
         shownBuddy = defaults.string(forKey: Self.shownBuddyKey).flatMap { BuddyID(rawValue: $0) } ?? .sheep
-        backendChoice =
-            defaults.string(forKey: Self.backendChoiceKey).flatMap { BackendChoice(savedValue: $0) } ?? .all
+        backends = Self.savedBackends(in: defaults)
         watchesRemoteMachines = defaults.object(forKey: Self.watchesRemoteMachinesKey) as? Bool ?? true
         animationMode =
             defaults.string(forKey: Self.animationModeKey).flatMap { AnimationMode(rawValue: $0) } ?? .always
@@ -176,5 +190,14 @@ final class Preferences {
         // Without a saved part to show (none saved, or edited by hand), the plate shows all of them.
         namePlateFields = fields.isEmpty ? NamePlate.Field.all : fields
         showsNamePlate = defaults.object(forKey: Self.showsNamePlateKey) as? Bool ?? true
+    }
+
+    /// The backends saved as an array of their names. Before they were checkboxes, one choice was saved as a string:
+    /// a backend's name or `all` (`both` while there were only herdr and hc). Without a backend (none saved, or edited
+    /// by hand), all are read.
+    private static func savedBackends(in defaults: UserDefaults) -> Set<Backend> {
+        let names = defaults.stringArray(forKey: backendsKey) ?? defaults.string(forKey: backendsKey).map { [$0] } ?? []
+        let backends = Set(names.compactMap(Backend.init(rawValue:)))
+        return backends.isEmpty ? Backend.all : backends
     }
 }

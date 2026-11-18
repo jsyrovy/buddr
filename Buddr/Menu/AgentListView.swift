@@ -98,22 +98,28 @@ private struct BuddySettings: View {
     }
 }
 
-/// "Agents from: herdr / hc / rex / All".
+/// "Agents from:" and a checkbox per backend, named by its CLI as in the list's section headers. The last checked one
+/// can't be unchecked.
 private struct BackendSettings: View {
     @Bindable var preferences: Preferences
 
     var body: some View {
-        Picker("Agents from", selection: $preferences.backendChoice) {
-            ForEach(BackendChoice.allCases, id: \.self) { choice in
-                Text(Self.title(choice)).tag(choice)
+        HStack {
+            Text("Agents from:")
+            ForEach(Backend.allCases, id: \.self) { backend in
+                Toggle(backend.rawValue, isOn: reads(backend))
+                    .disabled(!preferences.canStopReading(backend))
             }
         }
-        .fixedSize()
+        .toggleStyle(.checkbox)
     }
 
-    /// A backend by the name of its CLI, as in the list's section headers.
-    private static func title(_ choice: BackendChoice) -> String {
-        choice == .all ? "All" : choice.rawValue
+    private func reads(_ backend: Backend) -> Binding<Bool> {
+        Binding {
+            preferences.backends.contains(backend)
+        } set: { read in
+            preferences.setBackend(backend, read: read)
+        }
     }
 }
 

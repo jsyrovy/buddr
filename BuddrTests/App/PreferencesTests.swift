@@ -84,28 +84,60 @@ struct PreferencesTests {
     }
 
     @Test func readsAllBackendsByDefault() {
-        #expect(Preferences(defaults: defaults).backendChoice == .all)
+        #expect(Preferences(defaults: defaults).backends == [.herdr, .hc, .rex])
     }
 
-    @Test func savedBothReadsAsAllBackends() {
-        defaults.set("both", forKey: "agentBackends")
-        #expect(Preferences(defaults: defaults).backendChoice == .all)
-    }
-
-    @Test func backendChoiceIsSavedAndReported() {
+    @Test func backendsAreSavedAndReported() {
         let preferences = Preferences(defaults: defaults)
         var changes = 0
         preferences.onChange = { changes += 1 }
 
-        preferences.backendChoice = .hc
+        preferences.setBackend(.hc, read: false)
+        preferences.setBackend(.herdr, read: false)
 
-        #expect(changes == 1)
-        #expect(Preferences(defaults: defaults).backendChoice == .hc)
+        #expect(changes == 2)
+        #expect(preferences.backends == [.rex])
+        #expect(Preferences(defaults: defaults).backends == [.rex])
+
+        preferences.setBackend(.herdr, read: true)
+
+        #expect(changes == 3)
+        #expect(Preferences(defaults: defaults).backends == [.herdr, .rex])
+        #expect(defaults.stringArray(forKey: "agentBackends") == ["herdr", "rex"])
     }
 
-    @Test func invalidSavedBackendChoiceFallsBackToAll() {
-        defaults.set("everything", forKey: "agentBackends")
-        #expect(Preferences(defaults: defaults).backendChoice == .all)
+    @Test func theLastBackendCantBeDropped() {
+        let preferences = Preferences(defaults: defaults)
+        preferences.setBackend(.herdr, read: false)
+        #expect(preferences.canStopReading(.rex))
+        preferences.setBackend(.rex, read: false)
+        #expect(!preferences.canStopReading(.hc))
+        var changes = 0
+        preferences.onChange = { changes += 1 }
+
+        preferences.setBackend(.hc, read: false)
+
+        #expect(changes == 0)
+        #expect(preferences.backends == [.hc])
+    }
+
+    @Test(
+        arguments: [
+            ("herdr", [.herdr]), ("hc", [.hc]), ("rex", [.rex]), ("all", Backend.all), ("both", Backend.all),
+        ] as [(String, Set<Backend>)])
+    func backendChoiceSavedAsAStringIsRead(saved: String, backends: Set<Backend>) {
+        // Saved before the backends were checkboxes; `both` while there were only herdr and hc.
+        defaults.set(saved, forKey: "agentBackends")
+        #expect(Preferences(defaults: defaults).backends == backends)
+    }
+
+    @Test func unknownSavedBackendsAreIgnored() {
+        defaults.set(["rex", "everything"], forKey: "agentBackends")
+        #expect(Preferences(defaults: defaults).backends == [.rex])
+        defaults.set(["everything"], forKey: "agentBackends")
+        #expect(Preferences(defaults: defaults).backends == Backend.all)
+        defaults.set(42, forKey: "agentBackends")
+        #expect(Preferences(defaults: defaults).backends == Backend.all)
     }
 
     @Test func animatesAlwaysByDefault() {

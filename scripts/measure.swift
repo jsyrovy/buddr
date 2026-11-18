@@ -101,7 +101,7 @@ struct Settings: Codable, Equatable {
     var hideMode: String
     var hideMinutes: Int
     var watchesRemoteMachines: Bool
-    /// Missing in runs saved before Buddr read herdr-core; they read herdr only.
+    /// `herdr`, `hc+rex`, … or `all`. Missing in runs saved before Buddr read herdr-core; they read herdr only.
     var agentBackends: String?
 
     static func read() -> Settings {
@@ -115,7 +115,21 @@ struct Settings: Codable, Equatable {
             hideMode: choice("hideMode", ["never", "whenIdle", "unlessNeeded"], default: "never"),
             hideMinutes: choice("hideAfterMinutes", [1, 5, 15, 30], default: 5),
             watchesRemoteMachines: choice("watchesRemoteMachines", [false, true], default: true),
-            agentBackends: choice("agentBackends", ["herdr", "hc", "rex", "all", "both"], default: "all"))
+            agentBackends: backends(defaults?.object(forKey: "agentBackends")))
+    }
+
+    /// The backends checked in the menu, in its order, joined with `+`; `all` when all are, as runs saved before the
+    /// checkboxes (one choice saved as a string) recorded it.
+    private static func backends(_ saved: Any?) -> String {
+        let all = ["herdr", "hc", "rex"]
+        let names: [String] =
+            switch saved {
+            case let names as [String]: names
+            case let choice as String: [choice]
+            default: []
+            }
+        let checked = all.filter(names.contains)
+        return checked.isEmpty || checked == all ? "all" : checked.joined(separator: "+")
     }
 
     /// Names as in the JSON; a missing value is `–`.

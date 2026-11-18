@@ -82,7 +82,7 @@ Buddr/
                 deadlines), WebSocket (WebSocketProtocol: pure framing and upgrade; WebSocketConnection over a
                 UnixSocket), JSONDecoder.snakeCase (the decoder of every backend)
   State/      AgentStatus (+ priority aggregation), AgentSnapshot / AgentRecord / AgentSource (herdr, herdr-core, Rex) /
-              HerdrSource / SourceFailure, Backend + BackendChoice (which backends are read),
+              HerdrSource / SourceFailure, Backend (a tool whose agents are read),
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
@@ -139,7 +139,7 @@ CHANGELOG.md  one section per released version
   `BuddyPanel.clickTolerance` points (`onClick`); it pets the buddy (see below). After a drag (the button is released)
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
-  agent list, the settings ("Buddy" while there is more than one, "Agents from", "Animation" and "Hide" pop-ups,
+  agent list, the settings ("Buddy" while there is more than one, "Animation" and "Hide" pop-ups, "Agents from" and
   "Name Plate" checkboxes, "Watch Remote Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
   width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
   itself to show one).
@@ -179,9 +179,12 @@ CHANGELOG.md  one section per released version
   backend never delays the others, and shows the combined snapshot (`AgentSnapshot.combining`: the sources of this Mac first, then the
   machines). Sources are queried concurrently. A part that didn't change since its last poll is not combined again. Logs: category
   `agents` (the status, the number of agents and failures as they change).
-- The backends are chosen in the menu bar ("Agents from": herdr / hc / rex / All; `Preferences.backendChoice`, key
-  `agentBackends`: `herdr` / `hc` / `rex` / `all`, default `all`; `both`, saved before Rex, reads as `all`). A chosen
-  backend that is missing or not running is a failed source (⚠), also with All – the user asked for it.
+- The backends are chosen in the menu bar ("Agents from:" with a checkbox per backend, herdr / hc / rex, any
+  combination; `Preferences.backends`, key `agentBackends`, an array of the names, all by default). The last checked
+  one can't be unchecked (`Preferences.setBackend(_:read:)`, the checkbox is disabled), so agents are always read from
+  somewhere. Before the checkboxes, one choice was saved as a string (`herdr` / `hc` / `rex` / `all`, `both` before
+  Rex); it still reads, `all` and `both` as all. A chosen backend that is missing or not running is a failed source
+  (⚠) – the user asked for it.
 - Remote machines can be switched off in the menu bar (`Preferences.watchesRemoteMachines`, `UserDefaults` key
   `watchesRemoteMachines`, on by default) for every backend. `AgentMonitor.configure(backends:watchesRemoteMachines:)`
   applies both settings: it enables the kinds they ask for (`SourceKind.isEnabled(by:watchesRemoteMachines:)`,

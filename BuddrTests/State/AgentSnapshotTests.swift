@@ -73,20 +73,6 @@ struct AgentSnapshotTests {
                     agents: [.stub(.idle)], failures: [missing], sources: [.herdr(.localSession("default"))]))
     }
 
-    @Test func backendChoices() {
-        #expect(BackendChoice.herdr.backends == [.herdr])
-        #expect(BackendChoice.hc.backends == [.hc])
-        #expect(BackendChoice.rex.backends == [.rex])
-        #expect(BackendChoice.all.backends == [.herdr, .hc, .rex])
-    }
-
-    @Test func savedBothMeansAllBackends() {
-        // Saved while there were only herdr and hc.
-        #expect(BackendChoice(savedValue: "both") == .all)
-        #expect(BackendChoice(savedValue: "rex") == .rex)
-        #expect(BackendChoice(savedValue: "everything") == nil)
-    }
-
     @Test func rexSources() {
         let local = AgentSource.rex(machine: nil)
         let studio = AgentSource.rex(machine: "studio")
