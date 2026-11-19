@@ -153,7 +153,9 @@ struct Renderer {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let list = AgentListView(
-            store: store, preferences: Preferences(defaults: defaults), hiding: BuddyHiding(), onOpen: {})
+            store: store, preferences: Preferences(defaults: defaults), hiding: BuddyHiding(),
+            // Never checked, so nothing is asked of GitHub.
+            updates: UpdateChecker(currentVersion: AppVersion("0.3")), onOpen: {})
         for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             let content =
                 list

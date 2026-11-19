@@ -5,8 +5,8 @@ import Observation
 @MainActor
 @Observable
 final class Preferences {
-    // Keys, choices and defaults of the settings that change the cost (all but the name plate) are mirrored in
-    // `Settings.read()` of scripts/measure.swift.
+    // Keys, choices and defaults of the settings that change the cost (all but the name plate and the update check)
+    // are mirrored in `Settings.read()` of scripts/measure.swift.
     private static let buddyChoiceKey = "buddy"
     private static let buddyTurnMinutesKey = "buddyTurnMinutes"
     private static let shownBuddyKey = "shownBuddy"
@@ -18,6 +18,7 @@ final class Preferences {
     private static let hideMinutesKey = "hideAfterMinutes"
     private static let showsNamePlateKey = "showsNamePlate"
     private static let namePlateFieldsKey = "namePlateFields"
+    private static let checksForUpdatesKey = "checksForUpdates"
 
     /// The choices for `buddyTurnMinutes`.
     static let buddyTurnMinutesChoices = [15, 30, 60]
@@ -161,6 +162,15 @@ final class Preferences {
         }
     }
 
+    /// Whether GitHub is asked for a newer release once a day. Off by default: it is the app's only connection to the
+    /// internet.
+    var checksForUpdates: Bool {
+        didSet {
+            defaults.set(checksForUpdates, forKey: Self.checksForUpdatesKey)
+            onChange?()
+        }
+    }
+
     /// Called after a preference changed.
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
 
@@ -190,6 +200,7 @@ final class Preferences {
         // Without a saved part to show (none saved, or edited by hand), the plate shows all of them.
         namePlateFields = fields.isEmpty ? NamePlate.Field.all : fields
         showsNamePlate = defaults.object(forKey: Self.showsNamePlateKey) as? Bool ?? true
+        checksForUpdates = defaults.bool(forKey: Self.checksForUpdatesKey)
     }
 
     /// The backends saved as an array of their names. Before they were checkboxes, one choice was saved as a string:

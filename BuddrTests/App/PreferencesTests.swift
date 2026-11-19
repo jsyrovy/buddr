@@ -20,6 +20,15 @@ struct PreferencesTests {
         #expect(Preferences(defaults: defaults).watchesRemoteMachines)
     }
 
+    @Test func doesNotCheckForUpdatesByDefault() {
+        let preferences = Preferences(defaults: defaults)
+        #expect(!preferences.checksForUpdates)
+
+        preferences.checksForUpdates = true
+
+        #expect(Preferences(defaults: defaults).checksForUpdates)
+    }
+
     @Test func changeIsSavedAndReported() {
         let preferences = Preferences(defaults: defaults)
         var changes = 0

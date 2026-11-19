@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = Preferences()
     let snapshots = SnapshotStore()
     let hiding = BuddyHiding()
+    let updates = UpdateChecker()
     #if DEBUG
         let debug = DebugControls()
     #endif
@@ -85,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             snapshots.snapshot = snapshot
             applyStatus()
         }
+        let updates = updates
         let applyPreferences: @MainActor @Sendable () -> Void = {
             agentMonitor.configure(
                 backends: preferences.backends,
@@ -93,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hiding.setMode(preferences.hideMode, after: .seconds(preferences.hideMinutes * 60))
             turns.setChoice(preferences.buddyChoice, every: .seconds(preferences.buddyTurnMinutes * 60))
             panelController.setNamePlateFields(preferences.shownNamePlateFields)
+            updates.setDaily(preferences.checksForUpdates)
         }
         applyPreferences()
         preferences.onChange = applyPreferences

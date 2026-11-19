@@ -80,12 +80,15 @@ Buddr/
                 lines, ProcessTable), RexStatusFetcher (Rex's terminals with a status as agents, this Mac or the hosts)
     Transport/  ProcessRunner (subprocess with timeout) + OneShotSignal, UnixSocket (connected non-blocking socket with
                 deadlines), WebSocket (WebSocketProtocol: pure framing and upgrade; WebSocketConnection over a
-                UnixSocket), JSONDecoder.snakeCase (the decoder of every backend)
+                UnixSocket), JSONDecoder.snakeCase (the decoder of every backend and of the update check)
   State/      AgentStatus (+ priority aggregation), AgentSnapshot / AgentRecord / AgentSource (herdr, herdr-core, Rex) /
               HerdrSource / SourceFailure, Backend (a tool whose agents are read),
               AgentOverview (pure: snapshot grouped by source and workspace for the menu bar list), AttentionTracker
               (pure: agents newly blocked / done, which one the plate names) + NamePlate (the plate's parts)
   Menu/       SnapshotStore (@Observable latest snapshot), AgentListView (content of the menu bar window)
+  Updates/    AppVersion (pure: parsing, comparison), LatestRelease (UpdateError, GitHub's latest release: request,
+              parsing, fetch), UpdateChecker (@Observable: check now, daily loop), HomebrewCask (is it installed, looked
+              up once)
   Debug/      Debug builds only (`#if DEBUG`): DebugControls (play any clip, send the buddy away, override the
               status, a long name plate), DebugSection (its orange box in the menu bar list)
 BuddrTests/   Swift Testing tests, mirroring the app folders
@@ -140,7 +143,7 @@ CHANGELOG.md  one section per released version
   the panel is moved back into the `visibleFrame` of its screen, so it can't be dragged out of sight. Menu bar: SwiftUI
   `MenuBarExtra` in `.window` style (a popover; the `.menu` style can't lay out columns or color the rows) with the
   agent list, the settings ("Buddy" while there is more than one, "Animation" and "Hide" pop-ups, "Agents from" and
-  "Name Plate" checkboxes, "Watch Remote Machines") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
+  "Name Plate" checkboxes, "Watch Remote Machines", "Check for Updates Daily" with "Check Now") and "Quit Buddr". A segmented "Off | On Change | Always" control plus the duration doesn't fit the 360 pt
   width. A separate Settings window is not worth it until there are more settings (an `LSUIElement` app has to activate
   itself to show one).
 - Agent list (`AgentListView`, grouping in `AgentOverview`): a summary ("1 blocked · 2 working"), then one section per
@@ -195,6 +198,7 @@ CHANGELOG.md  one section per released version
 - Animation can be set in the menu bar (`Preferences.animationMode`, key `animationMode`: `off` / `onChange` /
   `always`, default `always`; `Preferences.animationSeconds`, key `animationDurationSeconds`, one of 5 / 10 / 30 /
   60 s, default 10). See "Animation modes" below.
+- Updates are only reported, never installed: details in "Update check" below.
 - A failed source is reported as a failure (⚠ + error in the menu bar list); it never blocks the others.
   A machine that can't be reached or would need authentication is just a failed source: Buddr doesn't gate machine
   queries by `herdr machine status` (see "herdr CLI").
@@ -580,6 +584,30 @@ A dark plate with light pixel text under the buddy's feet, naming the agent the 
   (fullscreen, hiding), and is hidden during the escape run itself (`BuddyEscape` suppresses it once the startle or
   yawn is over and lifts it after the arrival). The menu bar list is unchanged.
 
+## Update check
+
+`UpdateChecker` asks GitHub for the latest release and tells whether it is newer than the running app
+(`CFBundleShortVersionString`). It is the app's only connection to the internet besides what the backends do.
+
+- One request: `GET https://api.github.com/repos/jsyrovy/buddr/releases/latest` (`LatestRelease`), headers `Accept:
+  application/vnd.github+json`, `X-GitHub-Api-Version`, user agent `Buddr/<version>` (GitHub refuses requests without
+  one), ephemeral `URLSession`, timeout 15 s. It answers the latest *published* release only – never a draft (`make
+  publish` leaves one) or a prerelease – so the app offers what the Homebrew cask offers. Read: `tag_name` (`v0.4`,
+  compared number by number by `AppVersion`, so 0.10 > 0.9) and `html_url` (the release page). Without a login GitHub
+  allows 60 requests an hour per IP address; another status than 200 is a failure (`UpdateError.status`).
+- Set in the menu bar: "Check for Updates Daily" (`Preferences.checksForUpdates`, key `checksForUpdates`, **off** by
+  default – the user's choice, the request reveals the IP address) checks at once when switched on or at launch, then
+  every 24 h (`UpdateChecker.setDaily`); "Check Now" (`checkNow()`) checks once in any case. A check while one runs is
+  skipped; a cancelled one (the loop switched off) leaves the previous result. Nothing is persisted: after a restart
+  the result is unknown until the next check.
+- The list shows the last result under the checkbox: checking, up to date, a failure (⚠ + message), or "Buddr 0.4 is
+  available" with "Download" (opens the release page) and, when the Homebrew cask is installed
+  (`HomebrewCask.isInstalled`: `Caskroom/buddr` under `/opt/homebrew` or `/usr/local`, looked up once), the
+  `brew upgrade` command, since an update outside Homebrew leaves the cask's version behind. No notifications, nothing
+  on the buddy, no download or installation (Sparkle was rejected: a third-party dependency and its tools on the dev
+  machine).
+- Logs: category `updates`.
+
 ## Testing
 
 - Swift Testing (`import Testing`, `@Test`, `#expect`). The test bundle is hosted by the app (`TEST_HOST`), so
@@ -645,6 +673,8 @@ tests are cheap and stable:
 - Placement math in `BuddyPanelController` (including the room reserved for the plate), `ScreenGeometry`,
   `EscapeRoute`, `NamePlateLayout`.
 - `HideMode` – which statuses are calm in each mode.
+- `Updates/` – `AppVersion` parsing and order, `LatestRelease` request and answers (through a fake transport; never
+  ask the real GitHub in tests), `UpdateChecker` results and its daily loop (`ManualSleeper`, `ScriptedRelease`).
 - `FullscreenDetector` – window list parsing and the covering rules (notch, zoomed windows, other displays, layers);
   `FullscreenDebounce` – on right away, off only after the delay.
 

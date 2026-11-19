@@ -7,6 +7,7 @@ struct AgentListView: View {
     let store: SnapshotStore
     @Bindable var preferences: Preferences
     let hiding: BuddyHiding
+    let updates: UpdateChecker
     /// Called when the list is shown, to poll right away.
     let onOpen: @MainActor () -> Void
 
@@ -47,6 +48,7 @@ struct AgentListView: View {
                 AnimationSettings(preferences: preferences)
                 HideSettings(preferences: preferences)
                 NamePlateSettings(preferences: preferences)
+                UpdateSettings(preferences: preferences, updates: updates)
                 HStack {
                     Toggle("Watch Remote Machines", isOn: $preferences.watchesRemoteMachines)
                         .toggleStyle(.checkbox)
@@ -224,6 +226,78 @@ private struct NamePlateSettings: View {
         case .workspace: "Workspace"
         case .title: "Title"
         }
+    }
+}
+
+/// "Check for Updates Daily", "Check Now" and what the last check found.
+private struct UpdateSettings: View {
+    @Bindable var preferences: Preferences
+    let updates: UpdateChecker
+
+    var body: some View {
+        HStack {
+            Toggle("Check for Updates Daily", isOn: $preferences.checksForUpdates)
+                .toggleStyle(.checkbox)
+            Spacer()
+            Button("Check Now") {
+                Task { await updates.checkNow() }
+            }
+            .disabled(updates.state == .checking)
+        }
+        UpdateStatus(state: updates.state)
+    }
+}
+
+/// What the last update check found; nothing before the first one.
+private struct UpdateStatus: View {
+    let state: UpdateChecker.State
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Group {
+            switch state {
+            case .unchecked:
+                EmptyView()
+            case .checking:
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Checking for updates…")
+                }
+                .foregroundStyle(.secondary)
+            case .upToDate(let version):
+                Label {
+                    Text("Buddr \(version.description) is up to date")
+                } icon: {
+                    Image(systemName: "checkmark.circle")
+                }
+                .foregroundStyle(.secondary)
+            case .available(let release):
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Label {
+                            Text("Buddr \(release.version.description) is available")
+                        } icon: {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .foregroundStyle(.blue)
+                        }
+                        Spacer()
+                        Button("Download") {
+                            openURL(release.pageURL)
+                        }
+                    }
+                    if HomebrewCask.isInstalled {
+                        Text("With Homebrew: \(Text(HomebrewCask.upgradeCommand).monospaced())")
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+            case .failed(let message):
+                FailureRow(message: message)
+            }
+        }
+        .font(.callout)
     }
 }
 

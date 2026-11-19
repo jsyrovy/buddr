@@ -57,6 +57,9 @@ The sheep in the menu bar opens a list of all agents, grouped by machine and wor
   sheep walks off the screen and comes back as soon as that changes; "Show Sheep" in the list calls it back sooner.
 - **Name Plate** – on or off, and which parts it shows.
 - **Watch Remote Machines** – off reads this Mac only.
+- **Check for Updates Daily** – off by default; **Check Now** asks once. A newer release shows up in the list with a
+  link to its page (and the `brew upgrade` command when the Homebrew cask is installed). Buddr never installs it
+  itself.
 
 A machine that can't be reached shows up with a ⚠ and its error in the list; the sheep doesn't count it.
 
@@ -106,9 +109,13 @@ Changes are in [CHANGELOG.md](CHANGELOG.md).
 
 Buddr only reads: it asks herdr (`herdr agent list`, `workspace list`, …), herdr-core's socket and Rex's server for
 the agents' state, and never focuses, controls or sends anything to an agent. It never starts herdr-core or Rex's
-server when it isn't running. Buddr itself makes no network connections; for remote machines, herdr connects over its
-own SSH setup, herdr-core over its own connections, and Buddr reaches Rex's hosts through the SSH tunnels Rex.app keeps
-open. "Watch Remote Machines" turns these queries off.
+server when it isn't running. For remote machines, herdr connects over its own SSH setup, herdr-core over its own
+connections, and Buddr reaches Rex's hosts through the SSH tunnels Rex.app keeps open. "Watch Remote Machines" turns
+these queries off.
+
+The only connection Buddr makes itself is the update check: a request to GitHub's API for the latest release
+(`api.github.com/repos/jsyrovy/buddr/releases/latest`), with nothing but the app's version in the user agent. It runs
+only when you click "Check Now", or once a day with "Check for Updates Daily" on (off by default).
 
 ## Building from source
 
