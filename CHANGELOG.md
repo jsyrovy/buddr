@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3 – 2026-11-19
+
+- Agents in [Rex](https://www.superlogical.com/rex), as a third backend next to herdr and herdr-core: on this Mac and
+  on the SSH hosts Rex.app is connected to.
+- "Agents from" in the menu bar has a checkbox per backend (herdr, hc, rex), so any combination can be read.
+- Two new buddies: a rattlesnake that swallows eggs while agents work, and a dino whose back plates light up like a
+  progress bar.
+
 ## 0.2 – 2026-11-06
 
 - New buddies next to the sheep: a corgi that digs while agents work, the Earth that spins with the Moon circling it,
